@@ -3518,7 +3518,7 @@ async def competition_auto_bot():
                 await create_permanent_competition()
             elif active_perm["sold_tickets"] >= active_perm["max_tickets"]:
                 # Permanent competition is full - draw winner and create new one
-                logger.info(f"[PERMANENT-BOT] Permanent competition full! Drawing winner...")
+                logger.info("[PERMANENT-BOT] Permanent competition full! Drawing winner...")
                 await auto_draw_winner(active_perm["competition_id"])
                 await create_permanent_competition()
             
