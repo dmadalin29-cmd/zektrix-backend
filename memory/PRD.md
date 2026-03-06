@@ -22,63 +22,32 @@ UK's premier online competition platform where users can enter competitions to w
 - **Multi-language**: Romanian (default) and English
 - **Health Endpoint**: /api/health for Railway monitoring
 
-### REMOVED Features (March 2, 2026)
-- ~~Wallet System~~ - Users now pay directly with card for each purchase
-- ~~Lucky Wheel~~ - Spin-to-win feature completely removed
-- ~~Wallet Deposit~~ - No more wallet top-ups
-
-### KEPT from Wallet System
-- /api/wallet/balance - For checking any remaining balance
-- /api/wallet/transactions - For transaction history
-- /api/wallet/webhook - For Viva payment processing
-- /api/wallet/payment-status - For payment verification
-
 ## Tech Stack
 - **Frontend**: React, TailwindCSS, Shadcn/UI
 - **Backend**: FastAPI, Python 3.11
-- **Database**: MongoDB
+- **Database**: MongoDB Atlas
 - **Payments**: Viva Payments (direct card payments)
 - **Auth**: Google OAuth + JWT
 - **Email**: Resend API
-- **Deployment**: Railway (backend), Hostinger (frontend)
 
-## Deployment Structure
-```
-/app/
-├── Dockerfile              # Railway build config
-├── requirements.txt        # Python dependencies (root)
-├── backend/
-│   ├── server.py          # Main backend (3941 lines)
-│   └── requirements.txt   # Backend dependencies
-└── frontend/
-    └── ... (deployed to Hostinger)
-```
+## Bug Fixes Applied (March 6, 2026)
 
-## Key Endpoints
-- `/api/health` - Health check for Railway
-- `/api/competitions/*` - Competition CRUD
-- `/api/tickets/*` - Ticket operations
-- `/api/tickets/purchase-viva` - Direct Viva payment
-- `/api/admin/*` - Admin operations
-- `/api/webhooks/viva` - Payment webhook
+### Python Backend (server.py)
+1. ✅ Removed duplicate `AdminUserUpdate` class (lines 273-276)
+2. ✅ Fixed undefined function `draw_competition_winner` → changed to `auto_draw_winner`
+3. ✅ Fixed 3 f-strings without placeholders
+4. ✅ Removed duplicate `health_check` function
+5. ✅ All lint errors resolved
 
-## Changelog
+### Frontend (React/JavaScript)
+- ✅ No ESLint errors found - code is clean
 
-### March 2, 2026 - Major Cleanup
-- ✅ Removed Lucky Wheel completely (3 endpoints)
-- ✅ Removed wallet/deposit endpoint
-- ✅ Added /api/health endpoint
-- ✅ Fixed Railway deployment with correct Dockerfile
-- ✅ Frontend updated on Hostinger (no wallet/lucky wheel UI)
-- ✅ FAQ & Terms updated (no wallet references)
-
-## Credentials
-- Admin: contact@x67digital.com / Credcada1.
-- Hostinger SSH: ssh -p 65002 u485600077@82.25.102.184 / Credcada1.
-- GitHub: dmadalin29-cmd/zektrix-backend
+## Deployment Notes
+- MongoDB URL: mongodb+srv://X67digital:***@cluster0.eqecncg.mongodb.net
+- Backend runs on Railway (https://zektrix-backend-production.up.railway.app)
+- Frontend hosted on Hostinger
 
 ## Backlog
 - P1: Full PWA responsiveness review
-- P2: Refactor server.py (3941 lines - still large)
 - P2: Google Analytics & Facebook Pixel
 - P3: Privacy Policy page
