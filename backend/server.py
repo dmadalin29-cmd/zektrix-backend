@@ -115,6 +115,11 @@ app = FastAPI(title="Zektrix UK Competition Platform")
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer(auto_error=False)
 
+# Health endpoint
+@api_router.get("/health")
+async def health_check():
+    return {"status": "ok", "service": "zektrix-backend"}
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
