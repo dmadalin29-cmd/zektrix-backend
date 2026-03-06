@@ -2830,11 +2830,6 @@ async def competition_websocket(websocket: WebSocket, competition_id: str):
 # ==================== PUBLIC ROUTES ====================
 
 
-@api_router.get("/health")
-async def health_check():
-    """Health check endpoint for Railway"""
-    return {"status": "healthy", "service": "zektrix-backend"}
-
 @api_router.get("/")
 async def root():
     return {"message": "Zektrix UK Competition Platform API", "version": "2.0.0"}
