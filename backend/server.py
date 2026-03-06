@@ -3284,13 +3284,13 @@ async def create_auto_competition(template: dict) -> dict:
         "competition_type": "instant_win",
         "category": template["category"],
         "status": "active",
-        "image_url": f"https://images.unsplash.com/photo-1621981386829-9b458a2cddde?w=800&q=80",  # Cash/money image
+        "image_url": "https://images.unsplash.com/photo-1621981386829-9b458a2cddde?w=800&q=80",  # Cash/money image
         "prize_description": f"{template['prize_amount']} RON în numerar",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "is_auto_managed": True,
         "auto_prize_amount": template["prize_amount"],
         "qualification_question": {
-            "question": f"Cât de mult este premiul acestei competiții?",
+            "question": "Cât de mult este premiul acestei competiții?",
             "options": [f"{template['prize_amount']} RON", f"{template['prize_amount'] + 500} RON"],
             "correct_answer": 0
         }
