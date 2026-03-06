@@ -1,0 +1,18 @@
+# Zektrix UK - Robots.txt
+User-agent: *
+Allow: /
+Allow: /competitions
+Allow: /winners
+Allow: /faq
+Allow: /terms
+Allow: /search
+
+Disallow: /admin
+Disallow: /api/
+Disallow: /dashboard
+
+# Sitemaps
+Sitemap: https://zektrix.uk/sitemap.xml
+
+# Crawl-delay (optional - be nice to servers)
+Crawl-delay: 1
