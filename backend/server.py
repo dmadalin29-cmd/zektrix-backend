@@ -3266,7 +3266,7 @@ async def check_and_recreate_permanent_competition():
     # Check if it's full and needs winner draw
     if active_perm["sold_tickets"] >= active_perm["max_tickets"]:
         # Draw winner and create new one
-        await draw_competition_winner(active_perm["competition_id"])
+        await auto_draw_winner(active_perm["competition_id"])
         await create_permanent_competition()
         logger.info("[PERMANENT-BOT] Drew winner and created new permanent competition")
 
