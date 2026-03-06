@@ -270,11 +270,6 @@ class WinnerResponse(BaseModel):
     announced_at: datetime
     is_automatic: bool
 
-class AdminUserUpdate(BaseModel):
-    balance_change: Optional[float] = None
-    role: Optional[str] = None
-    new_password: Optional[str] = None
-
 class TicketSearchResult(BaseModel):
     username: str
     tickets: List[TicketResponse]
