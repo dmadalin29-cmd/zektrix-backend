@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 const AuthCallback = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { processGoogleCallback } = useAuth();
+    const { loginWithGoogle } = useAuth();
     const hasProcessed = useRef(false);
 
     useEffect(() => {
@@ -20,7 +20,7 @@ const AuthCallback = () => {
                 
                 if (sessionIdMatch) {
                     const sessionId = sessionIdMatch[1];
-                    await processGoogleCallback(sessionId);
+                    await loginWithGoogle(sessionId);
                     navigate('/dashboard', { replace: true });
                 } else {
                     navigate('/login', { replace: true });
@@ -32,7 +32,7 @@ const AuthCallback = () => {
         };
 
         processAuth();
-    }, [location, navigate, processGoogleCallback]);
+    }, [location, navigate, loginWithGoogle]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background">
