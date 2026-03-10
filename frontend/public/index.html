@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ro">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+        <meta name="theme-color" content="#0a0614" />
+        
+        <!-- SEO Meta Tags -->
+        <meta name="description" content="Zektrix UK - Platformă de competiții online nr.1 din UK. Participă la tombole exclusive pentru mașini de lux, electronice, premii în bani și multe altele. Bilete accesibile, extrageri transparente!" />
+        <meta name="keywords" content="competiții UK, tombole online, premii mașini, câștigă premii, bilete tombola, competiții România, premii electronice, extrageri live, zektrix, tombola UK, competitions UK, prize draw, win prizes, luxury car competition" />
+        <meta name="author" content="Zektrix UK" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <meta name="googlebot" content="index, follow" />
+        <meta name="google-site-verification" content="gLDMFt7phPWcdOeaoTc8lL0iowirzUZ4rDa1eiSKSL8" />
+        <link rel="canonical" href="https://zektrix.uk" />
+        
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://zektrix.uk/" />
+        <meta property="og:title" content="Zektrix UK - Competiții Exclusive cu Premii Uimitoare" />
+        <meta property="og:description" content="Participă la competiții pentru mașini de lux, electronice și premii în bani. Bilete accesibile, extrageri transparente. Intrare poștală gratuită disponibilă!" />
+        <meta property="og:image" content="https://zektrix.uk/og-image.png" />
+        <meta property="og:locale" content="ro_RO" />
+        <meta property="og:locale:alternate" content="en_GB" />
+        <meta property="og:site_name" content="Zektrix UK" />
+        
+        <!-- Twitter -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://zektrix.uk/" />
+        <meta name="twitter:title" content="Zektrix UK - Competiții Exclusive cu Premii Uimitoare" />
+        <meta name="twitter:description" content="Participă la competiții pentru mașini de lux, electronice și premii în bani. Bilete accesibile!" />
+        <meta name="twitter:image" content="https://zektrix.uk/og-image.png" />
+        
+        <!-- iOS PWA -->
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Zektrix" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+        
+        <!-- Android PWA -->
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="Zektrix" />
+        
+        <!-- Geo Tags -->
+        <meta name="geo.region" content="GB" />
+        <meta name="geo.placename" content="United Kingdom" />
+        
+        <!-- Cache Control -->
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+        
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        
+        <title>Zektrix UK - Competiții Exclusive | Premii Mașini, Electronice & Bani</title>
+        
+        <!-- Structured Data / Schema.org -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "Zektrix UK",
+            "alternateName": ["Zektrix", "Zektrix Competitions"],
+            "url": "https://zektrix.uk",
+            "description": "Platformă de competiții online nr.1 din UK. Participă la tombole exclusive pentru mașini de lux, electronice și premii în bani.",
+            "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://zektrix.uk/search?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+            }
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Zektrix UK",
+            "url": "https://zektrix.uk",
+            "logo": "https://zektrix.uk/icon-512.png",
+            "contactPoint": {
+                "@type": "ContactPoint",
+                "email": "support@zektrix.uk",
+                "contactType": "customer service",
+                "availableLanguage": ["Romanian", "English"]
+            },
+            "sameAs": [
+                "https://www.tiktok.com/@x67digital.com"
+            ]
+        }
+        </script>
+        
+        <!-- iOS Safe Area CSS -->
+        <style>
+            :root {
+                --sat: env(safe-area-inset-top);
+                --sar: env(safe-area-inset-right);
+                --sab: env(safe-area-inset-bottom);
+                --sal: env(safe-area-inset-left);
+            }
+            body {
+                padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            }
+        </style>
+    </head>
+    <body>
+        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <div id="root"></div>
+        
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then(function(registration) {
+                            console.log('ServiceWorker registration successful');
+                            setInterval(function() { registration.update(); }, 60000);
+                            registration.addEventListener('updatefound', function() {
+                                var newWorker = registration.installing;
+                                newWorker.addEventListener('statechange', function() {
+                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        if (confirm('O nouă versiune este disponibilă! Reîncarcă pentru a actualiza?')) {
+                                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                            window.location.reload();
+                                        }
+                                    }
+                                });
+                            });
+                        })
+                        .catch(function(err) {
+                            console.log('ServiceWorker registration failed: ', err);
+                        });
+                });
+                navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    window.location.reload();
+                });
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,73 @@
+{
+  "timestamp": "2026-03-10T13:52:28.133970",
+  "backend_url": "http://localhost:8001",
+  "total_tests": 8,
+  "passed_tests": 8,
+  "success_rate": 1.0,
+  "results": [
+    {
+      "test_name": "Health Check",
+      "success": true,
+      "message": "Health endpoint responding correctly: {'status': 'ok', 'service': 'zektrix-backend'}",
+      "expected": "",
+      "actual": "",
+      "timestamp": "2026-03-10T13:52:27.786625"
+    },
+    {
+      "test_name": "Competitions API",
+      "success": true,
+      "message": "Retrieved 5 competitions",
+      "expected": "",
+      "actual": "",
+      "timestamp": "2026-03-10T13:52:27.900580"
+    },
+    {
+      "test_name": "Competition Type Field",
+      "success": true,
+      "message": "All 5 tested competitions have valid competition_type field",
+      "expected": "",
+      "actual": "",
+      "timestamp": "2026-03-10T13:52:27.900608"
+    },
+    {
+      "test_name": "Competition Type Filter (classic)",
+      "success": true,
+      "message": "Filter by classic returned 1 competitions",
+      "expected": "",
+      "actual": "",
+      "timestamp": "2026-03-10T13:52:28.014363"
+    },
+    {
+      "test_name": "Competition Type Filter (instant_win)",
+      "success": true,
+      "message": "Filter by instant_win returned 4 competitions",
+      "expected": "",
+      "actual": "",
+      "timestamp": "2026-03-10T13:52:28.128470"
+    },
+    {
+      "test_name": "Auth Endpoint /auth/register",
+      "success": true,
+      "message": "Endpoint exists (status 422)",
+      "expected": "",
+      "actual": "",
+      "timestamp": "2026-03-10T13:52:28.130221"
+    },
+    {
+      "test_name": "Auth Endpoint /auth/login",
+      "success": true,
+      "message": "Endpoint exists (status 422)",
+      "expected": "",
+      "actual": "",
+      "timestamp": "2026-03-10T13:52:28.131599"
+    },
+    {
+      "test_name": "Auth Endpoint /auth/me",
+      "success": true,
+      "message": "GET endpoint exists (status 401)",
+      "expected": "",
+      "actual": "",
+      "timestamp": "2026-03-10T13:52:28.133806"
+    }
+  ]
+}
