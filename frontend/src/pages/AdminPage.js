@@ -224,7 +224,7 @@ const AdminPage = () => {
                 axios.get(`${API}/admin/stats`, { headers: { Authorization: `Bearer ${token}` }}).catch(() => ({ data: {} })),
                 axios.get(`${API}/competitions`).catch(() => ({ data: [] })),
                 axios.get(`${API}/admin/users`, { headers: { Authorization: `Bearer ${token}` }}).catch(() => ({ data: [] })),
-                axios.get(`${API}/admin/locuri`, { headers: { Authorization: `Bearer ${token}` }}).catch(() => ({ data: [] })),
+                axios.get(`${API}/admin/tickets`, { headers: { Authorization: `Bearer ${token}` }}).catch(() => ({ data: [] })),
                 axios.get(`${API}/winners`).catch(() => ({ data: [] }))
             ]);
             setStats(statsRes.data);
