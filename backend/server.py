@@ -2161,7 +2161,9 @@ async def get_all_tickets(
     competition_id: Optional[str] = None,
     user_id: Optional[str] = None,
     username: Optional[str] = None,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    limit: int = 200,
+    skip: int = 0
 ):
     query = {}
     if competition_id:
@@ -2194,11 +2196,23 @@ async def get_all_tickets(
             else:
                 return []  # No matching users found
     
-    tickets = await db.tickets.find(query, {"_id": 0}).sort("purchased_at", -1).to_list(10000)
+    tickets = await db.tickets.find(query, {"_id": 0}).sort("purchased_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    # Add user details and competition title to tickets
+    if not tickets:
+        return tickets
+    
+    # Batch fetch all users and competitions at once (instead of N+1 queries)
+    user_ids = list(set(t["user_id"] for t in tickets))
+    comp_ids = list(set(t["competition_id"] for t in tickets))
+    
+    users_list = await db.users.find({"user_id": {"$in": user_ids}}, {"_id": 0}).to_list(len(user_ids))
+    comps_list = await db.competitions.find({"competition_id": {"$in": comp_ids}}, {"_id": 0, "competition_id": 1, "title": 1}).to_list(len(comp_ids))
+    
+    users_map = {u["user_id"]: u for u in users_list}
+    comps_map = {c["competition_id"]: c.get("title", "Unknown") for c in comps_list}
+    
     for ticket in tickets:
-        user = await db.users.find_one({"user_id": ticket["user_id"]}, {"_id": 0})
+        user = users_map.get(ticket["user_id"])
         if user:
             ticket["username"] = user.get("username", "Unknown")
             ticket["first_name"] = user.get("first_name", "")
@@ -2212,9 +2226,7 @@ async def get_all_tickets(
             ticket["phone"] = ""
             ticket["email"] = ""
         
-        # Add competition title
-        comp = await db.competitions.find_one({"competition_id": ticket["competition_id"]}, {"_id": 0})
-        ticket["competition_title"] = comp.get("title", "Unknown") if comp else "Unknown"
+        ticket["competition_title"] = comps_map.get(ticket["competition_id"], "Unknown")
     
     return tickets
 
@@ -2351,57 +2363,65 @@ async def set_tiktok_live_status(is_live: bool, tiktok_url: Optional[str] = None
 
 @api_router.get("/admin/analytics")
 async def get_analytics(admin: dict = Depends(get_admin_user)):
-    """Get comprehensive analytics for admin dashboard"""
-    # Basic counts
-    total_users = await db.users.count_documents({})
-    total_tickets = await db.tickets.count_documents({})
-    total_competitions = await db.competitions.count_documents({})
-    active_competitions = await db.competitions.count_documents({"status": "active"})
-    completed_competitions = await db.competitions.count_documents({"status": "completed"})
-    total_winners = await db.winners.count_documents({})
+    """Get comprehensive analytics for admin dashboard - optimized"""
+    import asyncio
     
-    # Revenue calculation from ALL completed transactions
-    all_transactions = await db.transactions.find(
-        {"status": "completed"},
-        {"_id": 0, "amount": 1, "created_at": 1}
-    ).to_list(10000)
+    # Run all independent queries in parallel
+    counts_task = asyncio.gather(
+        db.users.count_documents({}),
+        db.tickets.count_documents({}),
+        db.competitions.count_documents({}),
+        db.competitions.count_documents({"status": "active"}),
+        db.competitions.count_documents({"status": "completed"}),
+        db.winners.count_documents({}),
+        db.referrals.count_documents({"status": "completed"})
+    )
     
-    total_revenue = sum(abs(t.get("amount", 0)) for t in all_transactions if t.get("amount", 0) > 0)
-    
-    # Average tickets per user
-    avg_tickets = total_tickets / total_users if total_users > 0 else 0
-    
-    # Revenue by day (last 30 days)
     thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
     
-    revenue_by_day = {}
-    for t in all_transactions:
-        created = t.get("created_at", "")
-        if created >= thirty_days_ago and t.get("amount", 0) > 0:
-            day = created[:10]
-            revenue_by_day[day] = revenue_by_day.get(day, 0) + t["amount"]
+    # Revenue aggregation pipeline (much faster than loading all docs)
+    revenue_pipeline = [
+        {"$match": {"status": "completed", "amount": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    revenue_task = db.transactions.aggregate(revenue_pipeline).to_list(1)
     
-    revenue_by_day_list = [{"date": k, "revenue": v} for k, v in sorted(revenue_by_day.items())]
+    # Revenue by day pipeline
+    revenue_day_pipeline = [
+        {"$match": {"status": "completed", "amount": {"$gt": 0}, "created_at": {"$gte": thirty_days_ago}}},
+        {"$addFields": {"day": {"$substr": ["$created_at", 0, 10]}}},
+        {"$group": {"_id": "$day", "revenue": {"$sum": "$amount"}}},
+        {"$sort": {"_id": 1}}
+    ]
+    revenue_day_task = db.transactions.aggregate(revenue_day_pipeline).to_list(30)
     
-    # Top competitions by tickets sold
-    competitions = await db.competitions.find({}, {"_id": 0}).sort("sold_tickets", -1).to_list(10)
+    # Top competitions
+    top_comps_task = db.competitions.find({}, {"_id": 0, "title": 1, "sold_tickets": 1, "max_tickets": 1, "ticket_price": 1}).sort("sold_tickets", -1).limit(10).to_list(10)
+    
+    # User growth
+    user_growth_pipeline = [
+        {"$match": {"created_at": {"$gte": thirty_days_ago}}},
+        {"$addFields": {"day": {"$substr": ["$created_at", 0, 10]}}},
+        {"$group": {"_id": "$day", "users": {"$sum": 1}}},
+        {"$sort": {"_id": 1}}
+    ]
+    user_growth_task = db.users.aggregate(user_growth_pipeline).to_list(30)
+    
+    # Await all in parallel
+    counts, revenue_result, revenue_by_day_result, competitions, user_growth_result = await asyncio.gather(
+        counts_task, revenue_task, revenue_day_task, top_comps_task, user_growth_task
+    )
+    
+    total_users, total_tickets, total_competitions, active_competitions, completed_competitions, total_winners, total_referrals = counts
+    total_revenue = revenue_result[0]["total"] if revenue_result else 0
+    avg_tickets = total_tickets / total_users if total_users > 0 else 0
+    
+    revenue_by_day_list = [{"date": r["_id"], "revenue": r["revenue"]} for r in revenue_by_day_result]
     top_competitions = [
         {"title": c["title"], "sold": c["sold_tickets"], "max": c["max_tickets"], "revenue": c["sold_tickets"] * c["ticket_price"]}
         for c in competitions
     ]
-    
-    # User growth by day (last 30 days)
-    users = await db.users.find({"created_at": {"$gte": thirty_days_ago}}, {"_id": 0, "created_at": 1}).to_list(10000)
-    user_growth = {}
-    for u in users:
-        day = u.get("created_at", "")[:10]
-        user_growth[day] = user_growth.get(day, 0) + 1
-    
-    user_growth_list = [{"date": k, "users": v} for k, v in sorted(user_growth.items())]
-    
-    # Referral stats
-    total_referrals = await db.referrals.count_documents({"status": "completed"})
-    referral_bonus_paid = total_referrals * 5  # £5 per referral
+    user_growth_list = [{"date": u["_id"], "users": u["users"]} for u in user_growth_result]
     
     return {
         "total_revenue": round(total_revenue, 2),
@@ -2416,7 +2436,7 @@ async def get_analytics(admin: dict = Depends(get_admin_user)):
         "top_competitions": top_competitions,
         "user_growth": user_growth_list,
         "total_referrals": total_referrals,
-        "referral_bonus_paid": referral_bonus_paid
+        "referral_bonus_paid": total_referrals * 5
     }
 
 # ==================== REFERRAL SYSTEM ====================
@@ -2949,22 +2969,123 @@ async def get_faq_list():
     ]
 
 @api_router.get("/admin/chat/messages")
-async def get_pending_messages(admin: dict = Depends(get_admin_user)):
-    """Get all chat messages with user info"""
-    messages = await db.chat_messages.find(
-        {},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
+async def get_pending_messages(admin: dict = Depends(get_admin_user), status: Optional[str] = None):
+    """Get all chat messages with user info - optimized"""
+    query = {}
+    if status:
+        query["status"] = status
     
-    # Enrich with user info
-    for msg in messages:
-        user = await db.users.find_one({"user_id": msg.get("user_id")}, {"_id": 0, "email": 1, "first_name": 1, "last_name": 1})
-        if user:
-            msg["user_email"] = user.get("email")
-            msg["user_first_name"] = user.get("first_name")
-            msg["user_last_name"] = user.get("last_name")
+    messages = await db.chat_messages.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+    
+    if messages:
+        # Batch fetch all users at once
+        user_ids = list(set(m.get("user_id") for m in messages if m.get("user_id")))
+        users_list = await db.users.find({"user_id": {"$in": user_ids}}, {"_id": 0, "user_id": 1, "email": 1, "first_name": 1, "last_name": 1}).to_list(len(user_ids))
+        users_map = {u["user_id"]: u for u in users_list}
+        
+        for msg in messages:
+            user = users_map.get(msg.get("user_id"))
+            if user:
+                msg["user_email"] = user.get("email")
+                msg["user_first_name"] = user.get("first_name")
+                msg["user_last_name"] = user.get("last_name")
     
     return messages
+
+@api_router.put("/admin/chat/{message_id}/status")
+async def update_chat_status(message_id: str, request: Request, admin: dict = Depends(get_admin_user)):
+    """Update chat message status (pending/replied/resolved)"""
+    body = await request.json()
+    new_status = body.get("status", "resolved")
+    
+    result = await db.chat_messages.update_one(
+        {"message_id": message_id},
+        {"$set": {"status": new_status, "resolved_at": datetime.now(timezone.utc).isoformat(), "resolved_by": admin.get("username", "Admin")}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return {"message": "Status updated", "status": new_status}
+
+@api_router.delete("/admin/chat/{message_id}")
+async def delete_chat_message(message_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a chat message/conversation"""
+    result = await db.chat_messages.delete_one({"message_id": message_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return {"message": "Conversation deleted"}
+
+class AdminEmailReply(BaseModel):
+    message_id: str
+    reply: str
+    user_email: str
+
+@api_router.post("/admin/chat/reply-email")
+async def admin_reply_email(data: AdminEmailReply, admin: dict = Depends(get_admin_user)):
+    """Reply to user via email and update chat status"""
+    # Update message in DB
+    await db.chat_messages.update_one(
+        {"message_id": data.message_id},
+        {"$set": {
+            "status": "replied",
+            "admin_reply": data.reply,
+            "replied_at": datetime.now(timezone.utc).isoformat(),
+            "replied_by": admin.get("username", "Admin"),
+            "replied_via": "email"
+        }}
+    )
+    
+    # Send email
+    try:
+        email_html = f"""
+        <div style="font-family: Arial; padding: 20px; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 20px; border-radius: 12px 12px 0 0;">
+                <h2 style="color: white; margin: 0;">Zektrix UK - Suport</h2>
+            </div>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 0 0 12px 12px;">
+                <p style="color: #374151;">Răspunsul echipei noastre de suport:</p>
+                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #8b5cf6; margin: 15px 0;">
+                    <p style="color: #1f2937; margin: 0;">{data.reply}</p>
+                </div>
+                <p style="color: #6b7280; font-size: 12px;">Dacă ai nevoie de ajutor suplimentar, nu ezita să ne contactezi.</p>
+                <p style="color: #6b7280; font-size: 12px;">Echipa Zektrix UK</p>
+            </div>
+        </div>
+        """
+        resend_api_key = os.environ.get("RESEND_API_KEY")
+        sender = os.environ.get("SENDER_EMAIL", "Zektrix <noreply@x67digital.com>")
+        if resend_api_key:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    "https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {resend_api_key}"},
+                    json={
+                        "from": sender,
+                        "to": data.user_email,
+                        "subject": "Răspuns de la Suport - Zektrix UK",
+                        "html": email_html
+                    }
+                )
+        email_sent = True
+    except Exception as e:
+        logger.error(f"Failed to send reply email: {e}")
+        email_sent = False
+    
+    # Also notify user via WebSocket if online
+    original = await db.chat_messages.find_one({"message_id": data.message_id}, {"_id": 0})
+    if original:
+        await chat_manager.send_to_user(original["user_id"], {
+            "type": "admin_reply",
+            "message_id": data.message_id,
+            "reply": data.reply,
+            "replied_by": admin.get("username", "Admin"),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+    
+    return {"message": "Reply sent", "email_sent": email_sent}
 
 class AdminChatReply(BaseModel):
     message_id: str

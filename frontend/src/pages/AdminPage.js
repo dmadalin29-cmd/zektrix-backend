@@ -201,6 +201,7 @@ const AdminPage = () => {
     const [locuri, setTickets] = useState([]);
     const [winners, setWinners] = useState([]);
     const [chatMsgs, setChatMsgs] = useState([]);
+    const [chatFilter, setChatFilter] = useState('all');
     const [liveStatus, setLiveStatus] = useState({ isLive: false, message: '' });
     const [analyticsData, setAnalyticsData] = useState(null);
 
@@ -314,6 +315,11 @@ const AdminPage = () => {
         if (!analyticsData?.top_competitions?.length) return [0];
         return analyticsData.top_competitions.slice(0, 12).map(c => c.sold || 0);
     }, [analyticsData]);
+
+    const filteredChat = useMemo(() => {
+        if (chatFilter === 'all') return chatMsgs;
+        return chatMsgs.filter(m => m.status === chatFilter);
+    }, [chatMsgs, chatFilter]);
 
     // AI Generate
     const generateAI = async () => {
@@ -1185,20 +1191,31 @@ const AdminPage = () => {
                     {/* ============== CHAT TAB ============== */}
                     {tab === 'chat' && (
                         <div className="space-y-4">
-                            <div className="flex items-center gap-3 mb-4">
+                            <div className="flex flex-wrap items-center gap-3 mb-4">
                                 <Badge className="bg-violet-500/20 text-violet-400 px-3 py-1.5">{chatMsgs.length} Mesaje</Badge>
                                 <Badge className="bg-yellow-500/20 text-yellow-400 px-3 py-1.5">{chatMsgs.filter(m => m.status === 'pending').length} Nerezolvate</Badge>
+                                <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{chatMsgs.filter(m => m.status === 'resolved').length} Rezolvate</Badge>
+                                <div className="flex gap-1 ml-auto">
+                                    {['all', 'pending', 'replied', 'resolved'].map(f => (
+                                        <Button key={f} size="sm" variant={chatFilter === f ? 'default' : 'outline'}
+                                            className={chatFilter === f ? 'bg-violet-600 text-white' : 'border-white/10 text-gray-400'}
+                                            onClick={() => setChatFilter(f)} data-testid={`chat-filter-${f}`}>
+                                            {f === 'all' ? 'Toate' : f === 'pending' ? 'Nerezolvate' : f === 'replied' ? 'Răspuns' : 'Rezolvate'}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
                             <div className="space-y-3">
-                                {chatMsgs.length === 0 ? (
+                                {filteredChat.length === 0 ? (
                                     <EmptyState icon={MessageCircle} title="Niciun mesaj" description="Mesajele de la utilizatori vor apărea aici." />
-                                ) : chatMsgs.map((m) => (
+                                ) : filteredChat.map((m) => (
                                     <div key={m.message_id} 
-                                        className={`rounded-2xl p-5 transition-all ${m.status === 'replied' ? 'opacity-70' : ''}`}
+                                        className={`rounded-2xl p-5 transition-all ${m.status === 'resolved' ? 'opacity-60' : ''}`}
                                         style={{
                                             background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
-                                            border: m.status === 'pending' ? '1px solid rgba(251, 191, 36, 0.3)' : '1px solid rgba(139, 92, 246, 0.15)'
+                                            border: m.status === 'pending' ? '1px solid rgba(251, 191, 36, 0.3)' : m.status === 'resolved' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(139, 92, 246, 0.15)'
                                         }}
+                                        data-testid={`chat-msg-${m.message_id}`}
                                     >
                                         <div className="flex items-start gap-4">
                                             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -1206,11 +1223,47 @@ const AdminPage = () => {
                                                 <User className="w-6 h-6 text-violet-300" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <p className="font-bold text-white">{m.username}</p>
-                                                    <Badge className={m.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-400'}>
-                                                        {m.status === 'pending' ? 'Așteaptă răspuns' : 'Răspuns trimis'}
-                                                    </Badge>
+                                                <div className="flex items-center justify-between gap-2 mb-2">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <p className="font-bold text-white">{m.username || `${m.user_first_name || ''} ${m.user_last_name || ''}`.trim() || 'User'}</p>
+                                                        {m.user_email && <p className="text-xs text-gray-500">{m.user_email}</p>}
+                                                        <Badge className={
+                                                            m.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 
+                                                            m.status === 'resolved' ? 'bg-emerald-500/20 text-emerald-400' : 
+                                                            'bg-blue-500/20 text-blue-400'
+                                                        }>
+                                                            {m.status === 'pending' ? 'Așteaptă' : m.status === 'resolved' ? 'Rezolvat' : 'Răspuns trimis'}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                                        {m.status !== 'resolved' && (
+                                                            <Button size="sm" variant="outline" className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 h-8 text-xs"
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await axios.put(`${API}/admin/chat/${m.message_id}/status`, { status: 'resolved' }, { headers: { Authorization: `Bearer ${token}` }});
+                                                                        setChatMsgs(prev => prev.map(msg => msg.message_id === m.message_id ? { ...msg, status: 'resolved' } : msg));
+                                                                        toast.success('Marcat ca rezolvat');
+                                                                    } catch { toast.error('Eroare'); }
+                                                                }}
+                                                                data-testid={`resolve-${m.message_id}`}
+                                                            >
+                                                                <CheckCircle className="w-3 h-3 mr-1" /> Rezolvat
+                                                            </Button>
+                                                        )}
+                                                        <Button size="sm" variant="outline" className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-8 text-xs"
+                                                            onClick={async () => {
+                                                                if (!window.confirm('Ștergi conversația?')) return;
+                                                                try {
+                                                                    await axios.delete(`${API}/admin/chat/${m.message_id}`, { headers: { Authorization: `Bearer ${token}` }});
+                                                                    setChatMsgs(prev => prev.filter(msg => msg.message_id !== m.message_id));
+                                                                    toast.success('Conversație ștearsă');
+                                                                } catch { toast.error('Eroare'); }
+                                                            }}
+                                                            data-testid={`delete-${m.message_id}`}
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                                 <p className="text-xs text-gray-500 mb-3">{new Date(m.created_at).toLocaleString('ro-RO')}</p>
                                                 <div className="p-3 rounded-xl bg-white/5 mb-3">
@@ -1219,32 +1272,59 @@ const AdminPage = () => {
                                                 {m.admin_reply && (
                                                     <div className="p-3 rounded-xl mb-3"
                                                         style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05))', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                                                        <p className="text-xs text-emerald-400 mb-1">Răspunsul tău:</p>
+                                                        <p className="text-xs text-emerald-400 mb-1">Răspuns ({m.replied_via === 'email' ? 'email' : 'chat'}):</p>
                                                         <p className="text-gray-300">{m.admin_reply}</p>
                                                     </div>
                                                 )}
-                                                {m.status === 'pending' && (
-                                                    <div className="flex gap-2">
+                                                {m.status !== 'resolved' && (
+                                                    <div className="flex flex-col gap-2">
                                                         <Input 
                                                             id={`reply-${m.message_id}`}
                                                             placeholder="Scrie răspunsul..." 
-                                                            className="bg-white/5 border-white/10 flex-1"
+                                                            className="bg-white/5 border-white/10"
+                                                            data-testid={`reply-input-${m.message_id}`}
                                                         />
-                                                        <Button 
-                                                            onClick={async () => {
-                                                                const input = document.getElementById(`reply-${m.message_id}`);
-                                                                const reply = input?.value;
-                                                                if (!reply) { toast.error('Scrie un răspuns'); return; }
-                                                                try {
-                                                                    await axios.post(`${API}/admin/chat/reply`, { message_id: m.message_id, reply }, { headers: { Authorization: `Bearer ${token}` }});
-                                                                    toast.success('Răspuns trimis!');
-                                                                    fetchAll();
-                                                                } catch { toast.error('Eroare'); }
-                                                            }}
-                                                            className="bg-violet-600 hover:bg-violet-500"
-                                                        >
-                                                            Trimite
-                                                        </Button>
+                                                        <div className="flex gap-2">
+                                                            <Button 
+                                                                onClick={async () => {
+                                                                    const input = document.getElementById(`reply-${m.message_id}`);
+                                                                    const reply = input?.value;
+                                                                    if (!reply) { toast.error('Scrie un răspuns'); return; }
+                                                                    try {
+                                                                        await axios.post(`${API}/admin/chat/reply`, { message_id: m.message_id, reply }, { headers: { Authorization: `Bearer ${token}` }});
+                                                                        setChatMsgs(prev => prev.map(msg => msg.message_id === m.message_id ? { ...msg, status: 'replied', admin_reply: reply } : msg));
+                                                                        input.value = '';
+                                                                        toast.success('Răspuns trimis în chat!');
+                                                                    } catch { toast.error('Eroare'); }
+                                                                }}
+                                                                className="bg-violet-600 hover:bg-violet-500 flex-1"
+                                                                data-testid={`reply-chat-${m.message_id}`}
+                                                            >
+                                                                <MessageCircle className="w-4 h-4 mr-2" /> Răspunde în Chat
+                                                            </Button>
+                                                            {m.user_email && (
+                                                                <Button 
+                                                                    onClick={async () => {
+                                                                        const input = document.getElementById(`reply-${m.message_id}`);
+                                                                        const reply = input?.value;
+                                                                        if (!reply) { toast.error('Scrie un răspuns'); return; }
+                                                                        try {
+                                                                            await axios.post(`${API}/admin/chat/reply-email`, 
+                                                                                { message_id: m.message_id, reply, user_email: m.user_email }, 
+                                                                                { headers: { Authorization: `Bearer ${token}` }});
+                                                                            setChatMsgs(prev => prev.map(msg => msg.message_id === m.message_id ? { ...msg, status: 'replied', admin_reply: reply, replied_via: 'email' } : msg));
+                                                                            input.value = '';
+                                                                            toast.success(`Email trimis la ${m.user_email}`);
+                                                                        } catch { toast.error('Eroare la trimitere email'); }
+                                                                    }}
+                                                                    variant="outline"
+                                                                    className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
+                                                                    data-testid={`reply-email-${m.message_id}`}
+                                                                >
+                                                                    <Mail className="w-4 h-4 mr-2" /> Email
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
