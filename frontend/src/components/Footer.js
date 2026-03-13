@@ -66,6 +66,12 @@ const Footer = () => {
                                     {t('footer_faq')}
                                 </Link>
                             </li>
+                            <li>
+                                <Link to="/privacy" className="text-sm text-muted-foreground hover:text-white transition-colors flex items-center gap-2">
+                                    <FileText className="w-4 h-4" />
+                                    Politica de Confidențialitate
+                                </Link>
+                            </li>
                         </ul>
                     </div>
 

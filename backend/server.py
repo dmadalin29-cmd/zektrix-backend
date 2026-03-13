@@ -2727,6 +2727,167 @@ FAQ_RESPONSES = {
     "roata norocului": "Invarte roata zilnic pentru sansa de a castiga bani, bilete gratuite sau bonusuri! O singura invartire pe zi.",
 }
 
+# Chat WebSocket Manager
+class ChatManager:
+    def __init__(self):
+        self.user_connections: Dict[str, WebSocket] = {}
+        self.admin_connections: List[WebSocket] = []
+
+    async def connect_user(self, ws: WebSocket, user_id: str):
+        await ws.accept()
+        self.user_connections[user_id] = ws
+
+    def disconnect_user(self, user_id: str):
+        self.user_connections.pop(user_id, None)
+
+    async def connect_admin(self, ws: WebSocket):
+        await ws.accept()
+        self.admin_connections.append(ws)
+
+    def disconnect_admin(self, ws: WebSocket):
+        if ws in self.admin_connections:
+            self.admin_connections.remove(ws)
+
+    async def send_to_user(self, user_id: str, message: dict):
+        ws = self.user_connections.get(user_id)
+        if ws:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                self.disconnect_user(user_id)
+
+    async def send_to_admins(self, message: dict):
+        dead = []
+        for ws in self.admin_connections:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect_admin(ws)
+
+chat_manager = ChatManager()
+
+async def verify_ws_token(token: str):
+    """Verify JWT token for WebSocket connections"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user = await db.users.find_one({"user_id": payload["user_id"]}, {"_id": 0})
+        return user
+    except Exception:
+        return None
+
+@app.websocket("/ws/chat/user")
+async def ws_chat_user(websocket: WebSocket, token: str = Query(...)):
+    user = await verify_ws_token(token)
+    if not user:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+    user_id = user["user_id"]
+    await chat_manager.connect_user(websocket, user_id)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            if data.get("type") == "message":
+                msg_text = data.get("message", "").strip()
+                if not msg_text:
+                    continue
+                # Check FAQ first
+                faq_response = None
+                for keyword, response in FAQ_RESPONSES.items():
+                    if keyword in msg_text.lower():
+                        faq_response = response
+                        break
+                if faq_response:
+                    await chat_manager.send_to_user(user_id, {
+                        "type": "faq_response",
+                        "message": faq_response,
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    })
+                else:
+                    msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+                    msg_doc = {
+                        "message_id": msg_id,
+                        "user_id": user_id,
+                        "username": user.get("username", user.get("first_name", "User")),
+                        "user_email": user.get("email", ""),
+                        "message": msg_text,
+                        "status": "pending",
+                        "admin_reply": None,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    await db.chat_messages.insert_one({**msg_doc})
+                    await chat_manager.send_to_user(user_id, {
+                        "type": "message_sent",
+                        "message_id": msg_id,
+                        "message": msg_text,
+                        "timestamp": msg_doc["created_at"]
+                    })
+                    await chat_manager.send_to_admins({
+                        "type": "new_message",
+                        "message_id": msg_id,
+                        "user_id": user_id,
+                        "username": msg_doc["username"],
+                        "user_email": msg_doc["user_email"],
+                        "message": msg_text,
+                        "status": "pending",
+                        "created_at": msg_doc["created_at"]
+                    })
+    except WebSocketDisconnect:
+        chat_manager.disconnect_user(user_id)
+
+@app.websocket("/ws/chat/admin")
+async def ws_chat_admin(websocket: WebSocket, token: str = Query(...)):
+    admin = await verify_ws_token(token)
+    if not admin or admin.get("role") != "admin":
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+    await chat_manager.connect_admin(websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            if data.get("type") == "reply":
+                msg_id = data.get("message_id")
+                reply_text = data.get("reply", "").strip()
+                if not msg_id or not reply_text:
+                    continue
+                original = await db.chat_messages.find_one({"message_id": msg_id}, {"_id": 0})
+                if not original:
+                    continue
+                await db.chat_messages.update_one(
+                    {"message_id": msg_id},
+                    {"$set": {
+                        "status": "replied",
+                        "admin_reply": reply_text,
+                        "replied_at": datetime.now(timezone.utc).isoformat(),
+                        "replied_by": admin.get("username", "Admin")
+                    }}
+                )
+                await chat_manager.send_to_user(original["user_id"], {
+                    "type": "admin_reply",
+                    "message_id": msg_id,
+                    "reply": reply_text,
+                    "replied_by": admin.get("username", "Admin"),
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+                await chat_manager.send_to_admins({
+                    "type": "reply_sent",
+                    "message_id": msg_id,
+                    "reply": reply_text,
+                    "replied_by": admin.get("username", "Admin")
+                })
+    except WebSocketDisconnect:
+        chat_manager.disconnect_admin(websocket)
+
+@api_router.get("/chat/history")
+async def get_chat_history(current_user: dict = Depends(get_current_user)):
+    """Get user's chat history"""
+    messages = await db.chat_messages.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(50)
+    return messages
+
 @api_router.post("/chat/message")
 async def chat_message(msg: ChatMessage, current_user: dict = Depends(get_current_user)):
     """Process chat message - returns FAQ response or forwards to support"""
@@ -2742,18 +2903,34 @@ async def chat_message(msg: ChatMessage, current_user: dict = Depends(get_curren
             }
     
     # No FAQ match - save for support review
-    await db.chat_messages.insert_one({
-        "message_id": f"msg_{uuid.uuid4().hex[:12]}",
+    msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+    msg_doc = {
+        "message_id": msg_id,
         "user_id": current_user["user_id"],
         "username": current_user.get("username", "Unknown"),
+        "user_email": current_user.get("email", ""),
         "message": msg.message,
         "status": "pending",
+        "admin_reply": None,
         "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.chat_messages.insert_one({**msg_doc})
+    
+    # Notify admin via WebSocket
+    await chat_manager.send_to_admins({
+        "type": "new_message",
+        "message_id": msg_id,
+        "user_id": current_user["user_id"],
+        "username": msg_doc["username"],
+        "user_email": msg_doc["user_email"],
+        "message": msg.message,
+        "status": "pending",
+        "created_at": msg_doc["created_at"]
     })
     
     return {
         "type": "support",
-        "response": "Mesajul tau a fost trimis echipei de suport. Vei primi un raspuns in curand pe email!",
+        "response": "Mesajul tau a fost trimis echipei de suport. Vei primi un raspuns in curand!",
         "ticket_created": True
     }
 
@@ -2844,12 +3021,13 @@ async def admin_reply_to_chat(reply: AdminChatReply, admin: dict = Depends(get_a
         except Exception as e:
             logger.error(f"Failed to send chat reply email: {e}")
     
-    # Broadcast to WebSocket if user is online
-    await ws_manager.broadcast_all({
-        "type": "chat_reply",
-        "user_id": original["user_id"],
+    # Broadcast to user via WebSocket chat
+    await chat_manager.send_to_user(original["user_id"], {
+        "type": "admin_reply",
+        "message_id": reply.message_id,
         "reply": reply.reply,
-        "message_id": reply.message_id
+        "replied_by": admin.get("username", "Admin"),
+        "timestamp": datetime.now(timezone.utc).isoformat()
     })
     
     return {"message": "Reply sent successfully", "email_sent": bool(user and user.get("email"))}

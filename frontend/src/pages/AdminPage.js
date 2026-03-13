@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const WS_URL = process.env.REACT_APP_BACKEND_URL?.replace('https://', 'wss://').replace('http://', 'ws://');
 
 // ============== ANIMATED COMPONENTS ==============
 
@@ -247,6 +248,34 @@ const AdminPage = () => {
         fetchAll();
         axios.get(`${API}/settings/tiktok-live`).then(r => setLiveStatus({ isLive: r.data.is_live, message: '', tiktok_url: r.data.tiktok_url })).catch(() => {});
         axios.get(`${API}/admin/chat/messages`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setChatMsgs(r.data)).catch(() => {});
+        
+        // Admin WebSocket for live chat
+        let ws = null;
+        if (token && WS_URL) {
+            try {
+                ws = new WebSocket(`${WS_URL}/ws/chat/admin?token=${token}`);
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'new_message') {
+                        setChatMsgs(prev => [{ 
+                            message_id: data.message_id, user_id: data.user_id,
+                            username: data.username, user_email: data.user_email,
+                            message: data.message, status: 'pending',
+                            created_at: data.created_at, admin_reply: null
+                        }, ...prev]);
+                        toast.info(`Mesaj nou de la ${data.username}`);
+                    } else if (data.type === 'reply_sent') {
+                        setChatMsgs(prev => prev.map(m => 
+                            m.message_id === data.message_id 
+                                ? { ...m, status: 'replied', admin_reply: data.reply, replied_by: data.replied_by }
+                                : m
+                        ));
+                    }
+                };
+                ws.onerror = () => ws.close();
+            } catch (e) { console.error('Admin WS error:', e); }
+        }
+        return () => { if (ws) ws.close(); };
     }, [isAdmin, navigate, fetchAll, token]);
 
     // Real chart data from analytics
