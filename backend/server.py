@@ -175,6 +175,7 @@ class CompetitionCreate(BaseModel):
     draw_date: Optional[str] = None  # ISO date string for countdown
     qualification_question: Optional[QualificationQuestion] = None
     is_free: Optional[bool] = False
+    instant_prizes: Optional[List[dict]] = None  # [{percentage: 39, prize_name: "£50 Cash", prize_description: "..."}, ...]
 
 class CompetitionUpdate(BaseModel):
     title: Optional[str] = None
@@ -190,6 +191,7 @@ class CompetitionUpdate(BaseModel):
     qualification_question: Optional[QualificationQuestion] = None
     postal_entry: Optional[PostalEntry] = None
     is_free: Optional[bool] = None
+    instant_prizes: Optional[List[dict]] = None
 
 class CompetitionResponse(BaseModel):
     competition_id: str
@@ -210,6 +212,7 @@ class CompetitionResponse(BaseModel):
     qualification_question: Optional[QualificationQuestion] = None
     postal_entry: Optional[PostalEntry] = None
     is_free: Optional[bool] = False
+    instant_prizes: Optional[List[dict]] = None
 
 class TicketPurchase(BaseModel):
     competition_id: str
@@ -802,6 +805,29 @@ async def process_session(session_id: str, response: Response):
 async def get_me(current_user: dict = Depends(get_current_user)):
     return {k: v for k, v in current_user.items() if k != "password_hash"}
 
+class ProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    username: Optional[str] = None
+
+@api_router.put("/auth/profile")
+async def update_profile(update: ProfileUpdate, current_user: dict = Depends(get_current_user)):
+    """Update user's own profile"""
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No update data provided")
+    
+    # Check username uniqueness if changing
+    if "username" in update_data:
+        existing = await db.users.find_one({"username": update_data["username"], "user_id": {"$ne": current_user["user_id"]}})
+        if existing:
+            raise HTTPException(status_code=400, detail="Username deja utilizat")
+    
+    await db.users.update_one({"user_id": current_user["user_id"]}, {"$set": update_data})
+    updated_user = await db.users.find_one({"user_id": current_user["user_id"]}, {"_id": 0, "password_hash": 0})
+    return updated_user
+
 @api_router.post("/auth/logout")
 async def logout(response: Response, current_user: dict = Depends(get_current_user)):
     await db.user_sessions.delete_one({"user_id": current_user["user_id"]})
@@ -907,6 +933,65 @@ async def get_competition_tickets(competition_id: str):
 
 # ==================== TICKET PURCHASE ====================
 
+async def check_instant_prizes(competition_id: str, new_sold: int, max_tickets: int):
+    """Check if any instant prize thresholds have been crossed and award them"""
+    comp = await db.competitions.find_one({"competition_id": competition_id}, {"_id": 0})
+    if not comp or not comp.get("instant_prizes"):
+        return
+    
+    current_percent = (new_sold / max_tickets) * 100
+    updated = False
+    
+    for i, prize in enumerate(comp["instant_prizes"]):
+        if prize.get("awarded"):
+            continue
+        if current_percent >= prize.get("percentage", 100):
+            # Award this instant prize!
+            all_tickets = await db.tickets.find({"competition_id": competition_id}, {"_id": 0}).to_list(new_sold)
+            if not all_tickets:
+                continue
+            
+            winner_ticket = random.choice(all_tickets)
+            winner_user = await db.users.find_one({"user_id": winner_ticket["user_id"]}, {"_id": 0})
+            
+            comp["instant_prizes"][i]["awarded"] = True
+            comp["instant_prizes"][i]["winner_user_id"] = winner_ticket["user_id"]
+            comp["instant_prizes"][i]["winner_username"] = winner_user.get("username", "Unknown") if winner_user else "Unknown"
+            comp["instant_prizes"][i]["winner_ticket_number"] = winner_ticket["ticket_number"]
+            comp["instant_prizes"][i]["awarded_at"] = datetime.now(timezone.utc).isoformat()
+            updated = True
+            
+            logger.info(f"Instant prize '{prize.get('prize_name')}' awarded to user {winner_ticket['user_id']} (ticket #{winner_ticket['ticket_number']}) at {current_percent:.1f}% in competition {competition_id}")
+            
+            # Notify via WebSocket
+            await ws_manager.broadcast_all({
+                "type": "instant_prize_awarded",
+                "competition_id": competition_id,
+                "prize_name": prize.get("prize_name"),
+                "winner_username": winner_user.get("username", "Unknown") if winner_user else "Unknown",
+                "ticket_number": winner_ticket["ticket_number"],
+                "percentage": prize.get("percentage")
+            })
+            
+            # Send notification email to winner
+            if winner_user and winner_user.get("email"):
+                try:
+                    await send_winner_notification(
+                        winner_user["email"], 
+                        winner_user.get("username", ""),
+                        comp["title"],
+                        f"Premiu Instant: {prize.get('prize_name', 'Premiu')}",
+                        winner_ticket["ticket_number"]
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send instant prize email: {e}")
+    
+    if updated:
+        await db.competitions.update_one(
+            {"competition_id": competition_id},
+            {"$set": {"instant_prizes": comp["instant_prizes"]}}
+        )
+
 @api_router.post("/tickets/purchase", response_model=List[TicketResponse])
 async def purchase_tickets(purchase: TicketPurchase, current_user: dict = Depends(get_current_user)):
     comp = await db.competitions.find_one({"competition_id": purchase.competition_id}, {"_id": 0})
@@ -1003,6 +1088,9 @@ async def purchase_tickets(purchase: TicketPurchase, current_user: dict = Depend
         {"competition_id": purchase.competition_id},
         {"$set": update_data}
     )
+    
+    # Check and award instant prizes based on percentage thresholds
+    await check_instant_prizes(purchase.competition_id, new_sold, comp["max_tickets"])
     
     # Record transaction
     await db.transactions.insert_one({
@@ -1468,6 +1556,9 @@ async def enter_free_competition(entry: FreeEntryRequest, current_user: dict = D
         {"$set": update_data}
     )
     
+    # Check instant prizes for free entry too
+    await check_instant_prizes(entry.competition_id, new_sold, comp["max_tickets"])
+    
     ticket_doc.pop("_id", None)
     
     return {
@@ -1688,6 +1779,9 @@ async def process_pending_ticket_purchase(pending_id: str):
         {"competition_id": pending["competition_id"]},
         {"$set": update_data}
     )
+    
+    # Check instant prizes after Viva payment
+    await check_instant_prizes(pending["competition_id"], new_sold, comp["max_tickets"])
     
     # Mark pending purchase as completed
     await db.pending_purchases.update_one(
@@ -1935,6 +2029,10 @@ async def create_competition(comp: CompetitionCreate, admin: dict = Depends(get_
         "winner_id": None,
         "winner_ticket": None,
         "is_free": bool(comp.is_free),
+        "instant_prizes": [
+            {**p, "awarded": False, "winner_user_id": None, "winner_ticket_number": None, "awarded_at": None}
+            for p in (comp.instant_prizes or [])
+        ] if comp.instant_prizes else [],
         "seo": None  # Will be generated automatically
     }
     logger.info(f"Creating competition: {comp.title}, is_free={comp.is_free}")

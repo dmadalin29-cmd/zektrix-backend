@@ -215,7 +215,8 @@ const AdminPage = () => {
     const [compForm, setCompForm] = useState({
         title: '', description: '', ticket_price: '', max_tickets: '', 
         competition_type: 'instant_win', image_url: '', prize_description: '', category: 'general',
-        qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false
+        qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false,
+        instant_prizes: []
     });
     const [userForm, setUserForm] = useState({ first_name: '', last_name: '', email: '', phone: '', balance: '', new_password: '', role: '' });
     const [ticketSearch, setTicketSearch] = useState('');
@@ -346,6 +347,11 @@ const AdminPage = () => {
             competition_type: compForm.competition_type, image_url: compForm.image_url,
             prize_description: compForm.prize_description, category: compForm.category,
             is_free: compForm.is_free,
+            instant_prizes: compForm.instant_prizes.filter(p => p.percentage && p.prize_name).map(p => ({
+                percentage: parseFloat(p.percentage),
+                prize_name: p.prize_name,
+                prize_description: p.prize_description || ''
+            })),
             qualification_question: compForm.qual_question ? {
                 question: compForm.qual_question,
                 options: [compForm.qual_option1, compForm.qual_option2],
@@ -361,7 +367,7 @@ const AdminPage = () => {
                 toast.success('Competiție creată!');
             }
             setShowCompModal(false); setEditingComp(null);
-            setCompForm({ title: '', description: '', ticket_price: '', max_tickets: '', competition_type: 'instant_win', image_url: '', prize_description: '', category: 'general', qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false });
+            setCompForm({ title: '', description: '', ticket_price: '', max_tickets: '', competition_type: 'instant_win', image_url: '', prize_description: '', category: 'general', qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false, instant_prizes: [] });
             fetchAll();
         } catch (e) { toast.error(e.response?.data?.detail || 'Eroare'); }
     };
@@ -381,7 +387,8 @@ const AdminPage = () => {
             qual_option1: c.qualification_question?.options?.[0] || '',
             qual_option2: c.qualification_question?.options?.[1] || '',
             qual_correct: (c.qualification_question?.correct_answer || 0).toString(),
-            is_free: c.is_free || false
+            is_free: c.is_free || false,
+            instant_prizes: (c.instant_prizes || []).map(p => ({ percentage: p.percentage?.toString() || '', prize_name: p.prize_name || '', prize_description: p.prize_description || '' }))
         });
         setShowCompModal(true);
     };
@@ -823,7 +830,7 @@ const AdminPage = () => {
                                     <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{comps.filter(c => c.status === 'active').length} Active</Badge>
                                 </div>
                                 <Button 
-                                    onClick={() => { setEditingComp(null); setCompForm({ title: '', description: '', ticket_price: '', max_tickets: '', competition_type: 'instant_win', image_url: '', prize_description: '', category: 'general', qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false }); setShowCompModal(true); }} 
+                                    onClick={() => { setEditingComp(null); setCompForm({ title: '', description: '', ticket_price: '', max_tickets: '', competition_type: 'instant_win', image_url: '', prize_description: '', category: 'general', qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false, instant_prizes: [] }); setShowCompModal(true); }} 
                                     className="bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-500/25"
                                     data-testid="add-competition-btn"
                                 >
@@ -1419,6 +1426,39 @@ const AdminPage = () => {
                                 <Input value={compForm.qual_option1} onChange={e => setCompForm(p => ({ ...p, qual_option1: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="Răspuns corect" />
                                 <Input value={compForm.qual_option2} onChange={e => setCompForm(p => ({ ...p, qual_option2: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="Răspuns greșit" />
                             </div>
+                        </div>
+
+                        {/* Instant Prizes Section */}
+                        <div className="border-t border-white/10 pt-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <Label className="text-orange-400 font-semibold">Premii Instant (max 10)</Label>
+                                {compForm.instant_prizes.length < 10 && (
+                                    <Button type="button" size="sm" variant="outline" className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
+                                        onClick={() => setCompForm(p => ({ ...p, instant_prizes: [...p.instant_prizes, { percentage: '', prize_name: '', prize_description: '' }] }))}
+                                        data-testid="add-instant-prize-btn"
+                                    >
+                                        + Adaugă Premiu
+                                    </Button>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-500 mb-3">Premiile se acordă automat când se atinge procentul de vânzare setat.</p>
+                            {compForm.instant_prizes.map((prize, idx) => (
+                                <div key={idx} className="flex gap-2 mb-2 items-center" data-testid={`instant-prize-${idx}`}>
+                                    <Input type="number" min="1" max="100" value={prize.percentage}
+                                        onChange={e => { const arr = [...compForm.instant_prizes]; arr[idx].percentage = e.target.value; setCompForm(p => ({ ...p, instant_prizes: arr })); }}
+                                        className="bg-white/5 border-white/10 w-20" placeholder="%" />
+                                    <Input value={prize.prize_name}
+                                        onChange={e => { const arr = [...compForm.instant_prizes]; arr[idx].prize_name = e.target.value; setCompForm(p => ({ ...p, instant_prizes: arr })); }}
+                                        className="bg-white/5 border-white/10 flex-1" placeholder="Nume premiu (ex: £50 Cash)" />
+                                    <Input value={prize.prize_description}
+                                        onChange={e => { const arr = [...compForm.instant_prizes]; arr[idx].prize_description = e.target.value; setCompForm(p => ({ ...p, instant_prizes: arr })); }}
+                                        className="bg-white/5 border-white/10 flex-1" placeholder="Descriere (opțional)" />
+                                    <Button type="button" size="sm" variant="ghost" className="text-red-400 hover:bg-red-500/10 px-2"
+                                        onClick={() => setCompForm(p => ({ ...p, instant_prizes: p.instant_prizes.filter((_, i) => i !== idx) }))}>
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setShowCompModal(false)}>Anulează</Button>

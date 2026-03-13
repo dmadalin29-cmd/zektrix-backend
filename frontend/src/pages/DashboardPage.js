@@ -13,8 +13,9 @@ import {
 import { 
     Ticket, History, ArrowRight, Loader2, Trophy, 
     ArrowUpRight, Gift, 
-    ChevronRight, Activity
+    ChevronRight, Activity, User, Save, Edit3
 } from 'lucide-react';
+import { Input } from '../components/ui/input';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -127,6 +128,73 @@ const EmptyState = ({ icon: Icon, title, description, action, actionLabel }) => 
     </div>
 );
 
+// Account Tab Component
+const AccountTab = ({ user, token, refreshUser, isRomanian }) => {
+    const [form, setForm] = useState({
+        first_name: user?.first_name || '',
+        last_name: user?.last_name || '',
+        phone: user?.phone || '',
+        username: user?.username || ''
+    });
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const authToken = token || localStorage.getItem('zektrix_token');
+            await axios.put(`${API}/auth/profile`, form, { headers: { Authorization: `Bearer ${authToken}` } });
+            toast.success(isRomanian ? 'Profil actualizat cu succes!' : 'Profile updated!');
+            if (refreshUser) await refreshUser();
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'Eroare la salvare');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="rounded-2xl p-6 md:p-8" data-testid="account-tab"
+            style={{ background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9), rgba(10, 6, 20, 0.95))', border: '1px solid rgba(139, 92, 246, 0.15)' }}>
+            <div className="flex items-center gap-3 mb-8">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+                    <User className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold text-white">{isRomanian ? 'Contul Meu' : 'My Account'}</h2>
+                    <p className="text-sm text-gray-500">{user?.email}</p>
+                </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label className="text-sm text-gray-400 mb-1 block">{isRomanian ? 'Prenume' : 'First Name'}</label>
+                    <Input value={form.first_name} onChange={e => setForm(p => ({ ...p, first_name: e.target.value }))}
+                        className="bg-white/5 border-white/10" data-testid="account-first-name" />
+                </div>
+                <div>
+                    <label className="text-sm text-gray-400 mb-1 block">{isRomanian ? 'Nume' : 'Last Name'}</label>
+                    <Input value={form.last_name} onChange={e => setForm(p => ({ ...p, last_name: e.target.value }))}
+                        className="bg-white/5 border-white/10" data-testid="account-last-name" />
+                </div>
+                <div>
+                    <label className="text-sm text-gray-400 mb-1 block">{isRomanian ? 'Utilizator' : 'Username'}</label>
+                    <Input value={form.username} onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
+                        className="bg-white/5 border-white/10" data-testid="account-username" />
+                </div>
+                <div>
+                    <label className="text-sm text-gray-400 mb-1 block">{isRomanian ? 'Telefon' : 'Phone'}</label>
+                    <Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
+                        className="bg-white/5 border-white/10" data-testid="account-phone" />
+                </div>
+            </div>
+            <Button onClick={handleSave} disabled={saving} className="bg-violet-600 hover:bg-violet-500" data-testid="account-save-btn">
+                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                {isRomanian ? 'Salvează Modificările' : 'Save Changes'}
+            </Button>
+        </div>
+    );
+};
+
 const DashboardPage = () => {
     const { user, token, refreshUser } = useAuth();
     const { t, isRomanian } = useLanguage();
@@ -134,6 +202,7 @@ const DashboardPage = () => {
     const location = useLocation();
 
     const getActiveTab = () => {
+        if (location.pathname.includes('/account')) return 'account';
         if (location.pathname.includes('/locs')) return 'locs';
         if (location.pathname.includes('/history')) return 'history';
         if (location.pathname.includes('/referral')) return 'referral';
@@ -196,7 +265,7 @@ const DashboardPage = () => {
 
     const handleTabChange = (value) => {
         setActiveTab(value);
-        const routes = { overview: '/dashboard', locs: '/dashboard/locs', history: '/dashboard/history', referral: '/dashboard/referral' };
+        const routes = { overview: '/dashboard', locs: '/dashboard/locs', history: '/dashboard/history', referral: '/dashboard/referral', account: '/dashboard/account' };
         navigate(routes[value] || '/dashboard');
     };
 
@@ -215,6 +284,7 @@ const DashboardPage = () => {
         { id: 'locs', icon: Ticket, label: isRomanian ? 'Locurile Mele' : 'My Locs', badge: locs.length },
         { id: 'history', icon: History, label: isRomanian ? 'Istoric' : 'History' },
         { id: 'referral', icon: Gift, label: 'Referral' },
+        { id: 'account', icon: User, label: isRomanian ? 'Contul Meu' : 'My Account' },
     ];
 
     return (
@@ -502,6 +572,9 @@ const DashboardPage = () => {
                                 </Button>
                             </div>
                         )}
+
+                        {/* Account Tab */}
+                        {activeTab === 'account' && <AccountTab user={user} token={token} refreshUser={refreshUser} isRomanian={isRomanian} />}
                     </div>
                 </div>
             </main>
