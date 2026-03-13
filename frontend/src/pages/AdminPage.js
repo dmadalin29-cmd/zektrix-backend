@@ -49,21 +49,24 @@ const AnimatedNumber = ({ value, prefix = '', suffix = '', decimals = 0 }) => {
 };
 
 // Sparkline Chart
-const Sparkline = ({ data, color, height = 32 }) => (
-    <div style={{ width: '100%', height }}>
-        <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data.map((v, i) => ({ v, i }))}>
-                <defs>
-                    <linearGradient id={`spark-${color}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={color} stopOpacity={0.4}/>
-                        <stop offset="100%" stopColor={color} stopOpacity={0}/>
-                    </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="v" stroke={color} strokeWidth={2} fill={`url(#spark-${color})`} />
-            </AreaChart>
-        </ResponsiveContainer>
-    </div>
-);
+const Sparkline = ({ data, color, height = 32 }) => {
+    if (!data || !data.length || data.every(v => v === 0)) return null;
+    return (
+        <div style={{ width: '100%', height, minWidth: 60 }}>
+            <ResponsiveContainer width="100%" height={height}>
+                <AreaChart data={data.map((v, i) => ({ v, i }))}>
+                    <defs>
+                        <linearGradient id={`spark-${color}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={color} stopOpacity={0.4}/>
+                            <stop offset="100%" stopColor={color} stopOpacity={0}/>
+                        </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="v" stroke={color} strokeWidth={2} fill={`url(#spark-${color})`} />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
 
 // Premium Stat Card
 const StatCard = ({ icon: Icon, label, value, change, changeType, gradient, sparkData, loading, onClick }) => (

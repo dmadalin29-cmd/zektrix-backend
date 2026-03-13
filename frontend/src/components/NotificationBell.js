@@ -7,7 +7,7 @@ import { Bell, BellOff, BellRing, Check, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const NotificationBell = () => {
     const { user, token } = useAuth();
@@ -37,7 +37,7 @@ const NotificationBell = () => {
 
     const setupWebSocketNotifications = () => {
         // Connect to WebSocket for real-time notifications
-        const wsUrl = API.replace('https://', 'wss://').replace('http://', 'ws://');
+        const wsUrl = process.env.REACT_APP_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
         const ws = new WebSocket(`${wsUrl}/ws`);
 
         ws.onmessage = (event) => {

@@ -7,7 +7,7 @@ import { MessageCircle, X, Send, Bot, User, HelpCircle, Loader2 } from 'lucide-r
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const LiveChat = () => {
     const { user, token } = useAuth();
