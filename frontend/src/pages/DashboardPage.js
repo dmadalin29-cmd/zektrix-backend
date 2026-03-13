@@ -169,16 +169,11 @@ const DashboardPage = () => {
             const headers = { Authorization: `Bearer ${authToken}` };
             
             // Fetch locs
-            const locsRes = await axios.get(`${API}/locs/my`, { headers });
+            const locsRes = await axios.get(`${API}/tickets/my`, { headers });
             setLocs(locsRes.data || []);
             
-            // Fetch transactions
-            try {
-                const transactionsRes = await axios.get(`${API}/wallet/transactions`, { headers });
-                setTransactions(transactionsRes.data || []);
-            } catch (txError) {
-                console.log('Transactions error (non-critical):', txError);
-            }
+            // Wallet removed - transactions no longer available
+            setTransactions([]);
         } catch (error) {
             console.error('Fetch error:', error);
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
