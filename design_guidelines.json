@@ -1,0 +1,148 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Zektrix Redesign",
+      "tone": "Ultra-Modern, Premium, High-Stakes, Trustworthy",
+      "theme_mode": "dark",
+      "primary_vibe": "Electric Blue Luxury"
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Unbounded, sans-serif",
+        "body": "Manrope, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "usage_rules": {
+        "headings": "Use 'Unbounded' for all H1-H3. Weight: 700/900. Tracking: tight (-0.02em). Uppercase for small labels.",
+        "body": "Use 'Manrope' for all paragraphs. Weight: 400/500. Leading: relaxed.",
+        "numbers": "Use 'JetBrains Mono' for countdowns, prices, and ticket numbers to convey data precision."
+      }
+    },
+    "colors": {
+      "palette": {
+        "background": {
+          "default": "#020617",
+          "paper": "#0F172A",
+          "subtle": "#1E293B"
+        },
+        "primary": {
+          "main": "#3B82F6",
+          "light": "#60A5FA",
+          "dark": "#2563EB",
+          "glow": "0 0 20px rgba(59, 130, 246, 0.5)"
+        },
+        "secondary": {
+          "main": "#06B6D4",
+          "light": "#22D3EE",
+          "dark": "#0891B2"
+        },
+        "accent": {
+          "gold": "#EAB308",
+          "gold_glow": "0 0 20px rgba(234, 179, 8, 0.4)",
+          "success": "#10B981",
+          "error": "#EF4444"
+        },
+        "text": {
+          "primary": "#F8FAFC",
+          "secondary": "#94A3B8",
+          "muted": "#64748B"
+        },
+        "border": {
+          "subtle": "rgba(148, 163, 184, 0.1)",
+          "highlight": "rgba(59, 130, 246, 0.3)"
+        }
+      },
+      "gradients": {
+        "primary": "linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%)",
+        "gold": "linear-gradient(135deg, #EAB308 0%, #F59E0B 100%)",
+        "dark_glass": "linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.9) 100%)"
+      }
+    },
+    "visual_enhancers": {
+      "glassmorphism": {
+        "default": "backdrop-filter: blur(12px); background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.05);",
+        "heavy": "backdrop-filter: blur(24px); background: rgba(2, 6, 23, 0.8); border-bottom: 1px solid rgba(255, 255, 255, 0.05);"
+      },
+      "shadows": {
+        "neon_blue": "0 0 30px -5px rgba(59, 130, 246, 0.3)",
+        "neon_gold": "0 0 30px -5px rgba(234, 179, 8, 0.3)",
+        "card_hover": "0 20px 40px -10px rgba(0, 0, 0, 0.5)"
+      },
+      "borders": {
+        "tracing_beam": "Use a moving gradient border for featured cards.",
+        "subtle_glow": "1px solid rgba(59, 130, 246, 0.2)"
+      }
+    },
+    "layout": {
+      "spacing": {
+        "container_padding": "px-4 md:px-8 lg:px-12",
+        "section_gap": "gap-16 md:gap-24",
+        "card_padding": "p-6 md:p-8"
+      },
+      "grid_systems": {
+        "competitions": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8",
+        "bento_hero": "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 auto-rows-[minmax(180px,auto)]"
+      }
+    }
+  },
+  "components": {
+    "Navbar": {
+      "style": "Floating pill shape, glassmorphism, fixed top-4, z-50.",
+      "content": ["Competitions", "Winners", "Search Tickets", "FAQ", "Language (RO/EN)", "Cart (Icon)", "Login/Register (Button)"],
+      "interaction": "Links glow blue on hover. Active state has a bottom glow line."
+    },
+    "HeroSection": {
+      "style": "Full viewport height (min-h-[80vh]). Immersive background image with heavy bottom fade gradient to blend into body.",
+      "elements": [
+        "H1: 'WIN THE UNIMAGINABLE' (Unbounded, 5xl+)",
+        "Subtext: 'Premium competitions. Verified winners. Instant payouts.' (Manrope, xl, text-slate-300)",
+        "CTA: 'View Competitions' (Primary Gradient Button)",
+        "Stats: '10k+ Winners', '€5M+ Paid' (Glass cards floating)"
+      ]
+    },
+    "CompetitionCard": {
+      "style": "Glass background, 1px border (slate-800). Hover: Border becomes Blue-500, slight lift, shadow-neon-blue.",
+      "elements": [
+        "Image: Top half, aspect-video, rounded-t-xl.",
+        "Badge: 'Ending Soon' (Red pulse) or 'New' (Blue glow).",
+        "Title: Unbounded, bold, white.",
+        "Progress Bar: Gradient Blue-Cyan.",
+        "Price/Ticket: JetBrains Mono, Gold color.",
+        "Button: 'Enter Now' (Outline or Ghost Blue)."
+      ]
+    },
+    "Button": {
+      "variants": {
+        "primary": "bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold rounded-full hover:shadow-neon-blue transition-all",
+        "secondary": "bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 rounded-full",
+        "gold": "bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-bold rounded-full hover:shadow-neon-gold"
+      }
+    }
+  },
+  "assets": {
+    "images": {
+      "hero_bg": "https://images.unsplash.com/photo-1610698517225-78fcfe40aceb?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "featured_car": "https://images.unsplash.com/photo-1670827062211-cb0e4b9ac645?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "gaming_setup": "https://images.unsplash.com/photo-1700412747294-b1bb05b86be4?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "winner_happy": "https://images.unsplash.com/photo-1659080907059-00adb7e98f3e?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "winner_trophy": "https://images.unsplash.com/photo-1651112882818-86d17da92000?crop=entropy&cs=srgb&fm=jpg&q=85"
+    },
+    "icons": "Use 'lucide-react' for all UI icons (Trophy, Ticket, User, ShoppingCart, Search, Menu, X)."
+  },
+  "instructions_to_main_agent": [
+    "1. UPDATE TAILWIND CONFIG: Replace the existing 'neon' colors in `tailwind.config.js` and `index.css` with the new Blue/Cyan/Gold palette defined above. REMOVE all pink/magenta references.",
+    "2. REFACTOR NAVBAR: Convert the navbar to a floating glass pill. Ensure it is responsive (hamburger menu on mobile).",
+    "3. MODERNIZE CARDS: Update the competition card component to use the new glassmorphism and hover effects.",
+    "4. IMPLEMENT HERO: Build a new Hero section using the 'hero_bg' image and the specified typography.",
+    "5. ENSURE DARK MODE: The app should be locked to Dark Mode (or default to it). Ensure text contrast is high (Slate-300 for body, White for heads).",
+    "6. DATA-TESTID: Add `data-testid` to all interactive elements (buttons, inputs, cards) for testing.",
+    "7. REMOVE OLD CSS: Clean up unused 'toxic green' or 'hot pink' classes from `index.css`."
+  ],
+  "universal_guidelines": [
+    "Avoid 'AI Slop': Do not use generic centered layouts. Use asymmetry and bento grids.",
+    "Micro-interactions: Every button must scale (0.98) on click. Every card must lift on hover.",
+    "Spacing: Use 'gap-8' or 'p-8' where you would normally use '4'. Give content room to breathe.",
+    "Gradients: Use gradients for ACTIONS (buttons, progress bars), not for backgrounds (keep backgrounds deep solid/noise).",
+    "Glassmorphism: Use it for containers on top of images. Ensure borders are visible (1px white/10)."
+  ]
+}
