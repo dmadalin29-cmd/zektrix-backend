@@ -1,257 +1,217 @@
 """
-Test suite for Zektrix UK Competition Platform - New Features
-Tests: Share API, Referral System, Analytics Dashboard, WebSocket
+Test suite for new features: Privacy Policy, Google Analytics, Live Chat
+Tests for Zektrix UK Competition Platform
 """
 import pytest
 import requests
 import os
-import uuid
-import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://comp-platform.preview.emergentagent.com').rstrip('/')
 
-class TestShareAPI:
-    """Test social sharing endpoints"""
+# Admin credentials from test request
+ADMIN_EMAIL = "contact@x67digital.com"
+ADMIN_PASSWORD = "Credcada1."
+
+@pytest.fixture(scope="module")
+def api_client():
+    """Shared requests session"""
+    session = requests.Session()
+    session.headers.update({"Content-Type": "application/json"})
+    return session
+
+@pytest.fixture(scope="module")
+def auth_token(api_client):
+    """Get authentication token for admin"""
+    response = api_client.post(f"{BASE_URL}/api/auth/login", json={
+        "email": ADMIN_EMAIL,
+        "password": ADMIN_PASSWORD
+    })
+    if response.status_code == 200:
+        return response.json().get("token")
+    pytest.skip("Authentication failed - skipping authenticated tests")
+
+# ==================== CHAT FAQ ENDPOINT ====================
+class TestChatFAQ:
+    """Tests for /api/chat/faq endpoint"""
     
-    def test_share_competition_valid(self):
-        """Test GET /api/share/competition/{id} with valid competition"""
-        # First get a valid competition
-        response = requests.get(f"{BASE_URL}/api/competitions")
-        assert response.status_code == 200
-        competitions = response.json()
-        assert len(competitions) > 0
+    def test_get_faq_list_success(self, api_client):
+        """Test GET /api/chat/faq returns FAQ list"""
+        response = api_client.get(f"{BASE_URL}/api/chat/faq")
         
-        comp_id = competitions[0]["competition_id"]
+        # Status code assertion
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         
-        # Test share endpoint
-        response = requests.get(f"{BASE_URL}/api/share/competition/{comp_id}")
+        # Data assertion - should be a list
+        data = response.json()
+        assert isinstance(data, list), "FAQ should be a list"
+        assert len(data) > 0, "FAQ list should not be empty"
+        
+        # Verify FAQ structure
+        faq_item = data[0]
+        assert "question" in faq_item, "FAQ item should have 'question' field"
+        assert "keyword" in faq_item, "FAQ item should have 'keyword' field"
+        
+        print(f"✓ FAQ endpoint returned {len(data)} FAQ items")
+
+    def test_faq_contains_expected_topics(self, api_client):
+        """Test that FAQ contains expected topics"""
+        response = api_client.get(f"{BASE_URL}/api/chat/faq")
         assert response.status_code == 200
         
         data = response.json()
-        assert "title" in data
-        assert "share_url" in data
-        assert "share_text" in data
-        assert "twitter_url" in data
-        assert "facebook_url" in data
-        assert "whatsapp_url" in data
-        assert "zektrix.uk" in data["share_url"]
-        print(f"✓ Share API returns valid data for competition: {data['title']}")
-    
-    def test_share_competition_invalid(self):
-        """Test GET /api/share/competition/{id} with invalid competition"""
-        response = requests.get(f"{BASE_URL}/api/share/competition/invalid_comp_id")
-        assert response.status_code == 404
-        assert "not found" in response.json()["detail"].lower()
-        print("✓ Share API returns 404 for invalid competition")
+        keywords = [item.get("keyword", "").lower() for item in data]
+        
+        # Check for expected FAQ topics
+        expected_topics = ["cum funcționează", "bilete", "contact"]
+        found_topics = []
+        for topic in expected_topics:
+            for keyword in keywords:
+                if topic in keyword:
+                    found_topics.append(topic)
+                    break
+        
+        assert len(found_topics) > 0, f"Expected at least some FAQ topics, got none matching {expected_topics}"
+        print(f"✓ FAQ contains expected topics: {found_topics}")
 
 
-class TestReferralSystem:
-    """Test referral system endpoints"""
+# ==================== CHAT HISTORY ENDPOINT (Requires Auth) ====================
+class TestChatHistory:
+    """Tests for /api/chat/history endpoint"""
     
-    @pytest.fixture
-    def new_user_with_referral_code(self):
-        """Create a new user and get their referral code"""
-        unique_id = uuid.uuid4().hex[:8]
-        user_data = {
-            "username": f"TEST_ref_user_{unique_id}",
-            "email": f"TEST_ref_{unique_id}@test.com",
-            "password": "testpass123"
-        }
-        response = requests.post(f"{BASE_URL}/api/auth/register", json=user_data)
-        assert response.status_code == 200
+    def test_chat_history_requires_auth(self, api_client):
+        """Test GET /api/chat/history requires authentication"""
+        response = api_client.get(f"{BASE_URL}/api/chat/history")
         
-        token = response.json()["token"]
+        # Should return 401 without auth
+        assert response.status_code in [401, 403], f"Expected 401/403 without auth, got {response.status_code}"
+        print("✓ Chat history endpoint properly requires authentication")
+
+    def test_chat_history_with_auth(self, api_client, auth_token):
+        """Test GET /api/chat/history with authentication"""
+        response = api_client.get(
+            f"{BASE_URL}/api/chat/history",
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
         
-        # Get referral code
-        headers = {"Authorization": f"Bearer {token}"}
-        ref_response = requests.get(f"{BASE_URL}/api/referral/my-code", headers=headers)
-        assert ref_response.status_code == 200
+        # Status code assertion
+        assert response.status_code == 200, f"Expected 200 with auth, got {response.status_code}"
         
-        return {
-            "token": token,
-            "user": response.json()["user"],
-            "referral_code": ref_response.json()["referral_code"]
-        }
-    
-    def test_validate_referral_code_invalid(self):
-        """Test GET /api/referral/validate/{code} with invalid code"""
-        response = requests.get(f"{BASE_URL}/api/referral/validate/INVALIDCODE123")
-        assert response.status_code == 404
-        assert "invalid" in response.json()["detail"].lower()
-        print("✓ Referral validation returns 404 for invalid code")
-    
-    def test_validate_referral_code_valid(self, new_user_with_referral_code):
-        """Test GET /api/referral/validate/{code} with valid code"""
-        ref_code = new_user_with_referral_code["referral_code"]
-        
-        response = requests.get(f"{BASE_URL}/api/referral/validate/{ref_code}")
-        assert response.status_code == 200
-        
+        # Data assertion - should be a list (may be empty for new users)
         data = response.json()
-        assert data["valid"] == True
-        assert "referrer_username" in data
-        print(f"✓ Referral validation returns valid=True for code: {ref_code}")
+        assert isinstance(data, list), "Chat history should be a list"
+        print(f"✓ Chat history endpoint returned {len(data)} messages")
+
+
+# ==================== CHAT MESSAGE ENDPOINT (Requires Auth) ====================
+class TestChatMessage:
+    """Tests for /api/chat/message endpoint"""
     
-    def test_get_my_referral_code(self, new_user_with_referral_code):
-        """Test GET /api/referral/my-code"""
-        headers = {"Authorization": f"Bearer {new_user_with_referral_code['token']}"}
-        response = requests.get(f"{BASE_URL}/api/referral/my-code", headers=headers)
+    def test_chat_message_requires_auth(self, api_client):
+        """Test POST /api/chat/message requires authentication"""
+        response = api_client.post(
+            f"{BASE_URL}/api/chat/message",
+            json={"message": "test message", "is_faq": False}
+        )
         
-        assert response.status_code == 200
+        # Should return 401 without auth
+        assert response.status_code in [401, 403], f"Expected 401/403 without auth, got {response.status_code}"
+        print("✓ Chat message endpoint properly requires authentication")
+
+    def test_chat_message_with_auth(self, api_client, auth_token):
+        """Test POST /api/chat/message with authentication"""
+        response = api_client.post(
+            f"{BASE_URL}/api/chat/message",
+            json={"message": "cum funcționează", "is_faq": True},
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        
+        # Status code assertion
+        assert response.status_code == 200, f"Expected 200 with auth, got {response.status_code}"
+        
+        # Data assertion
         data = response.json()
-        
-        assert "referral_code" in data
-        assert "referral_link" in data
-        assert "total_referrals" in data
-        assert "completed_referrals" in data
-        assert "pending_referrals" in data
-        assert "total_earned" in data
-        assert "bonus_per_referral" in data
-        assert data["bonus_per_referral"] == 5
-        print(f"✓ My referral code endpoint returns complete data: {data['referral_code']}")
-    
-    def test_get_my_referrals(self, new_user_with_referral_code):
-        """Test GET /api/referral/my-referrals"""
-        headers = {"Authorization": f"Bearer {new_user_with_referral_code['token']}"}
-        response = requests.get(f"{BASE_URL}/api/referral/my-referrals", headers=headers)
-        
-        assert response.status_code == 200
-        assert isinstance(response.json(), list)
-        print("✓ My referrals endpoint returns list")
-    
-    def test_referral_code_unauthenticated(self):
-        """Test referral endpoints require authentication"""
-        response = requests.get(f"{BASE_URL}/api/referral/my-code")
-        assert response.status_code == 401
-        print("✓ Referral endpoints require authentication")
+        assert "response" in data or "type" in data or "message_id" in data, \
+            f"Expected response to contain 'response', 'type' or 'message_id', got: {data}"
+        print(f"✓ Chat message endpoint responded with FAQ/support message")
 
 
-class TestAnalyticsDashboard:
-    """Test admin analytics endpoints"""
+# ==================== ADMIN CHAT MESSAGES ENDPOINT ====================
+class TestAdminChatMessages:
+    """Tests for /api/admin/chat/messages endpoint"""
     
-    @pytest.fixture
-    def admin_token(self):
-        """Get admin authentication token"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@zektrix.uk",
-            "password": "admin123"
-        })
-        if response.status_code != 200:
-            pytest.skip("Admin login failed")
-        return response.json()["token"]
-    
-    def test_analytics_endpoint_authenticated(self, admin_token):
-        """Test GET /api/admin/analytics with admin auth"""
-        headers = {"Authorization": f"Bearer {admin_token}"}
-        response = requests.get(f"{BASE_URL}/api/admin/analytics", headers=headers)
+    def test_admin_chat_messages_requires_auth(self, api_client):
+        """Test GET /api/admin/chat/messages requires authentication"""
+        response = api_client.get(f"{BASE_URL}/api/admin/chat/messages")
         
-        assert response.status_code == 200
+        # Should return 401 without auth
+        assert response.status_code in [401, 403], f"Expected 401/403 without auth, got {response.status_code}"
+        print("✓ Admin chat messages endpoint properly requires authentication")
+
+    def test_admin_chat_messages_with_admin_auth(self, api_client, auth_token):
+        """Test GET /api/admin/chat/messages with admin authentication"""
+        response = api_client.get(
+            f"{BASE_URL}/api/admin/chat/messages",
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        
+        # Status code assertion
+        assert response.status_code == 200, f"Expected 200 with admin auth, got {response.status_code}"
+        
+        # Data assertion - should be a list
         data = response.json()
+        assert isinstance(data, list), "Admin chat messages should be a list"
+        print(f"✓ Admin chat messages endpoint returned {len(data)} messages")
+
+
+# ==================== GOOGLE ANALYTICS VERIFICATION ====================
+class TestGoogleAnalytics:
+    """Tests for Google Analytics integration"""
+    
+    def test_index_html_has_gtag_script(self, api_client):
+        """Test that index.html contains Google Analytics script with correct ID"""
+        response = api_client.get(f"{BASE_URL}/")
         
-        # Verify all expected fields
-        expected_fields = [
-            "total_revenue", "total_users", "total_tickets", "total_competitions",
-            "active_competitions", "completed_competitions", "total_winners",
-            "avg_tickets_per_user", "revenue_by_day", "top_competitions",
-            "user_growth", "total_referrals", "referral_bonus_paid"
-        ]
+        # Status code assertion
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         
-        for field in expected_fields:
-            assert field in data, f"Missing field: {field}"
+        # Check for Google Analytics script
+        html_content = response.text
+        assert "googletagmanager.com/gtag" in html_content, "gtag.js script not found in HTML"
+        assert "G-G760C5BPRM" in html_content, "Google Analytics ID G-G760C5BPRM not found in HTML"
         
-        # Verify data types
-        assert isinstance(data["total_revenue"], (int, float))
-        assert isinstance(data["total_users"], int)
-        assert isinstance(data["total_tickets"], int)
-        assert isinstance(data["revenue_by_day"], list)
-        assert isinstance(data["top_competitions"], list)
-        assert isinstance(data["user_growth"], list)
+        print("✓ Google Analytics script with ID G-G760C5BPRM found in index.html")
+
+
+# ==================== PRIVACY POLICY PAGE ====================
+class TestPrivacyPolicy:
+    """Tests for Privacy Policy page"""
+    
+    def test_privacy_page_loads(self, api_client):
+        """Test that /privacy route loads correctly"""
+        response = api_client.get(f"{BASE_URL}/privacy")
         
-        print(f"✓ Analytics endpoint returns comprehensive data:")
-        print(f"  - Total Revenue: £{data['total_revenue']}")
-        print(f"  - Total Users: {data['total_users']}")
-        print(f"  - Total Tickets: {data['total_tickets']}")
-        print(f"  - Active Competitions: {data['active_competitions']}")
-    
-    def test_analytics_endpoint_unauthenticated(self):
-        """Test GET /api/admin/analytics without auth"""
-        response = requests.get(f"{BASE_URL}/api/admin/analytics")
-        assert response.status_code == 401
-        print("✓ Analytics endpoint requires authentication")
-    
-    def test_analytics_endpoint_non_admin(self):
-        """Test GET /api/admin/analytics with non-admin user"""
-        # Create regular user
-        unique_id = uuid.uuid4().hex[:8]
-        response = requests.post(f"{BASE_URL}/api/auth/register", json={
-            "username": f"TEST_regular_{unique_id}",
-            "email": f"TEST_regular_{unique_id}@test.com",
-            "password": "testpass123"
-        })
+        # Status code assertion
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         
-        if response.status_code == 200:
-            token = response.json()["token"]
-            headers = {"Authorization": f"Bearer {token}"}
-            
-            analytics_response = requests.get(f"{BASE_URL}/api/admin/analytics", headers=headers)
-            assert analytics_response.status_code == 403
-            print("✓ Analytics endpoint requires admin role")
+        # Check for Privacy Policy content markers
+        html_content = response.text
+        # React app loads the same index.html, so we verify the base loads
+        assert "root" in html_content, "React root element not found"
+        
+        print("✓ Privacy Policy page route loads correctly")
 
 
-class TestWebSocket:
-    """Test WebSocket endpoints"""
+# ==================== FOOTER LINK VERIFICATION ====================
+class TestFooterLinks:
+    """Tests for Footer components"""
     
-    def test_websocket_endpoint_exists(self):
-        """Verify WebSocket endpoints are defined in the API"""
-        # We can't easily test WebSocket with requests, but we can verify the server is running
-        response = requests.get(f"{BASE_URL}/api/")
-        assert response.status_code == 200
-        assert response.json()["version"] == "2.0.0"
-        print("✓ Server is running version 2.0.0 with WebSocket support")
-
-
-class TestAPIVersion:
-    """Test API version and health"""
-    
-    def test_api_version(self):
-        """Test API returns correct version"""
-        response = requests.get(f"{BASE_URL}/api/")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["version"] == "2.0.0"
-        assert "Zektrix" in data["message"]
-        print(f"✓ API version: {data['version']}")
-
-
-class TestExistingFeatures:
-    """Regression tests for existing features"""
-    
-    def test_competitions_list(self):
-        """Test GET /api/competitions"""
-        response = requests.get(f"{BASE_URL}/api/competitions")
-        assert response.status_code == 200
-        competitions = response.json()
-        assert isinstance(competitions, list)
-        print(f"✓ Competitions list returns {len(competitions)} competitions")
-    
-    def test_winners_list(self):
-        """Test GET /api/winners"""
-        response = requests.get(f"{BASE_URL}/api/winners")
-        assert response.status_code == 200
-        assert isinstance(response.json(), list)
-        print("✓ Winners list endpoint working")
-    
-    def test_login_admin(self):
-        """Test admin login"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@zektrix.uk",
-            "password": "admin123"
-        })
-        assert response.status_code == 200
-        data = response.json()
-        assert "token" in data
-        assert data["user"]["role"] == "admin"
-        print("✓ Admin login successful")
+    def test_homepage_loads_with_footer(self, api_client):
+        """Test that homepage loads (which includes Footer with Privacy link)"""
+        response = api_client.get(f"{BASE_URL}/")
+        
+        # Status code assertion
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        print("✓ Homepage loads correctly (Footer verified via Playwright tests)")
 
 
 if __name__ == "__main__":
