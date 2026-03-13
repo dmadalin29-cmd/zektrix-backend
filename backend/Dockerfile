@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 COPY . .
 
 # Expose port
-EXPOSE 8001
+EXPOSE 8080
 
-# Run application
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
+# Run application - Railway provides PORT env var
+CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8080}
