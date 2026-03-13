@@ -93,7 +93,7 @@ const CompetitionDetailPage = () => {
         setPurchasing(true);
         try {
             const response = await axios.post(
-                `${API}/locuri/purchase-viva`,
+                `${API}/tickets/purchase-viva`,
                 { 
                     competition_id: id, 
                     quantity,

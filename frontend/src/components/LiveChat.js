@@ -30,7 +30,7 @@ const LiveChat = () => {
 
     const fetchFaqList = async () => {
         try {
-            const response = await axios.get(`${API}/api/chat/faq`);
+            const response = await axios.get(`${API}/chat/faq`);
             setFaqList(response.data);
         } catch (error) {
             console.error('Failed to fetch FAQ');
@@ -49,7 +49,7 @@ const LiveChat = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post(`${API}/api/chat/message`, 
+            const response = await axios.post(`${API}/chat/message`, 
                 { message: keyword, is_faq: true },
                 { headers: token ? { Authorization: `Bearer ${token}` } : {} }
             );
@@ -83,7 +83,7 @@ const LiveChat = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post(`${API}/api/chat/message`, 
+            const response = await axios.post(`${API}/chat/message`, 
                 { message: userMessage },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

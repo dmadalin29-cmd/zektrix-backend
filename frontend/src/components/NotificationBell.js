@@ -26,7 +26,7 @@ const NotificationBell = () => {
 
     const checkSubscriptionStatus = async () => {
         try {
-            const response = await axios.get(`${API}/api/notifications/status`, {
+            const response = await axios.get(`${API}/notifications/status`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsSubscribed(response.data.subscribed);
@@ -89,7 +89,7 @@ const NotificationBell = () => {
             }
 
             // Subscribe to backend
-            await axios.post(`${API}/api/notifications/subscribe`, {
+            await axios.post(`${API}/notifications/subscribe`, {
                 endpoint: 'browser-notification',
                 keys: { permission: 'granted' }
             }, {
@@ -112,7 +112,7 @@ const NotificationBell = () => {
     const unsubscribe = async () => {
         setLoading(true);
         try {
-            await axios.delete(`${API}/api/notifications/unsubscribe`, {
+            await axios.delete(`${API}/notifications/unsubscribe`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsSubscribed(false);

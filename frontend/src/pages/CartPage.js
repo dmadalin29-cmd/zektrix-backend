@@ -91,7 +91,7 @@ const CartPage = () => {
                         </Card>
 
                         <div className="flex gap-4 justify-center">
-                            <Link to="/dashboard/locuri">
+                            <Link to="/dashboard/tickets">
                                 <Button className="btn-primary">
                                     {isRomanian ? 'Vezi Locurile' : 'View Tickets'}
                                 </Button>
