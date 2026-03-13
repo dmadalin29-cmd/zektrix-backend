@@ -2360,28 +2360,25 @@ async def get_analytics(admin: dict = Depends(get_admin_user)):
     completed_competitions = await db.competitions.count_documents({"status": "completed"})
     total_winners = await db.winners.count_documents({})
     
-    # Revenue calculation from completed transactions
-    transactions = await db.transactions.find(
-        {"status": "completed", "transaction_type": {"$in": ["deposit", "ticket_purchase", "ticket_purchase_viva"]}},
-        {"_id": 0}
+    # Revenue calculation from ALL completed transactions
+    all_transactions = await db.transactions.find(
+        {"status": "completed"},
+        {"_id": 0, "amount": 1, "created_at": 1}
     ).to_list(10000)
     
-    total_revenue = sum(abs(t.get("amount", 0)) for t in transactions if t.get("amount", 0) > 0)
+    total_revenue = sum(abs(t.get("amount", 0)) for t in all_transactions if t.get("amount", 0) > 0)
     
     # Average tickets per user
     avg_tickets = total_tickets / total_users if total_users > 0 else 0
     
     # Revenue by day (last 30 days)
     thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-    recent_transactions = await db.transactions.find(
-        {"status": "completed", "created_at": {"$gte": thirty_days_ago}},
-        {"_id": 0}
-    ).to_list(10000)
     
     revenue_by_day = {}
-    for t in recent_transactions:
-        if t.get("amount", 0) > 0:
-            day = t.get("created_at", "")[:10]
+    for t in all_transactions:
+        created = t.get("created_at", "")
+        if created >= thirty_days_ago and t.get("amount", 0) > 0:
+            day = created[:10]
             revenue_by_day[day] = revenue_by_day.get(day, 0) + t["amount"]
     
     revenue_by_day_list = [{"date": k, "revenue": v} for k, v in sorted(revenue_by_day.items())]

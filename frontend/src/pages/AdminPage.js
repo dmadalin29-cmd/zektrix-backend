@@ -198,6 +198,7 @@ const AdminPage = () => {
     const [winners, setWinners] = useState([]);
     const [chatMsgs, setChatMsgs] = useState([]);
     const [liveStatus, setLiveStatus] = useState({ isLive: false, message: '' });
+    const [analyticsData, setAnalyticsData] = useState(null);
 
     // Modals
     const [showCompModal, setShowCompModal] = useState(false);
@@ -220,18 +221,20 @@ const AdminPage = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const [statsRes, compsRes, usersRes, locuriRes, winnersRes] = await Promise.all([
+            const [statsRes, compsRes, usersRes, locuriRes, winnersRes, analyticsRes] = await Promise.all([
                 axios.get(`${API}/admin/stats`, { headers: { Authorization: `Bearer ${token}` }}).catch(() => ({ data: {} })),
                 axios.get(`${API}/competitions`).catch(() => ({ data: [] })),
                 axios.get(`${API}/admin/users`, { headers: { Authorization: `Bearer ${token}` }}).catch(() => ({ data: [] })),
                 axios.get(`${API}/admin/tickets`, { headers: { Authorization: `Bearer ${token}` }}).catch(() => ({ data: [] })),
-                axios.get(`${API}/winners`).catch(() => ({ data: [] }))
+                axios.get(`${API}/winners`).catch(() => ({ data: [] })),
+                axios.get(`${API}/admin/analytics`, { headers: { Authorization: `Bearer ${token}` }}).catch(() => ({ data: {} }))
             ]);
             setStats(statsRes.data);
             setComps(compsRes.data);
             setUsers(usersRes.data);
             setTickets(locuriRes.data);
             setWinners(winnersRes.data);
+            setAnalyticsData(analyticsRes.data);
         } catch (e) { console.error(e); }
         setLoading(false);
     }, [token]);
@@ -243,27 +246,42 @@ const AdminPage = () => {
         axios.get(`${API}/admin/chat/messages`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setChatMsgs(r.data)).catch(() => {});
     }, [isAdmin, navigate, fetchAll, token]);
 
-    // Mock chart data for beautiful visualizations
+    // Real chart data from analytics
     const chartData = useMemo(() => {
-        const days = ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'];
-        return days.map((day, i) => ({
-            name: day,
-            vanzari: Math.floor(Math.random() * 500 + 200),
-            utilizatori: Math.floor(Math.random() * 50 + 20),
-            locuri: Math.floor(Math.random() * 300 + 100)
+        if (!analyticsData?.revenue_by_day?.length) return [];
+        return analyticsData.revenue_by_day.slice(-7).map(d => ({
+            name: new Date(d.date).toLocaleDateString('ro-RO', { weekday: 'short' }),
+            vanzari: d.revenue || 0,
         }));
-    }, []);
+    }, [analyticsData]);
 
-    const pieData = useMemo(() => [
-        { name: 'Tech', value: 35, color: '#8b5cf6' },
-        { name: 'Auto', value: 25, color: '#f97316' },
-        { name: 'Travel', value: 20, color: '#06b6d4' },
-        { name: 'Lifestyle', value: 20, color: '#10b981' }
-    ], []);
+    const pieData = useMemo(() => {
+        if (!comps.length) return [];
+        const categories = {};
+        comps.forEach(c => {
+            const cat = c.category || 'other';
+            categories[cat] = (categories[cat] || 0) + 1;
+        });
+        const colors = { tech: '#8b5cf6', auto: '#f97316', travel: '#06b6d4', lifestyle: '#10b981', cash: '#eab308', general: '#6366f1', other: '#94a3b8' };
+        return Object.entries(categories).map(([name, value]) => ({
+            name: name.charAt(0).toUpperCase() + name.slice(1),
+            value,
+            color: colors[name] || '#8b5cf6'
+        }));
+    }, [comps]);
 
-    const sparkDataSales = useMemo(() => [30, 45, 35, 60, 75, 65, 80, 70, 90, 85, 95, 100], []);
-    const sparkDataUsers = useMemo(() => [20, 30, 25, 40, 50, 45, 55, 50, 60, 55, 65, 70], []);
-    const sparkDataTickets = useMemo(() => [40, 55, 45, 70, 85, 75, 90, 80, 100, 95, 105, 110], []);
+    const sparkDataSales = useMemo(() => {
+        if (!analyticsData?.revenue_by_day?.length) return [0];
+        return analyticsData.revenue_by_day.slice(-12).map(d => d.revenue || 0);
+    }, [analyticsData]);
+    const sparkDataUsers = useMemo(() => {
+        if (!analyticsData?.user_growth?.length) return [0];
+        return analyticsData.user_growth.slice(-12).map(d => d.count || 0);
+    }, [analyticsData]);
+    const sparkDataTickets = useMemo(() => {
+        if (!analyticsData?.top_competitions?.length) return [0];
+        return analyticsData.top_competitions.slice(0, 12).map(c => c.sold || 0);
+    }, [analyticsData]);
 
     // AI Generate
     const generateAI = async () => {
@@ -552,8 +570,6 @@ const AdminPage = () => {
                                     icon={Trophy} 
                                     label="Competiții Active" 
                                     value={stats?.active_competitions || 0} 
-                                    change={12} 
-                                    changeType="up" 
                                     gradient="linear-gradient(135deg, #8b5cf6, #7c3aed)" 
                                     sparkData={sparkDataSales}
                                     loading={loading}
@@ -563,8 +579,6 @@ const AdminPage = () => {
                                     icon={Users} 
                                     label="Total Utilizatori" 
                                     value={stats?.total_users || 0} 
-                                    change={8} 
-                                    changeType="up" 
                                     gradient="linear-gradient(135deg, #06b6d4, #0891b2)" 
                                     sparkData={sparkDataUsers}
                                     loading={loading}
@@ -573,9 +587,7 @@ const AdminPage = () => {
                                 <StatCard 
                                     icon={Ticket} 
                                     label="Locuri Vândute" 
-                                    value={stats?.total_locuri || 0} 
-                                    change={24} 
-                                    changeType="up" 
+                                    value={stats?.total_tickets || 0} 
                                     gradient="linear-gradient(135deg, #10b981, #059669)" 
                                     sparkData={sparkDataTickets}
                                     loading={loading}
@@ -584,9 +596,7 @@ const AdminPage = () => {
                                 <StatCard 
                                     icon={DollarSign} 
                                     label="Venit Total (£)" 
-                                    value={stats?.total_revenue || 0} 
-                                    change={18} 
-                                    changeType="up" 
+                                    value={analyticsData?.total_revenue?.toFixed(2) || '0.00'} 
                                     gradient="linear-gradient(135deg, #f97316, #ea580c)" 
                                     loading={loading}
                                 />
@@ -606,8 +616,7 @@ const AdminPage = () => {
                                             <p className="text-sm text-gray-500">Ultima săptămână</p>
                                         </div>
                                         <div className="flex items-center gap-4 text-xs">
-                                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-violet-500" /> Vânzări</span>
-                                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-cyan-500" /> Utilizatori</span>
+                                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-violet-500" /> Vânzări (£)</span>
                                         </div>
                                     </div>
                                     <div className="h-64 lg:h-72">
@@ -628,7 +637,6 @@ const AdminPage = () => {
                                                 <YAxis stroke="#6b7280" fontSize={12} />
                                                 <Tooltip content={<CustomTooltip />} />
                                                 <Area type="monotone" dataKey="vanzari" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorVanzari)" />
-                                                <Area type="monotone" dataKey="utilizatori" stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#colorUtilizatori)" />
                                             </AreaChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -667,7 +675,7 @@ const AdminPage = () => {
                                             <div key={i} className="flex items-center gap-2">
                                                 <span className="w-3 h-3 rounded-full" style={{ background: item.color }} />
                                                 <span className="text-xs text-gray-400">{item.name}</span>
-                                                <span className="text-xs font-bold text-white ml-auto">{item.value}%</span>
+                                                <span className="text-xs font-bold text-white ml-auto">{item.value}</span>
                                             </div>
                                         ))}
                                     </div>
