@@ -66,10 +66,10 @@ const CompetitionCard = ({ competition, featured = false }) => {
                 
                 {/* Badges */}
                 <div className="absolute top-4 left-4 flex gap-2">
-                    {competition.competition_type === 'instant_win' ? (
+                    {(competition.competition_type === 'instant_win' || competition.competition_type === 'draw') ? (
                         <Badge className="badge-instant">
                             <Zap className="w-3 h-3 mr-1" />
-                            {isRomanian ? 'Instant' : 'Instant'}
+                            Autodraw
                         </Badge>
                     ) : (
                         <Badge className="badge-classic">

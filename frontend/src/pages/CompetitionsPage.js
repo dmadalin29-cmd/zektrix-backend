@@ -241,7 +241,7 @@ const CompetitionsPage = () => {
                                     { icon: Trophy, value: competitions.filter(c => c.status === 'active').length, label: isRomanian ? 'Competiții Active' : 'Active', color: '#8b5cf6' },
                                     { icon: Ticket, value: competitions.reduce((sum, c) => sum + c.sold_tickets, 0), label: isRomanian ? 'Locuri Vândute' : 'Spots Sold', color: '#06b6d4' },
                                     { icon: Banknote, value: `£${Math.min(...competitions.filter(c => c.status === 'active' && !c.is_free).map(c => c.ticket_price) || [0]).toFixed(0)}`, label: isRomanian ? 'Preț Minim' : 'From', color: '#10b981' },
-                                    { icon: Zap, value: competitions.filter(c => c.competition_type === 'instant_win').length, label: isRomanian ? 'Instant Wins' : 'Instant Wins', color: '#f97316' },
+                                    { icon: Zap, value: competitions.filter(c => c.competition_type === 'instant_win' || c.competition_type === 'draw').length, label: 'Autodraw', color: '#f97316' },
                                 ].map((stat, i) => (
                                     <div key={i} className="rounded-xl p-4 text-center"
                                         style={{

@@ -110,9 +110,11 @@ const SpecialCompCard = ({ c }) => {
                         <span className="px-3 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-black text-xs font-black rounded-full flex items-center gap-1 animate-pulse">
                             <Sparkles className="w-3 h-3" /> SPECIAL
                         </span>
-                        <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded border border-green-500/30">
-                            AUTODRAW
-                        </span>
+                        {(c.competition_type === 'instant_win' || c.competition_type === 'draw') && (
+                            <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded border border-green-500/30">
+                                AUTODRAW
+                            </span>
+                        )}
                     </div>
                     
                     {/* Image */}
@@ -218,9 +220,11 @@ const CompCard = ({ c }) => {
         <Link to={`/competitions/${c.competition_id}`} className="group block bg-[#12111a] rounded-xl overflow-hidden border border-white/5 hover:border-violet-500/30 transition-all">
             <div className="relative aspect-[4/3]">
                 <img src={c.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80'} alt={c.title} className="w-full h-full object-cover" loading="lazy" />
-                <div className="absolute top-2 left-2">
-                    <span className="px-2 py-0.5 bg-violet-600 text-white text-[10px] font-bold rounded">AUTODRAW</span>
-                </div>
+                {(c.competition_type === 'instant_win' || c.competition_type === 'draw') && (
+                    <div className="absolute top-2 left-2">
+                        <span className="px-2 py-0.5 bg-violet-600 text-white text-[10px] font-bold rounded">AUTODRAW</span>
+                    </div>
+                )}
                 <div className="absolute bottom-2 left-2">
                     <span className="px-2 py-1 bg-violet-600 text-white text-xs font-bold rounded">{(c.is_free || c.ticket_price === 0) ? 'GRATUIT' : `£${c.ticket_price?.toFixed(2)}`}</span>
                 </div>
