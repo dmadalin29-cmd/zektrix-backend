@@ -1236,6 +1236,11 @@ const AdminPage = () => {
                                                 outputArray[i] = rawData.charCodeAt(i);
                                             }
                                             const reg = await navigator.serviceWorker.ready;
+                                            // Unsubscribe old subscription first
+                                            const existingSub = await reg.pushManager.getSubscription();
+                                            if (existingSub) {
+                                                await existingSub.unsubscribe();
+                                            }
                                             const subscription = await reg.pushManager.subscribe({
                                                 userVisibleOnly: true,
                                                 applicationServerKey: outputArray
