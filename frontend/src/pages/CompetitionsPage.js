@@ -36,9 +36,13 @@ const CompCard = ({ comp, featured = false }) => {
                 
                 {/* Badges */}
                 <div className="absolute top-3 left-3 flex gap-2">
-                    {(comp.competition_type === 'instant_win' || comp.competition_type === 'draw') && (
-                        <span className="px-2.5 py-1 bg-violet-600 text-white text-[10px] font-bold rounded-lg shadow-lg flex items-center gap-1">
+                    {comp.competition_type === 'instant_win' ? (
+                        <span className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded-lg shadow-lg flex items-center gap-1">
                             <Zap className="w-3 h-3" /> AUTODRAW
+                        </span>
+                    ) : (
+                        <span className="px-2.5 py-1 bg-violet-600 text-white text-[10px] font-bold rounded-lg shadow-lg flex items-center gap-1">
+                            DRAW
                         </span>
                     )}
                     {comp.is_flash_sale && (
@@ -130,13 +134,13 @@ const CompetitionsPage = () => {
         { id: 'instant_wins', label: 'Autodraw', icon: Zap },
         { id: 'cash', label: isRomanian ? 'Cash' : 'Cash', icon: Banknote },
         { id: 'tech', label: isRomanian ? 'Tech' : 'Tech', icon: Monitor },
-        { id: 'cars', label: isRomanian ? 'Mașini' : 'Cars', icon: Car },
+        { id: 'auto', label: isRomanian ? 'Mașini' : 'Cars', icon: Car },
     ];
 
     const filteredCompetitions = useMemo(() => {
         if (activeFilter === 'all') return competitions;
         if (activeFilter === 'instant_wins') {
-            return competitions.filter(c => c.competition_type === 'instant_win' || c.competition_type === 'draw');
+            return competitions.filter(c => c.competition_type === 'instant_win');
         }
         return competitions.filter(c => c.category === activeFilter);
     }, [competitions, activeFilter]);
@@ -241,7 +245,7 @@ const CompetitionsPage = () => {
                                     { icon: Trophy, value: competitions.filter(c => c.status === 'active').length, label: isRomanian ? 'Competiții Active' : 'Active', color: '#8b5cf6' },
                                     { icon: Ticket, value: competitions.reduce((sum, c) => sum + c.sold_tickets, 0), label: isRomanian ? 'Locuri Vândute' : 'Spots Sold', color: '#06b6d4' },
                                     { icon: Banknote, value: `£${Math.min(...competitions.filter(c => c.status === 'active' && !c.is_free).map(c => c.ticket_price) || [0]).toFixed(0)}`, label: isRomanian ? 'Preț Minim' : 'From', color: '#10b981' },
-                                    { icon: Zap, value: competitions.filter(c => c.competition_type === 'instant_win' || c.competition_type === 'draw').length, label: 'Autodraw', color: '#f97316' },
+                                    { icon: Zap, value: competitions.filter(c => c.competition_type === 'instant_win').length, label: 'Autodraw', color: '#f97316' },
                                 ].map((stat, i) => (
                                     <div key={i} className="rounded-xl p-4 text-center"
                                         style={{

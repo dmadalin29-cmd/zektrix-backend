@@ -238,13 +238,13 @@ const CompetitionDetailPage = () => {
                                     
                                     {/* Badges */}
                                     <div className="absolute top-4 left-4 flex gap-2">
-                                        {(competition.competition_type === 'instant_win' || competition.competition_type === 'draw') ? (
+                                        {competition.competition_type === 'instant_win' ? (
                                             <Badge className="badge-instant">
                                                 <Zap className="w-3 h-3 mr-1" /> Autodraw
                                             </Badge>
                                         ) : (
                                             <Badge className="badge-classic">
-                                                <Clock className="w-3 h-3 mr-1" /> {isRomanian ? 'Extragere Clasică' : 'Classic Draw'}
+                                                <Clock className="w-3 h-3 mr-1" /> Draw
                                             </Badge>
                                         )}
                                     </div>
