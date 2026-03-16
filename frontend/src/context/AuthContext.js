@@ -216,8 +216,13 @@ export const AuthProvider = ({ children }) => {
         return userData;
     };
 
-    const loginWithGoogle = async (sessionId) => {
-        const response = await axios.post(`${API}/auth/google/exchange`, { session_id: sessionId });
+    const loginWithGoogle = () => {
+        const redirectUrl = encodeURIComponent(`${window.location.origin}/auth/callback`);
+        window.location.href = `https://demobackend.emergentagent.com/auth/v1/env/oauth/redirect?redirect_url=${redirectUrl}`;
+    };
+
+    const processGoogleCallback = async (sessionId) => {
+        const response = await axios.get(`${API}/auth/session`, { params: { session_id: sessionId } });
         const { token: newToken, user: userData } = response.data;
         saveAuth(newToken, userData);
         return userData;
@@ -253,6 +258,7 @@ export const AuthProvider = ({ children }) => {
             login,
             register,
             loginWithGoogle,
+            processGoogleCallback,
             logout,
             refreshUser
         }}>
