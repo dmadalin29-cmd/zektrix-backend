@@ -36,7 +36,7 @@ const CompCard = ({ comp, featured = false }) => {
                 
                 {/* Badges */}
                 <div className="absolute top-3 left-3 flex gap-2">
-                    {comp.competition_type === 'instant_win' && (
+                    {(comp.competition_type === 'instant_win' || comp.competition_type === 'draw') && (
                         <span className="px-2.5 py-1 bg-violet-600 text-white text-[10px] font-bold rounded-lg shadow-lg flex items-center gap-1">
                             <Zap className="w-3 h-3" /> AUTODRAW
                         </span>
@@ -136,7 +136,7 @@ const CompetitionsPage = () => {
     const filteredCompetitions = useMemo(() => {
         if (activeFilter === 'all') return competitions;
         if (activeFilter === 'instant_wins') {
-            return competitions.filter(c => c.competition_type === 'instant_win');
+            return competitions.filter(c => c.competition_type === 'instant_win' || c.competition_type === 'draw');
         }
         return competitions.filter(c => c.category === activeFilter);
     }, [competitions, activeFilter]);
