@@ -32,10 +32,14 @@ const LiveChat = () => {
     }, [messages]);
 
     // Connect WebSocket only in live mode
+    const historyLoadedRef = useRef(false);
     useEffect(() => {
         if (isOpen && user && token && mode === 'live') {
             connectWebSocket();
-            loadHistory();
+            if (!historyLoadedRef.current) {
+                loadHistory();
+                historyLoadedRef.current = true;
+            }
         }
         return () => {
             if (wsRef.current) {
@@ -58,12 +62,18 @@ const LiveChat = () => {
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.type === 'admin_reply') {
-                    setMessages(prev => [...prev, {
-                        type: 'admin',
-                        text: data.reply,
-                        repliedBy: data.replied_by,
-                        timestamp: data.timestamp
-                    }]);
+                    const replyId = data.message_id + '_reply_' + data.timestamp;
+                    setMessages(prev => {
+                        // Prevent duplicate admin replies
+                        if (prev.some(m => m.id === replyId)) return prev;
+                        return [...prev, {
+                            type: 'admin',
+                            text: data.reply,
+                            repliedBy: data.replied_by,
+                            timestamp: data.timestamp,
+                            id: replyId
+                        }];
+                    });
                     if (!isOpen) setHasUnread(true);
                 } else if (data.type === 'faq_response') {
                     setMessages(prev => [...prev, { type: 'bot', text: data.message, timestamp: data.timestamp }]);
@@ -96,12 +106,13 @@ const LiveChat = () => {
             if (res.data && res.data.length > 0) {
                 const historyMsgs = [];
                 res.data.forEach(m => {
-                    historyMsgs.push({ type: 'user', text: m.message, timestamp: m.created_at });
+                    historyMsgs.push({ type: 'user', text: m.message, timestamp: m.created_at, id: m.message_id });
                     if (m.admin_reply) {
-                        historyMsgs.push({ type: 'admin', text: m.admin_reply, repliedBy: m.replied_by || 'Admin', timestamp: m.replied_at || m.created_at });
+                        historyMsgs.push({ type: 'admin', text: m.admin_reply, repliedBy: m.replied_by || 'Admin', timestamp: m.replied_at || m.created_at, id: m.message_id + '_reply' });
                     }
                 });
-                setMessages(prev => [...prev, ...historyMsgs]);
+                // Replace messages instead of appending to avoid duplicates
+                setMessages(historyMsgs);
             }
         } catch (e) {
             console.error('Failed to load chat history');
