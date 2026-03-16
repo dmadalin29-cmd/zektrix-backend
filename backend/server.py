@@ -19,7 +19,6 @@ from passlib.context import CryptContext
 import jwt
 import resend
 from emergentintegrations.llm.chat import LlmChat, UserMessage
-from pywebpush import webpush, WebPushException
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -3141,6 +3140,7 @@ async def notify_admins_live_chat(user_name: str, user_email: str, message: str)
     for sub in subscriptions:
         try:
             import json
+            from pywebpush import webpush, WebPushException
             webpush(
                 subscription_info={
                     "endpoint": sub["endpoint"],
@@ -3154,12 +3154,10 @@ async def notify_admins_live_chat(user_name: str, user_email: str, message: str)
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims={"sub": VAPID_MAILTO}
             )
-        except WebPushException as e:
+        except Exception as e:
             logger.error(f"Push notification failed: {e}")
             if "410" in str(e) or "404" in str(e):
                 await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
-        except Exception as e:
-            logger.error(f"Push error: {e}")
     
     # 2. Email notification
     if RESEND_API_KEY:
