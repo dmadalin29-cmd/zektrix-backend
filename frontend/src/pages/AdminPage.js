@@ -259,12 +259,16 @@ const AdminPage = () => {
                 ws.onmessage = (event) => {
                     const data = JSON.parse(event.data);
                     if (data.type === 'new_message') {
-                        setChatMsgs(prev => [{ 
-                            message_id: data.message_id, user_id: data.user_id,
-                            username: data.username, user_email: data.user_email,
-                            message: data.message, status: 'pending',
-                            created_at: data.created_at, admin_reply: null
-                        }, ...prev]);
+                        setChatMsgs(prev => {
+                            // Prevent duplicates
+                            if (prev.some(m => m.message_id === data.message_id)) return prev;
+                            return [{ 
+                                message_id: data.message_id, user_id: data.user_id,
+                                username: data.username, user_email: data.user_email,
+                                message: data.message, status: 'pending',
+                                created_at: data.created_at, admin_reply: null
+                            }, ...prev];
+                        });
                         toast.info(`Mesaj nou de la ${data.username}`);
                     } else if (data.type === 'reply_sent') {
                         setChatMsgs(prev => prev.map(m => 

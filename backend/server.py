@@ -3133,30 +3133,79 @@ async def push_unsubscribe(current_user: dict = Depends(get_current_user)):
     await db.push_subscriptions.delete_one({"user_id": current_user["user_id"]})
     return {"message": "Unsubscribed"}
 
+async def send_web_push(subscription_info: dict, data_payload: str):
+    """Send Web Push notification using httpx + VAPID signing (no pywebpush dependency)"""
+    import json
+    import time
+    import base64
+    import hashlib
+    from cryptography.hazmat.primitives.asymmetric import ec, utils
+    from cryptography.hazmat.primitives import serialization, hashes
+    from cryptography.hazmat.backends import default_backend
+    
+    endpoint = subscription_info["endpoint"]
+    
+    # Parse VAPID private key
+    priv_key_der = base64.b64decode(VAPID_PRIVATE_KEY)
+    private_key = serialization.load_der_private_key(priv_key_der, password=None, backend=default_backend())
+    
+    # Build VAPID JWT token
+    audience = "/".join(endpoint.split("/")[:3])
+    header = base64.urlsafe_b64encode(json.dumps({"typ": "JWT", "alg": "ES256"}).encode()).rstrip(b"=").decode()
+    payload_jwt = base64.urlsafe_b64encode(json.dumps({
+        "aud": audience,
+        "exp": int(time.time()) + 86400,
+        "sub": VAPID_MAILTO
+    }).encode()).rstrip(b"=").decode()
+    
+    signing_input = f"{header}.{payload_jwt}".encode()
+    der_sig = private_key.sign(signing_input, ec.ECDSA(hashes.SHA256()))
+    r, s = utils.decode_dss_signature(der_sig)
+    sig_bytes = r.to_bytes(32, "big") + s.to_bytes(32, "big")
+    signature = base64.urlsafe_b64encode(sig_bytes).rstrip(b"=").decode()
+    
+    jwt_token = f"{header}.{payload_jwt}.{signature}"
+    
+    # Get public key for Authorization
+    pub_bytes = private_key.public_key().public_bytes(
+        serialization.Encoding.X962,
+        serialization.PublicFormat.UncompressedPoint
+    )
+    pub_key_b64 = base64.urlsafe_b64encode(pub_bytes).rstrip(b"=").decode()
+    
+    headers = {
+        "Authorization": f"vapid t={jwt_token},k={pub_key_b64}",
+        "Content-Type": "application/json",
+        "TTL": "86400",
+    }
+    
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(endpoint, content=data_payload.encode(), headers=headers, timeout=10)
+        if resp.status_code in [404, 410]:
+            raise Exception(f"Subscription expired: {resp.status_code}")
+        return resp.status_code
+
 async def notify_admins_live_chat(user_name: str, user_email: str, message: str):
     """Send push notification + email to all admins when user requests live chat"""
+    import json
+    
     # 1. Push notifications
     subscriptions = await db.push_subscriptions.find({}, {"_id": 0}).to_list(50)
     for sub in subscriptions:
         try:
-            import json
-            from pywebpush import webpush, WebPushException
-            webpush(
-                subscription_info={
-                    "endpoint": sub["endpoint"],
-                    "keys": sub["keys"]
-                },
-                data=json.dumps({
-                    "title": "Asistență Live Solicitată",
-                    "body": f"{user_name}: {message[:100]}",
-                    "url": "https://zektrix.uk/admin"
-                }),
-                vapid_private_key=VAPID_PRIVATE_KEY,
-                vapid_claims={"sub": VAPID_MAILTO}
+            payload = json.dumps({
+                "title": "Asistenta Live Solicitata",
+                "body": f"{user_name}: {message[:100]}",
+                "url": "https://zektrix.uk/admin"
+            })
+            await send_web_push(
+                subscription_info={"endpoint": sub["endpoint"], "keys": sub["keys"]},
+                data_payload=payload
             )
+            logger.info(f"Push sent to {sub['endpoint'][:50]}...")
         except Exception as e:
             logger.error(f"Push notification failed: {e}")
-            if "410" in str(e) or "404" in str(e):
+            if "expired" in str(e).lower() or "410" in str(e) or "404" in str(e):
                 await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
     
     # 2. Email notification
