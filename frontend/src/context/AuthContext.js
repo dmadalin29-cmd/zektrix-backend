@@ -217,8 +217,9 @@ export const AuthProvider = ({ children }) => {
     };
 
     const loginWithGoogle = () => {
-        const redirectUrl = encodeURIComponent(`${window.location.origin}/auth/callback`);
-        window.location.href = `https://demobackend.emergentagent.com/auth/v1/env/oauth/redirect?redirect_url=${redirectUrl}`;
+        // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+        const redirectUrl = window.location.origin + '/auth/callback';
+        window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
     };
 
     const processGoogleCallback = async (sessionId) => {
