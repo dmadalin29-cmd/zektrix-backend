@@ -1309,7 +1309,8 @@ async def purchase_cart(cart: CartPurchase, current_user: dict = Depends(get_cur
             "merchantTrns": pending_id,
             "sourceCode": "9806",
             "successUrl": "https://zektrix.uk/payment/success",
-            "failureUrl": "https://zektrix.uk/payment/failed"
+            "failureUrl": "https://zektrix.uk/payment/failed",
+            "cancelUrl": "https://zektrix.uk/payment/cancel"
         }
         
         async with httpx.AsyncClient() as client:
@@ -1435,7 +1436,8 @@ async def purchase_tickets_with_viva(purchase: TicketPurchaseViva, current_user:
             "paymentTimeout": 1800,
             "sourceCode": "9806",
             "successUrl": "https://zektrix.uk/payment/success",
-            "failureUrl": "https://zektrix.uk/payment/failed"
+            "failureUrl": "https://zektrix.uk/payment/failed",
+            "cancelUrl": "https://zektrix.uk/payment/cancel"
         }
         
         async with httpx.AsyncClient() as client:
