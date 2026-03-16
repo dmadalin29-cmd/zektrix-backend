@@ -7,7 +7,7 @@ from datetime import datetime
 import uuid
 
 class ZektrixAPITester:
-    def __init__(self, base_url="https://comp-platform.preview.emergentagent.com"):
+    def __init__(self, base_url="https://contest-hub-34.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.token = None

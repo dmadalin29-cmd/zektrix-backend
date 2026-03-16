@@ -36,9 +36,11 @@ const CompCard = ({ comp, featured = false }) => {
                 
                 {/* Badges */}
                 <div className="absolute top-3 left-3 flex gap-2">
-                    <span className="px-2.5 py-1 bg-violet-600 text-white text-[10px] font-bold rounded-lg shadow-lg">
-                        AUTODRAW
-                    </span>
+                    {comp.competition_type === 'instant_win' && (
+                        <span className="px-2.5 py-1 bg-violet-600 text-white text-[10px] font-bold rounded-lg shadow-lg flex items-center gap-1">
+                            <Zap className="w-3 h-3" /> AUTODRAW
+                        </span>
+                    )}
                     {comp.is_flash_sale && (
                         <span className="px-2.5 py-1 bg-orange-500 text-white text-[10px] font-bold rounded-lg shadow-lg flex items-center gap-1">
                             <Zap className="w-3 h-3" /> FLASH
@@ -125,10 +127,10 @@ const CompetitionsPage = () => {
 
     const categories = [
         { id: 'all', label: isRomanian ? 'Toate' : 'All', icon: Sparkles },
-        { id: 'instant_wins', label: isRomanian ? 'Instant' : 'Instant', icon: Zap },
+        { id: 'instant_wins', label: 'Autodraw', icon: Zap },
         { id: 'cash', label: isRomanian ? 'Cash' : 'Cash', icon: Banknote },
         { id: 'tech', label: isRomanian ? 'Tech' : 'Tech', icon: Monitor },
-        { id: 'cars', label: isRomanian ? 'Auto' : 'Cars', icon: Car },
+        { id: 'cars', label: isRomanian ? 'Mașini' : 'Cars', icon: Car },
     ];
 
     const filteredCompetitions = useMemo(() => {

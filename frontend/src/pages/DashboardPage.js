@@ -237,12 +237,13 @@ const DashboardPage = () => {
             }
             const headers = { Authorization: `Bearer ${authToken}` };
             
-            // Fetch locs
-            const locsRes = await axios.get(`${API}/tickets/my`, { headers });
+            // Fetch locs and transactions
+            const [locsRes, txnRes] = await Promise.all([
+                axios.get(`${API}/tickets/my`, { headers }),
+                axios.get(`${API}/wallet/transactions`, { headers }).catch(() => ({ data: [] }))
+            ]);
             setLocs(locsRes.data || []);
-            
-            // Wallet removed - transactions no longer available
-            setTransactions([]);
+            setTransactions(txnRes.data || []);
         } catch (error) {
             console.error('Fetch error:', error);
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {

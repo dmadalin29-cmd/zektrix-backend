@@ -117,7 +117,23 @@ const AppRouter = () => {
                     }
                 />
                 <Route
+                    path="/dashboard/locs"
+                    element={
+                        <ProtectedRoute>
+                            <DashboardPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
                     path="/dashboard/history"
+                    element={
+                        <ProtectedRoute>
+                            <DashboardPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/dashboard/account"
                     element={
                         <ProtectedRoute>
                             <DashboardPage />
