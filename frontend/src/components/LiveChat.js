@@ -31,8 +31,9 @@ const LiveChat = () => {
         }
     }, [messages]);
 
-    // Connect WebSocket only in live mode
+    // Connect WebSocket only in live mode + poll for replies as fallback
     const historyLoadedRef = useRef(false);
+    const pollTimerRef = useRef(null);
     useEffect(() => {
         if (isOpen && user && token && mode === 'live') {
             connectWebSocket();
@@ -40,6 +41,27 @@ const LiveChat = () => {
                 loadHistory();
                 historyLoadedRef.current = true;
             }
+            // Poll for new replies every 5s as fallback when WS is down
+            pollTimerRef.current = setInterval(async () => {
+                if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+                    try {
+                        const authToken = token || localStorage.getItem('zektrix_token');
+                        const res = await axios.get(`${API}/chat/history`, {
+                            headers: { Authorization: `Bearer ${authToken}` }
+                        });
+                        if (res.data && res.data.length > 0) {
+                            const historyMsgs = [];
+                            res.data.forEach(m => {
+                                historyMsgs.push({ type: 'user', text: m.message, timestamp: m.created_at, id: m.message_id });
+                                if (m.admin_reply) {
+                                    historyMsgs.push({ type: 'admin', text: m.admin_reply, repliedBy: m.replied_by || 'Admin', timestamp: m.replied_at || m.created_at, id: m.message_id + '_reply' });
+                                }
+                            });
+                            setMessages(historyMsgs);
+                        }
+                    } catch { /* ignore polling errors */ }
+                }
+            }, 5000);
         }
         return () => {
             if (wsRef.current) {
@@ -48,6 +70,9 @@ const LiveChat = () => {
             }
             if (reconnectTimer.current) {
                 clearTimeout(reconnectTimer.current);
+            }
+            if (pollTimerRef.current) {
+                clearInterval(pollTimerRef.current);
             }
         };
     }, [isOpen, user, token, mode]);
@@ -162,8 +187,20 @@ const LiveChat = () => {
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
             wsRef.current.send(JSON.stringify({ type: 'message', message: userMessage }));
         } else {
-            setLoading(false);
-            toast.error('Nu sunt conectat. Încerc reconectarea...');
+            // Fallback: send via REST API when WebSocket is not available
+            try {
+                const authToken = token || localStorage.getItem('zektrix_token');
+                await axios.post(`${API}/chat/message`,
+                    { message: userMessage },
+                    { headers: { Authorization: `Bearer ${authToken}` } }
+                );
+                setLoading(false);
+            } catch (e) {
+                console.error('Send message error:', e);
+                setLoading(false);
+                toast.error('Eroare la trimitere. Încearcă din nou.');
+            }
+            // Try to reconnect WebSocket in background
             connectWebSocket();
         }
     };

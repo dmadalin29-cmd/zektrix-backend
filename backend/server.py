@@ -2897,13 +2897,26 @@ class ChatManager:
 chat_manager = ChatManager()
 
 async def verify_ws_token(token: str):
-    """Verify JWT token for WebSocket connections"""
+    """Verify JWT or session token for WebSocket connections"""
+    # Try JWT first
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user = await db.users.find_one({"user_id": payload["user_id"]}, {"_id": 0})
-        return user
+        if user:
+            return user
     except Exception:
-        return None
+        pass
+    
+    # Try session token (Google Auth)
+    try:
+        session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+        if session:
+            user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
+            return user
+    except Exception:
+        pass
+    
+    return None
 
 @app.websocket("/ws/chat/user")
 async def ws_chat_user(websocket: WebSocket, token: str = Query(...)):

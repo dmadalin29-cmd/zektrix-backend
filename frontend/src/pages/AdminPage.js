@@ -281,7 +281,20 @@ const AdminPage = () => {
                 ws.onerror = () => ws.close();
             } catch (e) { console.error('Admin WS error:', e); }
         }
-        return () => { if (ws) ws.close(); };
+        // Poll for new chat messages every 8s as fallback
+        const chatPoll = setInterval(() => {
+            axios.get(`${API}/admin/chat/messages`, { headers: { Authorization: `Bearer ${token}` }})
+                .then(r => {
+                    setChatMsgs(prev => {
+                        const newMsgs = r.data;
+                        if (newMsgs.length !== prev.length || JSON.stringify(newMsgs.map(m => m.message_id)) !== JSON.stringify(prev.map(m => m.message_id))) {
+                            return newMsgs;
+                        }
+                        return prev;
+                    });
+                }).catch(() => {});
+        }, 8000);
+        return () => { if (ws) ws.close(); clearInterval(chatPoll); };
     }, [isAdmin, navigate, fetchAll, token]);
 
     // Real chart data from analytics
