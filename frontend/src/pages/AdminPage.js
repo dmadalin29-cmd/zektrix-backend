@@ -473,9 +473,10 @@ const AdminPage = () => {
         <div className="min-h-screen bg-[#030014] flex" data-testid="admin-page">
             {/* ============== SIDEBAR ============== */}
             <aside 
-                className={`fixed lg:sticky top-0 left-0 z-50 h-screen transition-all duration-500 ease-out
+                className={`fixed top-0 left-0 z-50 h-screen transition-all duration-300 ease-out
                     ${sidebarCollapsed ? 'w-20' : 'w-72'} 
-                    ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+                    ${mobileMenuOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 pointer-events-none lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'}
+                    lg:sticky`}
                 style={{
                     background: 'linear-gradient(180deg, rgba(10, 6, 20, 0.98) 0%, rgba(5, 3, 15, 0.99) 100%)',
                     borderRight: '1px solid rgba(139, 92, 246, 0.1)',
