@@ -1216,16 +1216,29 @@ const AdminPage = () => {
                                 <Button
                                     onClick={async () => {
                                         try {
+                                            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                                                toast.error('Browser-ul nu suportă notificări push');
+                                                return;
+                                            }
                                             const permission = await Notification.requestPermission();
                                             if (permission !== 'granted') {
                                                 toast.error('Permite notificările din setările browser-ului');
                                                 return;
                                             }
                                             const vapidRes = await axios.get(`${API}/push/vapid-key`);
+                                            const key = vapidRes.data.public_key;
+                                            // Convert URL-safe base64 to Uint8Array
+                                            const padding = '='.repeat((4 - key.length % 4) % 4);
+                                            const base64 = (key + padding).replace(/-/g, '+').replace(/_/g, '/');
+                                            const rawData = window.atob(base64);
+                                            const outputArray = new Uint8Array(rawData.length);
+                                            for (let i = 0; i < rawData.length; ++i) {
+                                                outputArray[i] = rawData.charCodeAt(i);
+                                            }
                                             const reg = await navigator.serviceWorker.ready;
                                             const subscription = await reg.pushManager.subscribe({
                                                 userVisibleOnly: true,
-                                                applicationServerKey: vapidRes.data.public_key
+                                                applicationServerKey: outputArray
                                             });
                                             const subJson = subscription.toJSON();
                                             await axios.post(`${API}/push/subscribe`, {
@@ -1234,8 +1247,8 @@ const AdminPage = () => {
                                             }, { headers: { Authorization: `Bearer ${token}` } });
                                             toast.success('Notificări activate! Vei primi alerte pe telefon.');
                                         } catch (e) {
-                                            console.error(e);
-                                            toast.error('Eroare la activarea notificărilor');
+                                            console.error('Push error:', e);
+                                            toast.error('Eroare la activare: ' + (e.message || 'Verifică setările browser-ului'));
                                         }
                                     }}
                                     className="w-full bg-emerald-600 hover:bg-emerald-500"
