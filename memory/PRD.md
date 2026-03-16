@@ -4,9 +4,8 @@
 Full-stack competition platform with Viva Payments, modern UI, admin panel, GBP currency, PWA support, real-time chat, and more.
 
 ## Tech Stack
-- **Frontend:** React + Tailwind CSS + Shadcn/UI
-- **Backend:** FastAPI + MongoDB
-- **Hosting:** Railway (backend), Hostinger (frontend)
+- **Frontend:** React + Tailwind CSS + Shadcn/UI (Hostinger)
+- **Backend:** FastAPI + MongoDB (Railway)
 - **Payments:** Viva Payments (GBP)
 - **Auth:** JWT + Emergent-managed Google Auth
 - **Email:** Resend
@@ -15,7 +14,7 @@ Full-stack competition platform with Viva Payments, modern UI, admin panel, GBP 
 ## Core Features (Implemented)
 - User authentication (JWT + Google OAuth)
 - Competition management (CRUD, auto-draw, instant prizes)
-- Viva Payments integration (GBP)
+- Viva Payments integration (GBP) with cancel button support
 - Admin panel with analytics, user/competition management
 - WebSocket live chat system
 - PWA with offline support
@@ -24,19 +23,19 @@ Full-stack competition platform with Viva Payments, modern UI, admin panel, GBP 
 - Google Analytics integration
 - Deployment script (deploy.sh)
 
+## Bug Fixes Completed (March 2026)
+1. **AUTODRAW vs DRAW badges** - Visual differentiation: green AUTODRAW (instant_win) vs violet DRAW (draw) on all pages
+2. **Autodraw filter** - Correctly filters only instant_win competitions
+3. **Mașini filter** - Fixed to match `category=auto` from database
+4. **Dashboard tabs** - Added missing routes for `/dashboard/locs` and `/dashboard/account`
+5. **Free competition limit** - Backend enforces one entry per user
+6. **Viva Cancel Button** - Added `cancelUrl` + PaymentCancelPage for customer cancellation
+7. **Frontend .env** - Set production backend URL permanently
+
 ## Key Architecture
 - Backend: Monolithic `server.py` (~4600 lines) - NEEDS REFACTORING
 - Frontend: Pages in `src/pages/`, Components in `src/components/`
-- Routes: `/api` prefix for all backend endpoints
-
-## Critical Deployment Note
-Always use `/app/deploy.sh` for frontend production deployments to prevent wrong backend URL bug.
-
-## Bug Fixes Completed (March 2026)
-1. AUTODRAW badge - Now conditional on `competition_type === 'instant_win'`
-2. Autodraw filter - Renamed from "Instant" to "Autodraw", filters correctly
-3. Dashboard tabs - Added missing routes for `/dashboard/locs` and `/dashboard/account`
-4. Free competition limit - Backend already enforces one entry per user
+- Deploy: Always use `/app/deploy.sh` for frontend production builds
 
 ## Backlog (Prioritized)
 ### P0
