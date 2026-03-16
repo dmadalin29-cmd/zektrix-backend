@@ -180,6 +180,9 @@ const FeaturedCard = ({ c }) => {
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0a0614] via-transparent to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-2">
                         <span className="px-2 py-1 bg-violet-600 text-white text-xs font-bold rounded">FEATURED</span>
+                        {(c.competition_type === 'instant_win' || c.competition_type === 'draw') && (
+                            <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded border border-green-500/30">AUTODRAW</span>
+                        )}
                     </div>
                 </div>
                 <div className="p-5">
