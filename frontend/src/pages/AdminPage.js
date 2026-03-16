@@ -1346,7 +1346,7 @@ const AdminPage = () => {
 
             {/* ============== COMPETITION MODAL ============== */}
             <Dialog open={showCompModal} onOpenChange={setShowCompModal}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto"
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto !top-[50%] !translate-y-[-50%]"
                     style={{ background: 'linear-gradient(135deg, rgba(10, 6, 20, 0.98) 0%, rgba(5, 3, 15, 0.99) 100%)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                     <DialogHeader>
                         <DialogTitle className="text-white text-xl">{editingComp ? 'Editează Competiția' : 'Competiție Nouă'}</DialogTitle>

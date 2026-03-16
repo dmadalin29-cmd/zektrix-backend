@@ -563,7 +563,7 @@ async def send_daily_digest_email(user_email: str, username: str, new_competitio
             new_comps_html += f"""
             <div style="background: #2a2a4e; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
                 <p style="margin: 0; font-weight: bold;">{comp.get('title', 'N/A')}</p>
-                <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;">Preț loc: RON {comp.get('ticket_price', 0):.2f}</p>
+                <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;">Preț loc: £{comp.get('ticket_price', 0):.2f}</p>
             </div>
             """
         new_comps_html += "</div>"
@@ -1299,10 +1299,12 @@ async def purchase_cart(cart: CartPurchase, current_user: dict = Depends(get_cur
         
         order_data = {
             "amount": amount_in_cents,
+            "currencyCode": 826,
             "customerTrns": f"Cart: {len(cart.items)} competitions",
             "customer": {
                 "email": current_user.get("email", ""),
-                "fullName": current_user.get("username", "")
+                "fullName": current_user.get("username", ""),
+                "requestLang": "en-GB"
             },
             "merchantTrns": pending_id,
             "sourceCode": "9806",
@@ -1422,6 +1424,7 @@ async def purchase_tickets_with_viva(purchase: TicketPurchaseViva, current_user:
         
         order_payload = {
             "amount": amount_cents,
+            "currencyCode": 826,
             "customerTrns": f"Tickets for {comp['title']} - {purchase.quantity} tickets",
             "customer": {
                 "email": current_user["email"],
@@ -1656,7 +1659,7 @@ async def wallet_viva_webhook(request: Request):
                 # Check if user has deposit bonus from Lucky Wheel
                 if user and user.get("next_deposit_bonus"):
                     bonus_percent = user.get("next_deposit_bonus", 0)
-                    bonus_max = user.get("next_deposit_bonus_max", 50)  # Default max 50 RON
+                    bonus_max = user.get("next_deposit_bonus_max", 50)  # Default max 50 GBP
                     
                     # Calculate bonus (percentage of deposit, capped at max)
                     calculated_bonus = deposit_amount * (bonus_percent / 100)
@@ -1670,7 +1673,7 @@ async def wallet_viva_webhook(request: Request):
                         }
                     )
                     
-                    logger.info(f"Applied {bonus_percent}% bonus: {bonus_amount} RON for user {transaction['user_id']}")
+                    logger.info(f"Applied {bonus_percent}% bonus: {bonus_amount} GBP for user {transaction['user_id']}")
                 
                 # Add deposit + bonus to balance
                 total_credit = deposit_amount + bonus_amount
