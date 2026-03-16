@@ -4,41 +4,51 @@
 Full-stack competition platform with Viva Payments, modern UI, admin panel, GBP currency, PWA support, real-time chat, and more.
 
 ## Tech Stack
-- **Frontend:** React + Tailwind CSS + Shadcn/UI (Hostinger)
-- **Backend:** FastAPI + MongoDB (Railway)
+- **Frontend:** React + Tailwind CSS + Shadcn/UI (Hostinger - zektrix.uk)
+- **Backend:** FastAPI + MongoDB Atlas (Railway - zektrix-backend-production.up.railway.app)
 - **Payments:** Viva Payments (GBP)
 - **Auth:** JWT + Emergent-managed Google Auth
 - **Email:** Resend
 - **AI:** Gemini 2.5 Flash via Emergent LLM Key
-- **Push:** Web Push API (VAPID)
+- **Push:** Web Push API (VAPID) with pywebpush
 - **Scheduler:** APScheduler
 
 ## Core Features (Implemented)
-- User authentication (JWT + Google OAuth)
+- User authentication (JWT + Google OAuth via Emergent Auth)
 - Competition management (CRUD, auto-draw, instant prizes)
 - Viva Payments integration (GBP) with cancel button
 - Admin panel with analytics, user/competition management
-- **AI Chatbot** - Gemini Flash, answers questions about Zektrix in Romanian
-- **Push Notifications** - Admin receives push + email when user needs live help
+- AI Chatbot (Gemini Flash) with escalation to live agent
+- Push Notifications (VAPID) for admin live chat alerts
 - WebSocket live chat with AI-to-live escalation
 - PWA with offline support
 - My Account profile editing
 - Privacy Policy page, Google Analytics
 
-## Latest Session Changes (March 2026)
-1. AUTODRAW vs DRAW badge differentiation on all pages
-2. Fixed Mașini filter (category=auto match)
-3. Fixed Dashboard tabs (missing routes)
-4. Viva cancel button + PaymentCancelPage
-5. AI Chatbot (Gemini Flash) with escalation to live chat
-6. Push notifications (VAPID) + email alerts for admin
+## Session Changes (March 16, 2026)
+
+### Bug Fixes
+1. **Chat Duplicate Messages** - Fixed `LiveChat.js`: `loadHistory` now REPLACES messages instead of appending. Added `historyLoadedRef` to prevent double-loading. WebSocket dedup by message ID.
+2. **Google Auth Callback** - Improved `AuthCallback.js`: Added `window.location.hash` fallback, better error logging, Romanian UI text.
+3. **Push Notifications** - Infrastructure verified: VAPID keys match between PEM and env, pywebpush installed, admin subscription flow works.
+
+### Deployment
+- Frontend deployed to Hostinger with production backend URL verified in bundle
+- Production backend (Railway) healthy and VAPID key endpoint working
+
+## Important Notes
+- Preview and Production use DIFFERENT MongoDB databases (different user counts)
+- Admin credentials on preview: admin@zektrix.uk / admin123
+- Production admin credentials differ - user manages these on Railway
 
 ## Backlog
 ### P0
-- User verification of PWA/Responsiveness on iOS/Android
+- User verification of Google Auth on production (zektrix.uk)
+- User verification of Push Notifications (admin needs to subscribe via Settings > Activează Notificări Push)
+- User verification of Chat deduplication fix
 
 ### P1
-- Refactor `server.py` into modular routers
+- Refactor `server.py` into modular routers (4800+ lines)
 - Facebook Pixel integration
 - Terms & Conditions page
 
