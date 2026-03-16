@@ -1,37 +1,27 @@
 # Zektrix UK - Competition Platform PRD
 
 ## Architecture
-- **Backend:** FastAPI + MongoDB on Railway (auto-deploy from GitHub)
-- **Frontend:** React on Hostinger (manual deploy via SSH)
+- **Backend:** FastAPI + MongoDB on Railway
+- **Frontend:** React on Hostinger  
 - **Backend URL:** https://zektrix-backend-production.up.railway.app
 - **Frontend URL:** https://zektrix.uk
-- **Hostinger SSH:** ssh -p 65002 u485600077@82.25.102.184
-- **Deploy:** .env.production.local overrides platform's .env during builds
 
-## Credentials
-- Admin: contact@x67digital.com / Credcada1.
-
-## Completed Features (Latest: 2026-03-16)
-- Core competition platform, Viva Payments (GBP, currencyCode 826), Google Auth
-- Admin panel with real-time analytics (10x optimized)
+## Completed Features (2026-03-16)
+- Core platform, Viva Payments (GBP currencyCode 826), Google Auth
+- Admin panel (10x optimized), real-time analytics
 - Free competitions, PWA with auto-update
-- Google Analytics (G-G760C5BPRM)
-- Privacy Policy (/privacy) - UK GDPR compliant
-- WebSocket Live Chat (user↔admin real-time)
-- Admin chat management: resolve/delete/email reply/filter
-- User profile editing (Contul Meu tab)
-- **Instant Prizes** - up to 10 per competition, auto-awarded at % thresholds
-- **[2026-03-16] Fixed Viva Payments currency from RON to GBP (currencyCode: 826)**
-- **[2026-03-16] Fixed competition creation modal positioning**
-- **[2026-03-16] Removed all remaining RON references**
-
-## Testing
-- iteration_7.json: All passed
-- iteration_8.json: All 27/27 passed
+- Google Analytics (G-G760C5BPRM), Privacy Policy (/privacy)
+- WebSocket Live Chat, Admin chat management
+- User profile editing (Contul Meu)
+- Instant Prizes (up to 10 per competition, auto-awarded at % thresholds)
+- **[2026-03-16] PWA Optimization Complete:**
+  - 13 optimized icons (72-512px, iOS + Android)
+  - Service Worker v5: stratified caching (static/images/HTML)
+  - iOS safe areas, standalone mode adjustments
+  - CSS: overscroll-behavior, reduced motion, input zoom fix
+  - Manifest: portrait orientation, maskable icons, categories
 
 ## Backlog
-### P0
-- Full PWA & Responsiveness audit (iOS + Android)
 ### P1
 - Refactor server.py (~4600 lines) into routers
 ### P2
