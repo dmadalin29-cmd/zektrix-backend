@@ -1192,6 +1192,53 @@ const AdminPage = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Push Notifications */}
+                            <div className="rounded-2xl p-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
+                                    border: '1px solid rgba(139, 92, 246, 0.15)'
+                                }}>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
+                                        <Bell className="w-7 h-7 text-emerald-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white">Notificări Push pe Telefon</h3>
+                                        <p className="text-sm text-gray-500">Primești notificare când cineva cere asistență live</p>
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={async () => {
+                                        try {
+                                            const permission = await Notification.requestPermission();
+                                            if (permission !== 'granted') {
+                                                toast.error('Permite notificările din setările browser-ului');
+                                                return;
+                                            }
+                                            const vapidRes = await axios.get(`${API}/push/vapid-key`);
+                                            const reg = await navigator.serviceWorker.ready;
+                                            const subscription = await reg.pushManager.subscribe({
+                                                userVisibleOnly: true,
+                                                applicationServerKey: vapidRes.data.public_key
+                                            });
+                                            const subJson = subscription.toJSON();
+                                            await axios.post(`${API}/push/subscribe`, {
+                                                endpoint: subJson.endpoint,
+                                                keys: subJson.keys
+                                            }, { headers: { Authorization: `Bearer ${token}` } });
+                                            toast.success('Notificări activate! Vei primi alerte pe telefon.');
+                                        } catch (e) {
+                                            console.error(e);
+                                            toast.error('Eroare la activarea notificărilor');
+                                        }
+                                    }}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-500"
+                                    data-testid="enable-push-btn"
+                                >
+                                    <Bell className="w-4 h-4 mr-2" /> Activează Notificări Push
+                                </Button>
+                            </div>
                         </div>
                     )}
 

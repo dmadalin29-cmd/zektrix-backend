@@ -19,6 +19,7 @@ from passlib.context import CryptContext
 import jwt
 import resend
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from pywebpush import webpush, WebPushException
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -53,6 +54,11 @@ RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
+
+# VAPID Push Notification Config
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_MAILTO = os.environ.get('VAPID_MAILTO', 'mailto:support@zektrix.uk')
 
 # Helper function to generate random unique ticket numbers
 async def generate_random_ticket_number(competition_id: str, max_tickets: int) -> int:
@@ -3001,6 +3007,216 @@ async def ws_chat_admin(websocket: WebSocket, token: str = Query(...)):
                 })
     except WebSocketDisconnect:
         chat_manager.disconnect_admin(websocket)
+
+# =============================================
+# AI CHATBOT + PUSH NOTIFICATIONS
+# =============================================
+
+ZEKTRIX_SYSTEM_PROMPT = """Ești asistentul AI al platformei Zektrix.UK - o platformă de competiții online cu premii din Marea Britanie.
+
+INFORMAȚII DESPRE ZEKTRIX.UK:
+- Platformă de competiții online unde utilizatorii cumpără locuri (bilete) pentru a câștiga premii valoroase
+- Premii: mașini (Tesla Model 3, AMG GLE 63S), cash (£500-£10,000), vacanțe, tech (iPhone, Apple Watch, PS5)
+- Moneda: GBP (£ - lire sterline)
+- Plăți securizate prin Viva Payments (card bancar)
+- Există și competiții GRATUITE (un loc per utilizator)
+
+CUM FUNCȚIONEAZĂ:
+1. Utilizatorul creează un cont gratuit pe zektrix.uk
+2. Alege o competiție care îi place
+3. Selectează numărul de locuri dorite
+4. Răspunde la o întrebare de calificare (obligatorie legal)
+5. Plătește cu cardul prin Viva Payments
+6. Când toate locurile sunt vândute sau la data extragerii, se alege câștigătorul
+
+TIPURI DE COMPETIȚII:
+- AUTODRAW (instant_win): Câștigătorul este ales automat când se vând toate locurile
+- DRAW: Extragere manuală la o dată specificată de admin
+
+CONT ȘI DASHBOARD:
+- "Locurile Mele" - vezi toate biletele cumpărate
+- "Istoric" - istoricul tranzacțiilor
+- "Contul Meu" - editează profilul (nume, email, telefon, adresă)
+
+PREȚURI:
+- Biletele variază de la £0.49 la £2.98 per loc
+- Competițiile gratuite nu necesită plată
+- Poți cumpăra mai multe locuri pentru șanse mai mari
+
+REGULI IMPORTANTE:
+- Vârsta minimă: 18 ani
+- Un singur loc per utilizator la competițiile gratuite
+- Intrare poștală gratuită disponibilă (conform legii UK)
+- Trebuie să răspunzi corect la întrebarea de calificare
+
+CONTACT:
+- Email: support@zektrix.uk
+- WhatsApp: +40 730 268 067
+- Chat live pe site
+
+REGULI PENTRU TINE:
+1. Răspunde DOAR în limba română
+2. Fii prietenos, concis și util
+3. Dacă nu știi răspunsul exact, spune sincer și sugerează contactarea suportului live
+4. Când utilizatorul are o problemă complexă (plată eșuată, cont blocat, premiu neclamat), sugerează să vorbească cu un operator live
+5. NU inventa informații pe care nu le ai
+6. Răspunsurile să fie scurte (max 2-3 propoziții) dacă nu e nevoie de mai mult"""
+
+class AIChatRequest(BaseModel):
+    message: str
+    session_id: Optional[str] = None
+
+class PushSubscription(BaseModel):
+    endpoint: str
+    keys: dict
+
+@api_router.post("/chat/ai")
+async def ai_chat(req: AIChatRequest, current_user: dict = Depends(get_current_user)):
+    """AI chatbot endpoint - answers questions about Zektrix"""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=503, detail="AI service unavailable")
+    
+    session_id = req.session_id or f"ai_{current_user['user_id']}_{uuid.uuid4().hex[:8]}"
+    
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=session_id,
+            system_message=ZEKTRIX_SYSTEM_PROMPT
+        ).with_model("gemini", "gemini-2.5-flash")
+        
+        response = await chat.send_message(UserMessage(text=req.message))
+        
+        needs_escalation = any(kw in response.lower() for kw in [
+            "operator live", "asistență live", "contactează suportul", 
+            "vorbește cu un operator", "echipa noastră"
+        ])
+        
+        return {
+            "response": response,
+            "session_id": session_id,
+            "needs_escalation": needs_escalation
+        }
+    except Exception as e:
+        logger.error(f"AI chat error: {e}")
+        return {
+            "response": "Îmi pare rău, am o problemă tehnică momentan. Te rog să folosești chat-ul live pentru asistență.",
+            "session_id": session_id,
+            "needs_escalation": True
+        }
+
+@api_router.get("/push/vapid-key")
+async def get_vapid_key():
+    """Return VAPID public key for push notification subscription"""
+    return {"public_key": VAPID_PUBLIC_KEY}
+
+@api_router.post("/push/subscribe")
+async def push_subscribe(subscription: PushSubscription, current_user: dict = Depends(get_current_user)):
+    """Subscribe admin to push notifications"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    await db.push_subscriptions.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {
+            "user_id": current_user["user_id"],
+            "endpoint": subscription.endpoint,
+            "keys": subscription.keys,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    return {"message": "Subscribed to push notifications"}
+
+@api_router.post("/push/unsubscribe")
+async def push_unsubscribe(current_user: dict = Depends(get_current_user)):
+    """Unsubscribe from push notifications"""
+    await db.push_subscriptions.delete_one({"user_id": current_user["user_id"]})
+    return {"message": "Unsubscribed"}
+
+async def notify_admins_live_chat(user_name: str, user_email: str, message: str):
+    """Send push notification + email to all admins when user requests live chat"""
+    # 1. Push notifications
+    subscriptions = await db.push_subscriptions.find({}, {"_id": 0}).to_list(50)
+    for sub in subscriptions:
+        try:
+            import json
+            webpush(
+                subscription_info={
+                    "endpoint": sub["endpoint"],
+                    "keys": sub["keys"]
+                },
+                data=json.dumps({
+                    "title": "Asistență Live Solicitată",
+                    "body": f"{user_name}: {message[:100]}",
+                    "url": "https://zektrix.uk/admin"
+                }),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": VAPID_MAILTO}
+            )
+        except WebPushException as e:
+            logger.error(f"Push notification failed: {e}")
+            if "410" in str(e) or "404" in str(e):
+                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
+        except Exception as e:
+            logger.error(f"Push error: {e}")
+    
+    # 2. Email notification
+    if RESEND_API_KEY:
+        try:
+            admins = await db.users.find({"role": "admin"}, {"_id": 0, "email": 1}).to_list(10)
+            admin_emails = [a["email"] for a in admins if a.get("email")]
+            if admin_emails:
+                resend.Emails.send({
+                    "from": SENDER_EMAIL,
+                    "to": admin_emails,
+                    "subject": f"🔔 Asistență Live - {user_name}",
+                    "html": f"""
+                    <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px;background:#1a1a2e;color:white;border-radius:12px;">
+                        <h2 style="color:#8b5cf6;">Cerere Asistență Live</h2>
+                        <p><strong>Utilizator:</strong> {user_name}</p>
+                        <p><strong>Email:</strong> {user_email}</p>
+                        <p><strong>Mesaj:</strong> {message[:200]}</p>
+                        <a href="https://zektrix.uk/admin" style="display:inline-block;margin-top:15px;padding:12px 24px;background:#8b5cf6;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">Deschide Admin Panel</a>
+                    </div>
+                    """
+                })
+        except Exception as e:
+            logger.error(f"Email notification failed: {e}")
+
+@api_router.post("/chat/escalate")
+async def escalate_to_live(req: AIChatRequest, current_user: dict = Depends(get_current_user)):
+    """Escalate from AI chat to live chat - notifies admins"""
+    user_name = current_user.get("username", current_user.get("first_name", "Utilizator"))
+    user_email = current_user.get("email", "")
+    
+    msg_id = f"msg_{uuid.uuid4().hex[:12]}"
+    msg_doc = {
+        "message_id": msg_id,
+        "user_id": current_user["user_id"],
+        "username": user_name,
+        "user_email": user_email,
+        "message": f"[ESCALAT DIN AI] {req.message}",
+        "status": "pending",
+        "admin_reply": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.chat_messages.insert_one({**msg_doc})
+    
+    await chat_manager.send_to_admins({
+        "type": "new_message",
+        "message_id": msg_id,
+        "user_id": current_user["user_id"],
+        "username": user_name,
+        "user_email": user_email,
+        "message": f"[ESCALAT DIN AI] {req.message}",
+        "status": "pending",
+        "created_at": msg_doc["created_at"]
+    })
+    
+    await notify_admins_live_chat(user_name, user_email, req.message)
+    
+    return {"message": "Escalated to live chat", "message_id": msg_id}
 
 @api_router.get("/chat/history")
 async def get_chat_history(current_user: dict = Depends(get_current_user)):
