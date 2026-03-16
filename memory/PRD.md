@@ -9,7 +9,7 @@ Full-stack competition platform with Viva Payments, modern UI, admin panel, GBP 
 - **Payments:** Viva Payments (GBP)
 - **Auth:** JWT + Emergent-managed Google Auth
 - **Email:** Resend
-- **AI:** Gemini 2.5 Flash via Emergent LLM Key
+- **AI:** Gemini Flash via Emergent LLM Key
 - **Push:** Web Push API (VAPID) with pywebpush
 - **Scheduler:** APScheduler
 
@@ -20,35 +20,35 @@ Full-stack competition platform with Viva Payments, modern UI, admin panel, GBP 
 - Admin panel with analytics, user/competition management
 - AI Chatbot (Gemini Flash) with escalation to live agent
 - Push Notifications (VAPID) for admin live chat alerts
-- WebSocket live chat with AI-to-live escalation
+- WebSocket live chat + REST API fallback + polling
 - PWA with offline support
 - My Account profile editing
-- Privacy Policy page, Google Analytics
 
 ## Session Changes (March 16, 2026)
 
-### Bug Fixes
-1. **Chat Duplicate Messages** - Fixed `LiveChat.js`: `loadHistory` now REPLACES messages instead of appending. Added `historyLoadedRef` to prevent double-loading. WebSocket dedup by message ID.
-2. **Google Auth Callback** - Improved `AuthCallback.js`: Added `window.location.hash` fallback, better error logging, Romanian UI text.
-3. **Push Notifications** - Infrastructure verified: VAPID keys match between PEM and env, pywebpush installed, admin subscription flow works.
+### Bug Fixes Applied
+1. **Chat Duplicate Messages** - LiveChat.js: loadHistory REPLACES messages, historyLoadedRef prevents double-loading, WebSocket dedup by message ID
+2. **Live Chat Not Working** - Added REST API fallback (POST /chat/message) when WebSocket unavailable. User-side polling every 5s, admin-side polling every 8s for new messages
+3. **Google Auth Callback** - Added window.location.hash fallback, better error logging, Romanian UI text
+4. **WebSocket Session Token** - verify_ws_token now supports both JWT and session tokens for Google Auth users
+5. **Push Notifications** - Infrastructure verified, VAPID keys match, pywebpush working
 
-### Deployment
-- Frontend deployed to Hostinger with production backend URL verified in bundle
-- Production backend (Railway) healthy and VAPID key endpoint working
+### Deployments
+- Frontend deployed to Hostinger with production backend URL
+- Backend pushed to GitHub → Railway auto-deploy
+- All .env files use production URLs
 
 ## Important Notes
-- Preview and Production use DIFFERENT MongoDB databases (different user counts)
-- Admin credentials on preview: admin@zektrix.uk / admin123
-- Production admin credentials differ - user manages these on Railway
+- Preview and Production may use DIFFERENT MongoDB databases
+- WebSocket connections may not work through Kubernetes ingress (preview) but work on Railway (production)
+- REST API polling fallback ensures chat works without WebSocket
 
 ## Backlog
 ### P0
-- User verification of Google Auth on production (zektrix.uk)
-- User verification of Push Notifications (admin needs to subscribe via Settings > Activează Notificări Push)
-- User verification of Chat deduplication fix
+- User verification of all fixes on production site
 
 ### P1
-- Refactor `server.py` into modular routers (4800+ lines)
+- Refactor server.py into modular routers (4800+ lines)
 - Facebook Pixel integration
 - Terms & Conditions page
 
