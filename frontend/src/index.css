@@ -855,6 +855,42 @@ code, .font-mono {
     .container { padding-left: 1rem; padding-right: 1rem; }
     img, video { max-width: 100%; height: auto; }
     input, select, textarea { font-size: 16px !important; }
+    
+    /* Prevent iOS rubber-band bounce effect in standalone mode */
+    body { overscroll-behavior-y: contain; }
+    
+    /* Fix iOS input zoom */
+    input[type="text"], input[type="email"], input[type="password"],
+    input[type="number"], input[type="tel"], textarea, select {
+        font-size: 16px !important;
+        -webkit-appearance: none;
+        border-radius: 0;
+    }
+    
+    /* Smoother touch scrolling */
+    * { -webkit-overflow-scrolling: touch; }
+    
+    /* Fix fixed position elements on iOS */
+    .fixed { -webkit-transform: translateZ(0); }
+}
+
+/* Small phones */
+@media (max-width: 375px) {
+    .container { padding-left: 0.75rem; padding-right: 0.75rem; }
+    h1 { font-size: 1.75rem !important; }
+}
+
+/* iOS standalone mode adjustments */
+@media (display-mode: standalone) {
+    body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    
+    /* Fixed bottom elements need safe area offset */
+    .fixed.bottom-4, .fixed.bottom-0 {
+        bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+    }
 }
 
 /* Prevent layout shifts */
@@ -865,4 +901,13 @@ img { content-visibility: auto; }
     will-change: transform, opacity;
     transform: translateZ(0);
     backface-visibility: hidden;
+}
+
+/* Prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
