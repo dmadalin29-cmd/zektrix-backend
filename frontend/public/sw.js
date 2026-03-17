@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v5-20260316';
+const CACHE_VERSION = 'v6-20260317';
 const CACHE_NAME = `zektrix-${CACHE_VERSION}`;
 const STATIC_CACHE = `zektrix-static-${CACHE_VERSION}`;
 const IMG_CACHE = `zektrix-img-${CACHE_VERSION}`;
@@ -57,17 +57,17 @@ self.addEventListener('fetch', (event) => {
         return;
     }
     
-    // JS/CSS: stale-while-revalidate (serve cache, update in background)
+    // JS/CSS: network-first (always get fresh code, fallback to cache)
     if (url.pathname.match(/\.(js|css)$/) && url.pathname.includes('/static/')) {
         event.respondWith(
-            caches.open(STATIC_CACHE).then((cache) => {
-                return cache.match(event.request).then((cached) => {
-                    const fetchPromise = fetch(event.request).then((response) => {
-                        if (response.ok) cache.put(event.request, response.clone());
-                        return response;
-                    }).catch(() => cached);
-                    return cached || fetchPromise;
-                });
+            fetch(event.request).then((response) => {
+                if (response.ok) {
+                    const clone = response.clone();
+                    caches.open(STATIC_CACHE).then((cache) => cache.put(event.request, clone));
+                }
+                return response;
+            }).catch(() => {
+                return caches.open(STATIC_CACHE).then((cache) => cache.match(event.request));
             })
         );
         return;
