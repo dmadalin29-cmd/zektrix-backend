@@ -193,30 +193,30 @@ const CompetitionDetailPage = () => {
 
                     {/* Success Dialog */}
                     <Dialog open={purchaseSuccess} onOpenChange={setPurchaseSuccess}>
-                        <DialogContent className="sm:max-w-md" aria-describedby="success-description">
+                        <DialogContent className="sm:max-w-md glass border-secondary/30" aria-describedby="success-description">
                             <DialogHeader>
-                                <div className="w-20 h-20 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4 neon-secondary">
-                                    <PartyPopper className="w-10 h-10 text-secondary" />
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-3 neon-secondary">
+                                    <PartyPopper className="w-8 h-8 sm:w-10 sm:h-10 text-secondary" />
                                 </div>
-                                <DialogTitle className="text-center text-2xl">{t('congratulations')}</DialogTitle>
+                                <DialogTitle className="text-center text-xl sm:text-2xl">{t('congratulations')}</DialogTitle>
                             </DialogHeader>
                             <div id="success-description" className="text-center space-y-4">
-                                <p className="text-muted-foreground">
+                                <p className="text-sm sm:text-base text-muted-foreground">
                                     {t('purchase_successful')} {purchasedLocuri.length} {purchasedLocuri.length === 1 ? t('ticket') : t('locuri')}!
                                 </p>
-                                <div className="flex flex-wrap gap-3 justify-center">
+                                <div className="flex flex-wrap gap-2 sm:gap-3 justify-center">
                                     {purchasedLocuri.map((ticket) => (
-                                        <span key={ticket.ticket_id} className="ticket-badge">
+                                        <span key={ticket.ticket_id} className="ticket-badge text-sm sm:text-base">
                                             #{ticket.ticket_number}
                                         </span>
                                     ))}
                                 </div>
                             </div>
-                            <DialogFooter className="flex-col sm:flex-col gap-2">
-                                <Button className="w-full btn-secondary text-black" onClick={() => navigate('/dashboard/locuri')}>
+                            <DialogFooter className="flex-col sm:flex-col gap-2 mt-2">
+                                <Button className="w-full btn-secondary text-black py-5" onClick={() => navigate('/dashboard/locuri')}>
                                     {t('view_my_locuri')}
                                 </Button>
-                                <Button variant="outline" className="w-full" onClick={() => { setPurchaseSuccess(false); fetchCompetition(); }}>
+                                <Button variant="outline" className="w-full py-5" onClick={() => { setPurchaseSuccess(false); fetchCompetition(); }}>
                                     {t('buy_more')}
                                 </Button>
                             </DialogFooter>
