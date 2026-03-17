@@ -202,7 +202,7 @@ const CompetitionDetailPage = () => {
                             </DialogHeader>
                             <div id="success-description" className="text-center space-y-4">
                                 <p className="text-sm sm:text-base text-muted-foreground">
-                                    {t('purchase_successful')} {purchasedLocuri.length} {purchasedLocuri.length === 1 ? t('ticket') : t('locuri')}!
+                                    {t('you_purchased')} {purchasedLocuri.length} {purchasedLocuri.length === 1 ? 'loc' : t('locuri')}!
                                 </p>
                                 <div className="flex flex-wrap gap-2 sm:gap-3 justify-center">
                                     {purchasedLocuri.map((ticket) => (
@@ -214,7 +214,7 @@ const CompetitionDetailPage = () => {
                             </div>
                             <DialogFooter className="flex-col sm:flex-col gap-2 mt-2">
                                 <Button className="w-full btn-secondary text-black py-5" onClick={() => navigate('/dashboard/locuri')}>
-                                    {t('view_my_locuri')}
+                                    {t('view_my_locs')}
                                 </Button>
                                 <Button variant="outline" className="w-full py-5" onClick={() => { setPurchaseSuccess(false); fetchCompetition(); }}>
                                     {t('buy_more')}
