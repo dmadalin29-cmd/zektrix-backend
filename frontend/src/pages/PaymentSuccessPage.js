@@ -59,9 +59,9 @@ const PaymentSuccessPage = () => {
         <div className="min-h-screen bg-background flex flex-col">
             <Navbar />
             
-            <main className="flex-1 flex items-center justify-center p-4 pt-24">
+            <main className="flex-1 flex items-center justify-center px-3 sm:px-4 pt-20 pb-8" data-testid="payment-success-page">
                 <Card className="w-full max-w-lg glass border-green-500/30">
-                    <CardContent className="p-8 text-center">
+                    <CardContent className="p-5 sm:p-8 text-center">
                         {loading ? (
                             <div className="py-12">
                                 <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
@@ -72,15 +72,15 @@ const PaymentSuccessPage = () => {
                         ) : (
                             <>
                                 {/* Success Icon */}
-                                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center animate-pulse-glow">
-                                    <CheckCircle className="w-12 h-12 text-white" />
+                                <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center animate-pulse-glow">
+                                    <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
                                 </div>
 
                                 {/* Title */}
-                                <h1 className="text-3xl font-black mb-2 gradient-text">
+                                <h1 className="text-2xl sm:text-3xl font-black mb-2 gradient-text">
                                     {isRomanian ? 'Plată Reușită!' : 'Payment Successful!'}
                                 </h1>
-                                <p className="text-muted-foreground mb-8">
+                                <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
                                     {isRomanian 
                                         ? 'Mulțumim pentru achiziție! Locurile tale au fost rezervate.'
                                         : 'Thank you for your purchase! Your spots have been reserved.'
@@ -89,17 +89,17 @@ const PaymentSuccessPage = () => {
 
                                 {/* Order Details */}
                                 {orderDetails && (
-                                    <div className="bg-black/30 rounded-2xl p-6 mb-6 text-left">
-                                        <h3 className="font-bold mb-4 flex items-center gap-2">
+                                    <div className="bg-black/30 rounded-2xl p-4 sm:p-6 mb-6 text-left">
+                                        <h3 className="font-bold mb-4 flex items-center gap-2 text-sm sm:text-base">
                                             <Ticket className="w-5 h-5 text-primary" />
                                             {isRomanian ? 'Detalii Comandă' : 'Order Details'}
                                         </h3>
                                         <div className="space-y-2 text-sm">
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between gap-2">
                                                 <span className="text-muted-foreground">
                                                     {isRomanian ? 'ID Tranzacție' : 'Transaction ID'}
                                                 </span>
-                                                <span className="font-mono">{transactionId || orderId}</span>
+                                                <span className="font-mono text-xs sm:text-sm truncate max-w-[150px] sm:max-w-none">{transactionId || orderId}</span>
                                             </div>
                                             {orderDetails.amount && (
                                                 <div className="flex justify-between">
@@ -117,13 +117,13 @@ const PaymentSuccessPage = () => {
 
                                 {/* Tickets */}
                                 {tickets.length > 0 && (
-                                    <div className="bg-primary/10 border border-primary/30 rounded-2xl p-6 mb-6">
-                                        <h3 className="font-bold mb-3">
+                                    <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4 sm:p-6 mb-6">
+                                        <h3 className="font-bold mb-3 text-sm sm:text-base">
                                             {isRomanian ? 'Codurile Tale' : 'Your Codes'}
                                         </h3>
-                                        <div className="grid grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                             {tickets.map((ticket, idx) => (
-                                                <div key={idx} className="bg-black/30 rounded-lg p-2 font-mono text-sm text-primary">
+                                                <div key={idx} className="bg-black/30 rounded-lg p-2 font-mono text-xs sm:text-sm text-primary text-center break-all">
                                                     {ticket.ticket_code}
                                                 </div>
                                             ))}

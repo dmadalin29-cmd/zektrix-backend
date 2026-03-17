@@ -327,6 +327,94 @@ const CompetitionDetailPage = () => {
                                 </Card>
                             )}
 
+                            {/* Instant Prizes Section */}
+                            {competition.instant_prizes && competition.instant_prizes.length > 0 && (
+                                <Card className="glass border-amber-500/30 overflow-hidden" data-testid="instant-prizes-section">
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center gap-3 mb-5">
+                                            <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                                <Gift className="w-5 h-5 text-amber-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-lg">{isRomanian ? 'Premii Instant' : 'Instant Prizes'}</h3>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {isRomanian ? 'Câștigă automat când pragul este atins!' : 'Win automatically when threshold is reached!'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {competition.instant_prizes
+                                                .sort((a, b) => a.percentage - b.percentage)
+                                                .map((prize, idx) => {
+                                                    const isAwarded = prize.awarded;
+                                                    const isReached = soldPercentage >= prize.percentage;
+                                                    return (
+                                                        <div 
+                                                            key={idx} 
+                                                            className={`relative rounded-xl p-4 border transition-all ${
+                                                                isAwarded 
+                                                                    ? 'bg-green-500/10 border-green-500/30' 
+                                                                    : isReached 
+                                                                        ? 'bg-amber-500/10 border-amber-500/30 animate-pulse' 
+                                                                        : 'bg-white/5 border-white/10'
+                                                            }`}
+                                                            data-testid={`instant-prize-${idx}`}
+                                                        >
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <div className="flex items-center gap-3 min-w-0">
+                                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${
+                                                                        isAwarded 
+                                                                            ? 'bg-green-500/20 text-green-400' 
+                                                                            : 'bg-amber-500/20 text-amber-400'
+                                                                    }`}>
+                                                                        {prize.percentage}%
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-bold truncate">{prize.prize_name}</p>
+                                                                        {prize.prize_description && (
+                                                                            <p className="text-xs text-muted-foreground truncate">{prize.prize_description}</p>
+                                                                        )}
+                                                                        {isAwarded && prize.winner_username && (
+                                                                            <p className="text-xs text-green-400 mt-1">
+                                                                                <CheckCircle className="w-3 h-3 inline mr-1" />
+                                                                                {isRomanian ? 'Câștigat de' : 'Won by'} {prize.winner_username}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <Badge className={`flex-shrink-0 ${
+                                                                    isAwarded 
+                                                                        ? 'bg-green-500/20 text-green-400 border-green-500/30' 
+                                                                        : isReached 
+                                                                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
+                                                                            : 'bg-white/10 text-muted-foreground border-white/10'
+                                                                }`}>
+                                                                    {isAwarded 
+                                                                        ? (isRomanian ? 'Acordat' : 'Awarded')
+                                                                        : isReached 
+                                                                            ? (isRomanian ? 'Se extrage!' : 'Drawing!')
+                                                                            : (isRomanian ? 'La ' + prize.percentage + '%' : 'At ' + prize.percentage + '%')
+                                                                    }
+                                                                </Badge>
+                                                            </div>
+                                                            {/* Progress bar for this prize */}
+                                                            <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                                <div 
+                                                                    className={`h-full rounded-full transition-all duration-500 ${
+                                                                        isAwarded ? 'bg-green-500' : isReached ? 'bg-amber-500' : 'bg-primary/50'
+                                                                    }`}
+                                                                    style={{ width: `${Math.min(100, (soldPercentage / prize.percentage) * 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            }
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
                             {/* Postal Entry */}
                             {postalEntry && (
                                 <Card className="postal-entry-section">
