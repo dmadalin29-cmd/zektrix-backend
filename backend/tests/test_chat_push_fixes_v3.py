@@ -17,7 +17,7 @@ import time
 import os
 
 # Use preview URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prize-draw-hub-1.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://competition-platform-1.preview.emergentagent.com').rstrip('/')
 
 class TestChatAndPushFixes:
     """Test chat and push notification fixes"""
