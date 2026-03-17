@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v6-20260317';
+const CACHE_VERSION = 'v7-20260317b';
 const CACHE_NAME = `zektrix-${CACHE_VERSION}`;
 const STATIC_CACHE = `zektrix-static-${CACHE_VERSION}`;
 const IMG_CACHE = `zektrix-img-${CACHE_VERSION}`;
