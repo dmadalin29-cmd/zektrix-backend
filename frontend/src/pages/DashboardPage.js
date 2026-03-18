@@ -452,14 +452,14 @@ const DashboardPage = () => {
                                                 </Badge>
                                             </div>
                                             <div className="flex flex-wrap gap-2 mb-4">
-                                                {group.locs.sort((a, b) => a.loc_number - b.loc_number).map((loc) => (
-                                                    <span key={loc.loc_id} 
+                                                {group.locs.sort((a, b) => a.ticket_number - b.ticket_number).map((loc) => (
+                                                    <span key={loc.ticket_id} 
                                                         className="px-3 py-1.5 rounded-lg font-mono font-bold text-sm"
                                                         style={{
                                                             background: 'linear-gradient(135deg, #8b5cf6, #f97316)',
                                                             boxShadow: '0 0 15px rgba(139, 92, 246, 0.3)'
                                                         }}>
-                                                        #{loc.loc_number}
+                                                        #{loc.ticket_number}
                                                     </span>
                                                 ))}
                                             </div>
