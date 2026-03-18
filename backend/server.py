@@ -7,6 +7,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import asyncio
+import subprocess
+import sys
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict
@@ -19,6 +21,15 @@ from passlib.context import CryptContext
 import jwt
 import resend
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+# Auto-install pywebpush if missing (Railway fix)
+try:
+    from pywebpush import webpush as _webpush_test
+except ImportError:
+    logging.getLogger("startup").warning("pywebpush not found, installing...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "pywebpush", "py-vapid", "--quiet"])
+    from pywebpush import webpush as _webpush_test
+    logging.getLogger("startup").info("pywebpush installed successfully")
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -3204,7 +3215,7 @@ async def test_push_notification(current_user: dict = Depends(get_admin_user)):
     errors = []
     for sub in subs:
         try:
-            from pywebpush import webpush
+            from pywebpush import webpush  # noqa: already imported at startup
             webpush(
                 subscription_info={"endpoint": sub["endpoint"], "keys": sub["keys"]},
                 data=json_mod.dumps({
@@ -3238,7 +3249,7 @@ async def notify_admins_live_chat(user_name: str, user_email: str, message: str)
     vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
     for sub in subscriptions:
         try:
-            from pywebpush import webpush
+            from pywebpush import webpush  # noqa: already imported at startup
             webpush(
                 subscription_info={
                     "endpoint": sub["endpoint"],
