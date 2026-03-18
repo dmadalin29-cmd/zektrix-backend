@@ -1,56 +1,95 @@
 # Zektrix.UK - Competition Platform PRD
 
 ## Original Problem Statement
-Full-stack competition platform with Viva Payments, modern UI, admin panel, GBP currency, PWA support, real-time chat, and more.
+Full-stack competition platform with Viva Payments, modern UI, AI-powered live chat with push notifications for admins, and PWA.
 
-## Tech Stack
-- **Frontend:** React + Tailwind CSS + Shadcn/UI (Hostinger - zektrix.uk)
-- **Backend:** FastAPI + MongoDB Atlas (Railway - zektrix-backend-production.up.railway.app)
-- **Payments:** Viva Payments (GBP)
-- **Auth:** JWT + Emergent-managed Google Auth
-- **Email:** Resend
-- **AI:** Gemini Flash via Emergent LLM Key
-- **Push:** Web Push API (VAPID) with pywebpush
-- **Scheduler:** APScheduler
+## Core Architecture
+- **Frontend**: React (CRA) deployed on Hostinger (zektrix.uk)
+- **Backend**: FastAPI deployed on Railway (auto-deploy from GitHub main branch)
+- **Database**: MongoDB Atlas (production DB: `ektrix_db`, preview DB: `zektrix_db`)
+- **PWA**: Service worker with network-first caching strategy
 
-## Core Features (Implemented)
-- User authentication (JWT + Google OAuth via Emergent Auth)
-- Competition management (CRUD, auto-draw, instant prizes)
-- Viva Payments integration (GBP) with cancel button
-- Admin panel with analytics, user/competition management
-- AI Chatbot (Gemini Flash) with escalation to live agent
-- Push Notifications (VAPID) for admin live chat alerts
-- WebSocket live chat + REST API fallback + polling
-- PWA with offline support
-- My Account profile editing
+## What's Been Implemented
 
-## Session Changes (March 16, 2026)
+### Authentication
+- JWT + Google Auth (Emergent-managed)
+- Admin and user roles
 
-### Bug Fixes Applied
-1. **Chat Duplicate Messages** - LiveChat.js: loadHistory REPLACES messages, historyLoadedRef prevents double-loading, WebSocket dedup by message ID
-2. **Live Chat Not Working** - Added REST API fallback (POST /chat/message) when WebSocket unavailable. User-side polling every 5s, admin-side polling every 8s for new messages
-3. **Google Auth Callback** - Added window.location.hash fallback, better error logging, Romanian UI text
-4. **WebSocket Session Token** - verify_ws_token now supports both JWT and session tokens for Google Auth users
-5. **Push Notifications** - Infrastructure verified, VAPID keys match, pywebpush working
+### Competitions
+- Browse, search, filter competitions
+- Ticket purchase via Viva Payments
+- Free competition entry
+- Instant prizes at percentage thresholds (auto-awarded to different users)
+- Auto-draw when max tickets reached (both paid and free entries)
+- Flash sales
 
-### Deployments
-- Frontend deployed to Hostinger with production backend URL
-- Backend pushed to GitHub → Railway auto-deploy
-- All .env files use production URLs
+### User Dashboard
+- My Tickets/Locs with ticket numbers
+- Transaction history
+- Profile management
 
-## Important Notes
-- Preview and Production may use DIFFERENT MongoDB databases
-- WebSocket connections may not work through Kubernetes ingress (preview) but work on Railway (production)
-- REST API polling fallback ensures chat works without WebSocket
+### AI Chat & Live Chat
+- Gemini Flash AI chatbot for initial queries
+- Escalation to live chat with admin
+- REST API fallback + polling for reliability
+- Push notifications to admin for new chat requests
+- Email notifications to admin
 
-## Backlog
-### P0
-- User verification of all fixes on production site
+### Admin Panel
+- Competition CRUD
+- User management
+- Live chat interface
+- Push notification subscription + test button
+- Analytics dashboard
 
-### P1
-- Refactor server.py into modular routers (4800+ lines)
+### Push Notifications
+- VAPID key-based web push (pywebpush)
+- Real browser push subscription via pushManager
+- Test endpoint: POST /api/push/test
+- Auto-cleanup of expired subscriptions
+
+### Deployment
+- `deploy_production.sh` script: GitHub push + Hostinger clean deploy
+- Service worker cache busting with versioning
+- Production URL verification in build
+
+### UI/UX
+- Floating ultra-modern navbar with Lucide icons, glassmorphism
+- Properly centered dialog/modal using flexbox (works on iOS PWA, Android, Desktop)
+- Dark theme with violet/orange accents
+
+## Key API Endpoints
+- POST /api/push/vapid-key - Get VAPID public key
+- POST /api/push/subscribe - Subscribe to push (admin only)
+- POST /api/push/test - Send test push notification
+- POST /api/chat/message - REST fallback for chat messages
+- POST /api/chat/escalate - Escalate AI chat to live
+- POST /api/chat/ai - AI chatbot endpoint
+
+## 3rd Party Integrations
+- Viva Payments (payment processing)
+- Emergent Google Auth
+- Resend (email)
+- Gemini Flash via emergentintegrations (AI chat)
+- pywebpush (push notifications)
+- apscheduler (scheduled tasks)
+
+## Prioritized Backlog
+
+### P0 (Critical)
+- User must re-subscribe to push notifications from admin panel
+- Verify push notifications work end-to-end
+
+### P1 (Important)
+- Verify live chat reliability on production
+- Refactor server.py (4800+ lines) into modules
+
+### P2 (Nice to have)
 - Facebook Pixel integration
 - Terms & Conditions page
 
-### P2 - "IDEE BOMBA"
-- Bundle Deals, SMS Marketing, Leaderboard, Referral System
+### P3 (Future - IDEE BOMBA)
+- Bundle Deals
+- SMS Marketing
+- Leaderboard
+- Referral System
