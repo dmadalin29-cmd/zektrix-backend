@@ -5,84 +5,75 @@ PROD_BACKEND="https://zektrix-backend-production.up.railway.app"
 SSH_HOST="u485600077@82.25.102.184"
 SSH_PORT="65002"
 SSH_PASS="Credcada1."
-GITHUB_REMOTE="origin"
-GITHUB_BRANCH="main"
 
 echo "============================================"
 echo "   DEPLOY PRODUCTION - zektrix.uk"
 echo "============================================"
 
-# Ensure sshpass is installed
 which sshpass >/dev/null 2>&1 || apt-get install -y sshpass >/dev/null 2>&1
 
-# 1. Push backend to GitHub (Railway auto-deploy)
+# 1. Push backend to GitHub
 echo ""
-echo "[1/5] Pushing backend to GitHub..."
+echo "[1/5] Pushing to GitHub..."
 cd /app
 git add -A
-git diff --cached --quiet && echo "No changes to commit" || git commit -m "Production deploy $(date +%Y%m%d-%H%M%S)"
-git push $GITHUB_REMOTE $GITHUB_BRANCH 2>&1 || echo "Push failed or nothing to push"
-echo "Backend: DONE"
+git diff --cached --quiet && echo "No changes" || git commit -m "Production deploy $(date +%Y%m%d-%H%M%S)"
+git push origin main 2>&1 || echo "Nothing to push"
 
-# 2. Build frontend with PRODUCTION URL (without touching .env)
+# 2. Build frontend - MODIFY .env temporarily
 echo ""
-echo "[2/5] Building frontend with production URL..."
+echo "[2/5] Building frontend..."
 cd /app/frontend
+cp .env .env.dev.bak
+cat > .env << EOF
+REACT_APP_BACKEND_URL=$PROD_BACKEND
+WDS_SOCKET_PORT=443
+EOF
 rm -rf build
-REACT_APP_BACKEND_URL=$PROD_BACKEND yarn build 2>&1 | tail -3
-echo "Build: DONE"
+yarn build 2>&1 | tail -2
+cp .env.dev.bak .env
+rm -f .env.dev.bak
 
-# 3. Verify build
+# 3. Verify
 echo ""
-echo "[3/5] Verifying build..."
+echo "[3/5] Verifying..."
 JS_FILE=$(ls build/static/js/main.*.js)
-PREVIEW_COUNT=$(grep -c "preview.emergentagent.com" "$JS_FILE" || true)
-PROD_COUNT=$(grep -c "zektrix-backend-production" "$JS_FILE" || true)
-
-if [ "$PREVIEW_COUNT" -gt 0 ]; then
-    echo "ABORT: Preview URL found in build!"
+if grep -q "preview.emergentagent.com" "$JS_FILE"; then
+    echo "ABORT: Preview URL in build!"
     exit 1
 fi
-if [ "$PROD_COUNT" -eq 0 ]; then
-    echo "ABORT: Production URL NOT found in build!"
+if ! grep -q "zektrix-backend-production" "$JS_FILE"; then
+    echo "ABORT: Production URL missing!"
     exit 1
 fi
-echo "Verify: CLEAN (production URL only)"
+echo "Build verified: production URL only"
 
-# 4. Upload to Hostinger
+# 4. Deploy to Hostinger
 echo ""
 echo "[4/5] Deploying to Hostinger..."
-cd build && tar czf /tmp/zektrix_prod.tar.gz .
-
-sshpass -p "$SSH_PASS" scp -P $SSH_PORT -o StrictHostKeyChecking=no /tmp/zektrix_prod.tar.gz $SSH_HOST:~/zektrix_prod.tar.gz
-
+cd build && tar czf /tmp/zektrix_deploy.tar.gz .
+sshpass -p "$SSH_PASS" scp -P $SSH_PORT -o StrictHostKeyChecking=no /tmp/zektrix_deploy.tar.gz $SSH_HOST:~/zektrix_deploy.tar.gz
 sshpass -p "$SSH_PASS" ssh -p $SSH_PORT -o StrictHostKeyChecking=no $SSH_HOST "
   cp domains/zektrix.uk/public_html/.htaccess ~/htaccess_bk.txt 2>/dev/null
   cd domains/zektrix.uk/public_html/ && find . -not -name '.htaccess' -not -name '.' -not -name '..' -delete 2>/dev/null
-  cd ~/domains/zektrix.uk/public_html/ && tar xzf ~/zektrix_prod.tar.gz
-  cp ~/htaccess_bk.txt ~/domains/zektrix.uk/public_html/.htaccess 2>/dev/null
+  tar xzf ~/zektrix_deploy.tar.gz
+  cp ~/htaccess_bk.txt .htaccess 2>/dev/null
 "
-echo "Hostinger: DONE"
 
-# 5. Verify live site
+# 5. Verify live
 echo ""
-echo "[5/5] Verifying live site..."
+echo "[5/5] Verifying live..."
 sleep 2
 LIVE_JS=$(curl -s https://zektrix.uk | grep -o 'main\.[a-z0-9]*\.js')
-LIVE_URLS=$(curl -s "https://zektrix.uk/static/js/$LIVE_JS" | grep -oP 'https://[a-zA-Z0-9._-]+\.(up\.railway\.app|preview\.emergentagent\.com)' | sort -u)
-
-echo "Live JS: $LIVE_JS"
-echo "URLs in JS: $LIVE_URLS"
-
-if echo "$LIVE_URLS" | grep -q "preview"; then
-    echo "WARNING: Preview URL detected on live site!"
+if curl -s "https://zektrix.uk/static/js/$LIVE_JS" | grep -q "preview.emergentagent.com"; then
+    echo "WARNING: Preview URL on live site!"
 else
-    echo "VERIFIED: Production URL only"
+    echo "LIVE VERIFIED: production URL only"
 fi
 
 echo ""
 echo "============================================"
 echo "   DEPLOY COMPLETE"
-echo "   Backend: GitHub -> Railway (auto)"
+echo "   Backend: GitHub -> Railway"
 echo "   Frontend: Hostinger (zektrix.uk)"
 echo "============================================"
