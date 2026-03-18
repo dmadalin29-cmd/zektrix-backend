@@ -3616,7 +3616,14 @@ async def competition_websocket(websocket: WebSocket, competition_id: str):
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint for Railway"""
-    return {"status": "healthy", "service": "zektrix-backend"}
+    modules = {}
+    for mod_name in ["pywebpush", "py_vapid", "emergentintegrations"]:
+        try:
+            __import__(mod_name)
+            modules[mod_name] = "installed"
+        except ImportError:
+            modules[mod_name] = "MISSING"
+    return {"status": "healthy", "service": "zektrix-backend", "modules": modules}
 
 @api_router.get("/")
 async def root():
