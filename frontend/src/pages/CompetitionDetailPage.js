@@ -193,12 +193,12 @@ const CompetitionDetailPage = () => {
 
                     {/* Success Dialog */}
                     <Dialog open={purchaseSuccess} onOpenChange={setPurchaseSuccess}>
-                        <DialogContent className="w-[92vw] max-w-sm p-4 sm:p-6 glass border-secondary/30 rounded-xl" aria-describedby="success-description">
+                        <DialogContent className="w-[calc(100%-1.5rem)] max-w-md p-4 sm:p-6 glass border-secondary/30 rounded-xl" aria-describedby="success-description">
                             <DialogHeader className="space-y-2">
-                                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto neon-secondary">
-                                    <PartyPopper className="w-6 h-6 sm:w-8 sm:h-8 text-secondary" />
+                                <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center mx-auto neon-secondary">
+                                    <PartyPopper className="w-6 h-6 text-secondary" />
                                 </div>
-                                <DialogTitle className="text-center text-lg sm:text-xl">{t('congratulations')}</DialogTitle>
+                                <DialogTitle className="text-center text-lg">{t('congratulations')}</DialogTitle>
                             </DialogHeader>
                             <div id="success-description" className="text-center space-y-3">
                                 <p className="text-sm text-muted-foreground">
@@ -206,17 +206,17 @@ const CompetitionDetailPage = () => {
                                 </p>
                                 <div className="flex flex-wrap gap-2 justify-center max-h-[20vh] overflow-y-auto">
                                     {purchasedLocuri.map((ticket) => (
-                                        <span key={ticket.ticket_id} className="ticket-badge text-sm">
+                                        <span key={ticket.ticket_id} className="ticket-badge text-xs sm:text-sm">
                                             #{ticket.ticket_number}
                                         </span>
                                     ))}
                                 </div>
                             </div>
                             <div className="flex flex-col gap-2 mt-2">
-                                <Button className="w-full btn-secondary text-black py-3" onClick={() => navigate('/dashboard/locuri')}>
+                                <Button className="w-full btn-secondary text-black text-xs sm:text-sm py-3 whitespace-normal leading-tight" onClick={() => navigate('/dashboard/locuri')}>
                                     {t('view_my_locs')}
                                 </Button>
-                                <Button variant="outline" className="w-full py-3" onClick={() => { setPurchaseSuccess(false); fetchCompetition(); }}>
+                                <Button variant="outline" className="w-full text-xs sm:text-sm py-3 whitespace-normal leading-tight" onClick={() => { setPurchaseSuccess(false); fetchCompetition(); }}>
                                     {t('buy_more')}
                                 </Button>
                             </div>
