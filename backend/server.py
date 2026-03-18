@@ -22,15 +22,6 @@ import jwt
 import resend
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
-# Auto-install pywebpush if missing (Railway fix)
-try:
-    from pywebpush import webpush as _webpush_test
-except ImportError:
-    logging.getLogger("startup").warning("pywebpush not found, installing...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "pywebpush", "py-vapid", "--quiet"])
-    from pywebpush import webpush as _webpush_test
-    logging.getLogger("startup").info("pywebpush installed successfully")
-
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -3235,25 +3226,95 @@ async def test_push_notification(current_user: dict = Depends(get_admin_user)):
 
 
 async def send_web_push(subscription: dict, data: dict) -> bool:
-    """Send a web push notification - auto-installs pywebpush if missing"""
-    import json as json_mod
+    """Send web push notification using only cryptography + httpx (no pywebpush needed)"""
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    import struct, time
     
-    try:
-        from pywebpush import webpush
-    except ImportError:
-        logger.warning("pywebpush not found, installing on-the-fly...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pywebpush", "py-vapid", "--quiet"])
-        from pywebpush import webpush
-        logger.info("pywebpush installed successfully")
+    endpoint = subscription["endpoint"]
+    p256dh_b64 = subscription["keys"]["p256dh"]
+    auth_b64 = subscription["keys"]["auth"]
     
+    # Decode client keys
+    def url_b64_decode(s):
+        s = s + '=' * (4 - len(s) % 4)
+        return base64.urlsafe_b64decode(s)
+    
+    client_pub_bytes = url_b64_decode(p256dh_b64)
+    auth_secret = url_b64_decode(auth_b64)
+    
+    # Load VAPID private key
     vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
-    webpush(
-        subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
-        data=json_mod.dumps(data),
-        vapid_private_key=vapid_pem_path,
-        vapid_claims={"sub": VAPID_MAILTO}
+    with open(vapid_pem_path, 'rb') as f:
+        vapid_private_key = serialization.load_pem_private_key(f.read(), password=None)
+    
+    # Generate ephemeral ECDH key pair for content encryption
+    server_key = ec.generate_private_key(ec.SECP256R1())
+    server_pub_bytes = server_key.public_key().public_bytes(
+        serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint
     )
-    return True
+    
+    # ECDH shared secret
+    client_pub_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), client_pub_bytes)
+    shared_secret = server_key.exchange(ec.ECDH(), client_pub_key)
+    
+    # Web Push content encryption (RFC 8291 / aes128gcm)
+    # PRK = HKDF-Extract(auth_secret, shared_secret)
+    auth_info = b"WebPush: info\x00" + client_pub_bytes + server_pub_bytes
+    prk = HKDF(algorithm=hashes.SHA256(), length=32, salt=auth_secret, info=auth_info).derive(shared_secret)
+    
+    # Content encryption key
+    cek = HKDF(algorithm=hashes.SHA256(), length=16, salt=os.urandom(16), info=b"Content-Encoding: aes128gcm\x00").derive(prk)
+    
+    # Nonce
+    nonce = HKDF(algorithm=hashes.SHA256(), length=12, salt=os.urandom(16), info=b"Content-Encoding: nonce\x00").derive(prk)
+    
+    # Encrypt payload
+    payload = json.dumps(data).encode('utf-8')
+    # Add padding (RFC 8188)
+    padded = payload + b'\x02'
+    
+    aesgcm = AESGCM(cek)
+    encrypted = aesgcm.encrypt(nonce, padded, None)
+    
+    # Build aes128gcm body: salt(16) + rs(4) + idlen(1) + keyid(65) + encrypted
+    salt = os.urandom(16)
+    rs = struct.pack('!I', 4096)
+    keyid = server_pub_bytes
+    idlen = struct.pack('!B', len(keyid))
+    body = salt + rs + idlen + keyid + encrypted
+    
+    # VAPID authorization
+    parsed_url = endpoint.split('/')
+    aud = '/'.join(parsed_url[:3])
+    now = int(time.time())
+    vapid_payload = {"aud": aud, "exp": now + 43200, "sub": VAPID_MAILTO}
+    vapid_token = jwt.encode(vapid_payload, vapid_private_key, algorithm="ES256")
+    
+    vapid_pub_bytes = vapid_private_key.public_key().public_bytes(
+        serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint
+    )
+    vapid_pub_b64 = base64.urlsafe_b64encode(vapid_pub_bytes).rstrip(b'=').decode()
+    
+    # Send push
+    headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Encoding": "aes128gcm",
+        "Authorization": f"vapid t={vapid_token},k={vapid_pub_b64}",
+        "TTL": "86400",
+    }
+    
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(endpoint, content=body, headers=headers, timeout=30)
+    
+    if resp.status_code in (200, 201, 202):
+        return True
+    elif resp.status_code in (404, 410):
+        raise Exception(f"{resp.status_code} push subscription expired")
+    else:
+        raise Exception(f"Push failed: {resp.status_code} {resp.text[:100]}")
 
 
 
