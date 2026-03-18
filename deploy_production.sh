@@ -12,6 +12,9 @@ echo "============================================"
 echo "   DEPLOY PRODUCTION - zektrix.uk"
 echo "============================================"
 
+# Ensure sshpass is installed
+which sshpass >/dev/null 2>&1 || apt-get install -y sshpass >/dev/null 2>&1
+
 # 1. Push backend to GitHub (Railway auto-deploy)
 echo ""
 echo "[1/5] Pushing backend to GitHub..."
