@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Bell, BellOff, BellRing, Check, X, Loader2 } from 'lucide-react';
+import { Bell, BellOff, BellRing, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -15,12 +15,10 @@ const NotificationBell = () => {
     const [isSubscribed, setIsSubscribed] = useState(false);
     const [showDialog, setShowDialog] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [notifications, setNotifications] = useState([]);
 
     useEffect(() => {
         if (user && token) {
             checkSubscriptionStatus();
-            setupWebSocketNotifications();
         }
     }, [user, token]);
 
@@ -35,63 +33,59 @@ const NotificationBell = () => {
         }
     };
 
-    const setupWebSocketNotifications = () => {
-        // Connect to WebSocket for real-time notifications
-        const wsUrl = process.env.REACT_APP_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
-        const ws = new WebSocket(`${wsUrl}/ws`);
-
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'competition_alert') {
-                    // Show browser notification if permitted
-                    showBrowserNotification(data);
-                    // Add to in-app notifications
-                    setNotifications(prev => [{
-                        id: Date.now(),
-                        title: data.title,
-                        message: data.message,
-                        timestamp: new Date()
-                    }, ...prev.slice(0, 9)]);
-                }
-            } catch (e) {
-                console.error('WebSocket message error:', e);
-            }
-        };
-
-        return () => ws.close();
-    };
-
-    const showBrowserNotification = (data) => {
-        if (Notification.permission === 'granted') {
-            new Notification(`🔥 ${data.title}`, {
-                body: data.message,
-                icon: '/favicon.png',
-                badge: '/favicon.png',
-                tag: `competition-${data.competition_id}`
-            });
+    const urlBase64ToUint8Array = (base64String) => {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
         }
+        return outputArray;
     };
 
     const requestPermissionAndSubscribe = async () => {
         setLoading(true);
         try {
-            // Request browser notification permission
-            const permission = await Notification.requestPermission();
-            
-            if (permission !== 'granted') {
-                toast.error(isRomanian 
-                    ? 'Te rugăm să permiți notificările din setările browserului' 
-                    : 'Please allow notifications in browser settings'
-                );
-                setLoading(false);
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                toast.error(isRomanian ? 'Browser-ul nu suporta notificari push' : 'Browser does not support push notifications');
                 return;
             }
 
-            // Subscribe to backend
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                toast.error(isRomanian 
+                    ? 'Permite notificarile din setarile browserului' 
+                    : 'Please allow notifications in browser settings'
+                );
+                return;
+            }
+
+            // Get VAPID public key from backend
+            const vapidRes = await axios.get(`${API}/push/vapid-key`);
+            const vapidKey = vapidRes.data.public_key;
+            const applicationServerKey = urlBase64ToUint8Array(vapidKey);
+
+            // Register service worker and subscribe
+            const reg = await navigator.serviceWorker.ready;
+            
+            // Unsubscribe existing
+            const existingSub = await reg.pushManager.getSubscription();
+            if (existingSub) {
+                await existingSub.unsubscribe();
+            }
+
+            const subscription = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: applicationServerKey
+            });
+
+            const subJson = subscription.toJSON();
+
+            // Send real subscription to backend
             await axios.post(`${API}/notifications/subscribe`, {
-                endpoint: 'browser-notification',
-                keys: { permission: 'granted' }
+                endpoint: subJson.endpoint,
+                keys: subJson.keys
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -99,11 +93,12 @@ const NotificationBell = () => {
             setIsSubscribed(true);
             setShowDialog(false);
             toast.success(isRomanian 
-                ? '🔔 Notificări activate! Vei primi alerte când competițiile sunt aproape sold out.' 
-                : '🔔 Notifications enabled! You\'ll get alerts when competitions are almost sold out.'
+                ? 'Notificari activate!' 
+                : 'Notifications enabled!'
             );
         } catch (error) {
-            toast.error(isRomanian ? 'Eroare la activare notificări' : 'Failed to enable notifications');
+            console.error('Push subscription error:', error);
+            toast.error(isRomanian ? 'Eroare la activare notificari' : 'Failed to enable notifications');
         } finally {
             setLoading(false);
         }
@@ -112,11 +107,18 @@ const NotificationBell = () => {
     const unsubscribe = async () => {
         setLoading(true);
         try {
+            // Unsubscribe from browser push
+            const reg = await navigator.serviceWorker.ready;
+            const existingSub = await reg.pushManager.getSubscription();
+            if (existingSub) {
+                await existingSub.unsubscribe();
+            }
+
             await axios.delete(`${API}/notifications/unsubscribe`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsSubscribed(false);
-            toast.success(isRomanian ? 'Notificări dezactivate' : 'Notifications disabled');
+            toast.success(isRomanian ? 'Notificari dezactivate' : 'Notifications disabled');
         } catch (error) {
             toast.error(isRomanian ? 'Eroare la dezactivare' : 'Failed to disable notifications');
         } finally {
@@ -140,30 +142,24 @@ const NotificationBell = () => {
                 ) : (
                     <Bell className="w-5 h-5" />
                 )}
-                {notifications.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-secondary text-xs rounded-full flex items-center justify-center text-black font-bold">
-                        {notifications.length}
-                    </span>
-                )}
             </Button>
 
             <Dialog open={showDialog} onOpenChange={setShowDialog}>
-                <DialogContent className="glass border-white/10 max-w-md">
+                <DialogContent className="glass border-white/10">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Bell className="w-5 h-5 text-primary" />
-                            {isRomanian ? 'Notificări Push' : 'Push Notifications'}
+                            {isRomanian ? 'Notificari Push' : 'Push Notifications'}
                         </DialogTitle>
                         <DialogDescription>
                             {isRomanian 
-                                ? 'Primește alerte când competițiile sunt aproape sold out (80%)' 
-                                : 'Get alerts when competitions are almost sold out (80%)'
+                                ? 'Primeste alerte cand competitiile sunt aproape sold out' 
+                                : 'Get alerts when competitions are almost sold out'
                             }
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="py-4 space-y-4">
-                        {/* Notification Status */}
                         <div className={`p-4 rounded-xl ${isSubscribed ? 'bg-secondary/20 border border-secondary/30' : 'bg-muted'}`}>
                             <div className="flex items-center gap-3">
                                 {isSubscribed ? (
@@ -172,8 +168,8 @@ const NotificationBell = () => {
                                             <BellRing className="w-5 h-5 text-secondary" />
                                         </div>
                                         <div className="flex-1">
-                                            <p className="font-semibold text-secondary">{isRomanian ? 'Notificări Active' : 'Notifications Active'}</p>
-                                            <p className="text-xs text-muted-foreground">{isRomanian ? 'Vei primi alerte automat' : 'You\'ll receive alerts automatically'}</p>
+                                            <p className="font-semibold text-secondary">{isRomanian ? 'Notificari Active' : 'Notifications Active'}</p>
+                                            <p className="text-xs text-muted-foreground">{isRomanian ? 'Vei primi alerte automat' : 'You will receive alerts automatically'}</p>
                                         </div>
                                         <Check className="w-5 h-5 text-secondary" />
                                     </>
@@ -183,30 +179,14 @@ const NotificationBell = () => {
                                             <BellOff className="w-5 h-5 text-muted-foreground" />
                                         </div>
                                         <div className="flex-1">
-                                            <p className="font-semibold">{isRomanian ? 'Notificări Dezactivate' : 'Notifications Disabled'}</p>
-                                            <p className="text-xs text-muted-foreground">{isRomanian ? 'Activează pentru a primi alerte' : 'Enable to receive alerts'}</p>
+                                            <p className="font-semibold">{isRomanian ? 'Notificari Dezactivate' : 'Notifications Disabled'}</p>
+                                            <p className="text-xs text-muted-foreground">{isRomanian ? 'Activeaza pentru a primi alerte' : 'Enable to receive alerts'}</p>
                                         </div>
                                     </>
                                 )}
                             </div>
                         </div>
 
-                        {/* Recent Notifications */}
-                        {notifications.length > 0 && (
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium text-muted-foreground">{isRomanian ? 'Notificări Recente' : 'Recent Notifications'}</p>
-                                <div className="space-y-2 max-h-40 overflow-y-auto">
-                                    {notifications.map(notif => (
-                                        <div key={notif.id} className="p-3 bg-muted rounded-lg text-sm">
-                                            <p className="font-medium">{notif.title}</p>
-                                            <p className="text-xs text-muted-foreground">{notif.message}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Action Button */}
                         <Button
                             className={`w-full ${isSubscribed ? 'btn-outline' : 'btn-primary'}`}
                             onClick={isSubscribed ? unsubscribe : requestPermissionAndSubscribe}
@@ -215,18 +195,11 @@ const NotificationBell = () => {
                             {loading ? (
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             ) : isSubscribed ? (
-                                <><BellOff className="w-4 h-4 mr-2" /> {isRomanian ? 'Dezactivează Notificările' : 'Disable Notifications'}</>
+                                <><BellOff className="w-4 h-4 mr-2" /> {isRomanian ? 'Dezactiveaza' : 'Disable'}</>
                             ) : (
-                                <><BellRing className="w-4 h-4 mr-2" /> {isRomanian ? 'Activează Notificările' : 'Enable Notifications'}</>
+                                <><BellRing className="w-4 h-4 mr-2" /> {isRomanian ? 'Activeaza Notificarile' : 'Enable Notifications'}</>
                             )}
                         </Button>
-
-                        <p className="text-xs text-center text-muted-foreground">
-                            {isRomanian 
-                                ? '💡 Vei primi notificări când o competiție ajunge la 80% vândut' 
-                                : '💡 You\'ll be notified when a competition reaches 80% sold'
-                            }
-                        </p>
                     </div>
                 </DialogContent>
             </Dialog>

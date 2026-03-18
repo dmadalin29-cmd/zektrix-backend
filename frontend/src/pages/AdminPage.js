@@ -1274,6 +1274,21 @@ const AdminPage = () => {
                                 >
                                     <Bell className="w-4 h-4 mr-2" /> Activează Notificări Push
                                 </Button>
+                                <Button
+                                    onClick={async () => {
+                                        try {
+                                            const res = await axios.post(`${API}/push/test`, {}, { headers: { Authorization: `Bearer ${token}` } });
+                                            toast.success(res.data.message || 'Notificare de test trimisă!');
+                                        } catch (e) {
+                                            toast.error(e.response?.data?.detail || 'Eroare la trimitere test');
+                                        }
+                                    }}
+                                    variant="outline"
+                                    className="w-full mt-2 border-emerald-600/30 text-emerald-400 hover:bg-emerald-600/10"
+                                    data-testid="test-push-btn"
+                                >
+                                    Trimite Notificare de Test
+                                </Button>
                             </div>
                         </div>
                     )}

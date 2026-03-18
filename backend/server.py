@@ -3190,6 +3190,45 @@ async def push_unsubscribe(current_user: dict = Depends(get_current_user)):
     await db.push_subscriptions.delete_one({"user_id": current_user["user_id"]})
     return {"message": "Unsubscribed"}
 
+@api_router.post("/push/test")
+async def test_push_notification(current_user: dict = Depends(get_admin_user)):
+    """Send a test push notification to verify setup works"""
+    import json as json_mod
+    
+    subs = await db.push_subscriptions.find({"user_id": current_user["user_id"]}, {"_id": 0}).to_list(5)
+    if not subs:
+        raise HTTPException(status_code=404, detail="Nu ai nicio subscriptie push activa. Activeaza mai intai notificarile.")
+    
+    vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
+    sent = 0
+    errors = []
+    for sub in subs:
+        try:
+            from pywebpush import webpush
+            webpush(
+                subscription_info={"endpoint": sub["endpoint"], "keys": sub["keys"]},
+                data=json_mod.dumps({
+                    "title": "Test Zektrix",
+                    "body": "Notificarile push functioneaza! Vei primi alerte cand cineva cere asistenta live.",
+                    "url": "https://zektrix.uk/admin"
+                }),
+                vapid_private_key=vapid_pem_path,
+                vapid_claims={"sub": VAPID_MAILTO}
+            )
+            sent += 1
+        except Exception as e:
+            err_str = str(e)
+            errors.append(err_str[:100])
+            if "410" in err_str or "404" in err_str:
+                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
+    
+    if sent > 0:
+        return {"success": True, "message": f"Notificare de test trimisa!"}
+    else:
+        raise HTTPException(status_code=400, detail=f"Nu s-a putut trimite: {'; '.join(errors)}")
+
+
+
 async def notify_admins_live_chat(user_name: str, user_email: str, message: str):
     """Send push notification + email to all admins when user requests live chat"""
     import json
