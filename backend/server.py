@@ -946,18 +946,30 @@ async def check_instant_prizes(competition_id: str, new_sold: int, max_tickets: 
     
     current_percent = (new_sold / max_tickets) * 100
     updated = False
+    awarded_user_ids = set()
+    
+    # Collect already awarded user IDs to avoid duplicates
+    for prize in comp["instant_prizes"]:
+        if prize.get("awarded") and prize.get("winner_user_id"):
+            awarded_user_ids.add(prize["winner_user_id"])
     
     for i, prize in enumerate(comp["instant_prizes"]):
         if prize.get("awarded"):
             continue
         if current_percent >= prize.get("percentage", 100):
-            # Award this instant prize!
             all_tickets = await db.tickets.find({"competition_id": competition_id}, {"_id": 0}).to_list(new_sold)
             if not all_tickets:
                 continue
             
-            winner_ticket = random.choice(all_tickets)
+            # Try to pick a user that hasn't won an instant prize yet
+            eligible_tickets = [t for t in all_tickets if t["user_id"] not in awarded_user_ids]
+            if not eligible_tickets:
+                eligible_tickets = all_tickets
+            
+            winner_ticket = random.choice(eligible_tickets)
             winner_user = await db.users.find_one({"user_id": winner_ticket["user_id"]}, {"_id": 0})
+            
+            awarded_user_ids.add(winner_ticket["user_id"])
             
             comp["instant_prizes"][i]["awarded"] = True
             comp["instant_prizes"][i]["winner_user_id"] = winner_ticket["user_id"]
@@ -968,7 +980,6 @@ async def check_instant_prizes(competition_id: str, new_sold: int, max_tickets: 
             
             logger.info(f"Instant prize '{prize.get('prize_name')}' awarded to user {winner_ticket['user_id']} (ticket #{winner_ticket['ticket_number']}) at {current_percent:.1f}% in competition {competition_id}")
             
-            # Notify via WebSocket
             await ws_manager.broadcast_all({
                 "type": "instant_prize_awarded",
                 "competition_id": competition_id,
@@ -978,7 +989,6 @@ async def check_instant_prizes(competition_id: str, new_sold: int, max_tickets: 
                 "percentage": prize.get("percentage")
             })
             
-            # Send notification email to winner
             if winner_user and winner_user.get("email"):
                 try:
                     await send_winner_notification(
@@ -1559,7 +1569,41 @@ async def enter_free_competition(entry: FreeEntryRequest, current_user: dict = D
     update_data = {"sold_tickets": new_sold}
     
     if comp["competition_type"] == "instant_win" and new_sold >= comp["max_tickets"]:
+        # Auto-select winner when all spots are filled
+        all_tickets = await db.tickets.find({"competition_id": entry.competition_id}, {"_id": 0}).to_list(new_sold)
+        winner_ticket = random.choice(all_tickets)
+        
         update_data["status"] = "completed"
+        update_data["winner_id"] = winner_ticket["user_id"]
+        update_data["winner_ticket"] = winner_ticket["ticket_number"]
+        
+        # Create winner record
+        winner_user = await db.users.find_one({"user_id": winner_ticket["user_id"]}, {"_id": 0})
+        winner_doc = {
+            "winner_id": f"winner_{uuid.uuid4().hex[:12]}",
+            "competition_id": entry.competition_id,
+            "competition_title": comp["title"],
+            "user_id": winner_ticket["user_id"],
+            "username": winner_user.get("username", "Unknown") if winner_user else "Unknown",
+            "ticket_number": winner_ticket["ticket_number"],
+            "prize_description": comp.get("prize_description"),
+            "announced_at": datetime.now(timezone.utc).isoformat(),
+            "is_automatic": True
+        }
+        await db.winners.insert_one(winner_doc)
+        
+        # Send winner notification email
+        if winner_user and winner_user.get("email"):
+            try:
+                await send_winner_notification(
+                    winner_user["email"],
+                    winner_user.get("username", ""),
+                    comp["title"],
+                    comp.get("prize_description", "Premiu principal"),
+                    winner_ticket["ticket_number"]
+                )
+            except Exception as e:
+                logger.error(f"Failed to send winner email: {e}")
     
     await db.competitions.update_one(
         {"competition_id": entry.competition_id},
