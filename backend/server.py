@@ -3210,23 +3210,18 @@ async def test_push_notification(current_user: dict = Depends(get_admin_user)):
     if not subs:
         raise HTTPException(status_code=404, detail="Nu ai nicio subscriptie push activa. Activeaza mai intai notificarile.")
     
-    vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
     sent = 0
     errors = []
     for sub in subs:
         try:
-            from pywebpush import webpush  # noqa: already imported at startup
-            webpush(
-                subscription_info={"endpoint": sub["endpoint"], "keys": sub["keys"]},
-                data=json_mod.dumps({
-                    "title": "Test Zektrix",
-                    "body": "Notificarile push functioneaza! Vei primi alerte cand cineva cere asistenta live.",
-                    "url": "https://zektrix.uk/admin"
-                }),
-                vapid_private_key=vapid_pem_path,
-                vapid_claims={"sub": VAPID_MAILTO}
+            result = await send_web_push(
+                sub,
+                {"title": "Test Zektrix", "body": "Notificarile push functioneaza!", "url": "https://zektrix.uk/admin"}
             )
-            sent += 1
+            if result:
+                sent += 1
+            else:
+                errors.append("Push failed silently")
         except Exception as e:
             err_str = str(e)
             errors.append(err_str[:100])
@@ -3239,34 +3234,41 @@ async def test_push_notification(current_user: dict = Depends(get_admin_user)):
         raise HTTPException(status_code=400, detail=f"Nu s-a putut trimite: {'; '.join(errors)}")
 
 
+async def send_web_push(subscription: dict, data: dict) -> bool:
+    """Send a web push notification - auto-installs pywebpush if missing"""
+    import json as json_mod
+    
+    try:
+        from pywebpush import webpush
+    except ImportError:
+        logger.warning("pywebpush not found, installing on-the-fly...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pywebpush", "py-vapid", "--quiet"])
+        from pywebpush import webpush
+        logger.info("pywebpush installed successfully")
+    
+    vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
+    webpush(
+        subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
+        data=json_mod.dumps(data),
+        vapid_private_key=vapid_pem_path,
+        vapid_claims={"sub": VAPID_MAILTO}
+    )
+    return True
+
+
 
 async def notify_admins_live_chat(user_name: str, user_email: str, message: str):
     """Send push notification + email to all admins when user requests live chat"""
-    import json
-    
     # 1. Push notifications
     subscriptions = await db.push_subscriptions.find({}, {"_id": 0}).to_list(50)
-    vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
     for sub in subscriptions:
         try:
-            from pywebpush import webpush  # noqa: already imported at startup
-            webpush(
-                subscription_info={
-                    "endpoint": sub["endpoint"],
-                    "keys": sub["keys"]
-                },
-                data=json.dumps({
-                    "title": "Asistenta Live Solicitata",
-                    "body": f"{user_name}: {message[:100]}",
-                    "url": "https://zektrix.uk/admin"
-                }),
-                vapid_private_key=vapid_pem_path,
-                vapid_claims={"sub": VAPID_MAILTO}
-            )
+            await send_web_push(sub, {
+                "title": "Asistenta Live Solicitata",
+                "body": f"{user_name}: {message[:100]}",
+                "url": "https://zektrix.uk/admin"
+            })
             logger.info(f"Push sent to {sub['endpoint'][:50]}...")
-        except ImportError:
-            logger.error("pywebpush not installed - push notifications unavailable")
-            break
         except Exception as e:
             logger.error(f"Push notification failed: {e}")
             if "410" in str(e) or "404" in str(e):
