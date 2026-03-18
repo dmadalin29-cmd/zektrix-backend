@@ -193,30 +193,30 @@ const CompetitionDetailPage = () => {
 
                     {/* Success Dialog */}
                     <Dialog open={purchaseSuccess} onOpenChange={setPurchaseSuccess}>
-                        <DialogContent className="w-[calc(100%-1.5rem)] max-w-md p-4 sm:p-6 glass border-secondary/30 rounded-xl" aria-describedby="success-description">
-                            <DialogHeader className="space-y-2">
-                                <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center mx-auto neon-secondary">
-                                    <PartyPopper className="w-6 h-6 text-secondary" />
+                        <DialogContent className="glass border-secondary/30" aria-describedby="success-description">
+                            <DialogHeader className="space-y-3 pt-2">
+                                <div className="w-14 h-14 rounded-full bg-secondary/20 flex items-center justify-center mx-auto neon-secondary">
+                                    <PartyPopper className="w-7 h-7 text-secondary" />
                                 </div>
-                                <DialogTitle className="text-center text-lg">{t('congratulations')}</DialogTitle>
+                                <DialogTitle className="text-center text-xl font-bold">{t('congratulations')}</DialogTitle>
                             </DialogHeader>
-                            <div id="success-description" className="text-center space-y-3">
+                            <div id="success-description" className="text-center space-y-3 py-2">
                                 <p className="text-sm text-muted-foreground">
                                     {t('you_purchased')} {purchasedLocuri.length} {purchasedLocuri.length === 1 ? 'loc' : t('locuri')}!
                                 </p>
-                                <div className="flex flex-wrap gap-2 justify-center max-h-[20vh] overflow-y-auto">
+                                <div className="flex flex-wrap gap-2 justify-center">
                                     {purchasedLocuri.map((ticket) => (
-                                        <span key={ticket.ticket_id} className="ticket-badge text-xs sm:text-sm">
+                                        <span key={ticket.ticket_id} className="ticket-badge text-sm">
                                             #{ticket.ticket_number}
                                         </span>
                                     ))}
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-2 mt-2">
-                                <Button className="w-full btn-secondary text-black text-xs sm:text-sm py-3 whitespace-normal leading-tight" onClick={() => navigate('/dashboard/locuri')}>
+                            <div className="flex flex-col gap-3 pt-2">
+                                <Button className="w-full btn-secondary text-black font-semibold h-11" onClick={() => navigate('/dashboard/locuri')}>
                                     {t('view_my_locs')}
                                 </Button>
-                                <Button variant="outline" className="w-full text-xs sm:text-sm py-3 whitespace-normal leading-tight" onClick={() => { setPurchaseSuccess(false); fetchCompetition(); }}>
+                                <Button variant="outline" className="w-full font-semibold h-11" onClick={() => { setPurchaseSuccess(false); fetchCompetition(); }}>
                                     {t('buy_more')}
                                 </Button>
                             </div>

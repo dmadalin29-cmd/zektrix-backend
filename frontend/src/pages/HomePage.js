@@ -299,7 +299,7 @@ const HomePage = () => {
             <Navbar />
             
             {/* Activity Ticker */}
-            <div className="pt-16">
+            <div className="pt-24">
                 <ActivityTicker activities={activities} competitions={comps} />
             </div>
             
