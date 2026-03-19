@@ -58,15 +58,28 @@ if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
 
 # VAPID Push Notification Config
-VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '').replace('\\n', '\n')
 VAPID_MAILTO = os.environ.get('VAPID_MAILTO', 'mailto:support@zektrix.uk')
 
-# Write VAPID PEM file from env variable if it doesn't exist or is outdated
+# Write VAPID PEM file from env variable
 vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
 if VAPID_PRIVATE_KEY and VAPID_PRIVATE_KEY.startswith('-----BEGIN'):
     with open(vapid_pem_path, 'w') as f:
         f.write(VAPID_PRIVATE_KEY.strip() + '\n')
+
+# Derive VAPID public key from private key (ensures they always match)
+VAPID_PUBLIC_KEY = ''
+if os.path.exists(vapid_pem_path):
+    try:
+        from cryptography.hazmat.primitives import serialization as _ser
+        with open(vapid_pem_path, 'rb') as f:
+            _pk = _ser.load_pem_private_key(f.read(), password=None)
+        VAPID_PUBLIC_KEY = base64.urlsafe_b64encode(
+            _pk.public_key().public_bytes(_ser.Encoding.X962, _ser.PublicFormat.UncompressedPoint)
+        ).rstrip(b'=').decode()
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Failed to derive VAPID public key: {e}")
+        VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 
 # Helper function to generate random unique ticket numbers
 async def generate_random_ticket_number(competition_id: str, max_tickets: int) -> int:
