@@ -9,6 +9,7 @@ import logging
 import asyncio
 import subprocess
 import sys
+import json
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict
@@ -3195,7 +3196,6 @@ async def push_unsubscribe(current_user: dict = Depends(get_current_user)):
 @api_router.post("/push/test")
 async def test_push_notification(current_user: dict = Depends(get_admin_user)):
     """Send a test push notification to verify setup works"""
-    import json as json_mod
     
     subs = await db.push_subscriptions.find({"user_id": current_user["user_id"]}, {"_id": 0}).to_list(5)
     if not subs:
