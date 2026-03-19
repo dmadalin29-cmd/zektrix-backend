@@ -4422,74 +4422,111 @@ async def competition_auto_bot():
 # Sends daily email to all users with competition updates
 
 async def generate_daily_email_html(competitions: list, user_name: str, user_id: str = "") -> str:
-    """Generate ultra-modern email HTML for daily digest with GDPR footer"""
+    """Generate modern premium email HTML for daily digest"""
     
-    # Sort competitions by progress (most filled first for urgency)
     sorted_comps = sorted(competitions, key=lambda x: (x.get("sold_tickets", 0) / max(x.get("max_tickets", 1), 1)), reverse=True)
     
-    # Calculate totals
-    total_prizes = sum(comp.get("auto_prize_amount", 0) for comp in sorted_comps if comp.get("auto_prize_amount"))
-    total_tickets_available = sum(comp.get("max_tickets", 0) - comp.get("sold_tickets", 0) for comp in sorted_comps)
+    # Calculate total prizes as ticket_price × max_tickets (realistic prize pool)
+    total_prize_pool = 0
+    for comp in sorted_comps:
+        price = comp.get("ticket_price", 0) or 0
+        max_t = comp.get("max_tickets", 0) or 0
+        if price > 0:
+            total_prize_pool += price * max_t
+        elif comp.get("auto_prize_amount"):
+            total_prize_pool += comp["auto_prize_amount"]
     
-    # Hot competitions (>60% sold)
+    total_tickets_available = sum(comp.get("max_tickets", 0) - comp.get("sold_tickets", 0) for comp in sorted_comps)
     hot_comps = [c for c in sorted_comps if (c.get("sold_tickets", 0) / max(c.get("max_tickets", 1), 1)) > 0.6]
     
-    # Generate competition cards
+    # Build competition cards with images
     comp_cards = ""
-    for comp in sorted_comps[:5]:  # Max 5 competitions
+    for comp in sorted_comps[:6]:
         progress = int((comp.get("sold_tickets", 0) / max(comp.get("max_tickets", 1), 1)) * 100)
         remaining = comp.get("max_tickets", 0) - comp.get("sold_tickets", 0)
-        prize = comp.get("prize_description", comp.get("title", "Premiu"))
+        prize = comp.get("prize_description") or comp.get("title", "Premiu")
+        image_url = comp.get("image_url", "")
+        comp_link = f"https://zektrix.uk/competitions/{comp.get('competition_id', '')}"
+        price = comp.get("ticket_price", 0) or 0
+        max_t = comp.get("max_tickets", 0) or 0
+        comp_prize_pool = price * max_t if price > 0 else (comp.get("auto_prize_amount") or 0)
+        is_free = price == 0
         
-        # Urgency color based on progress
         if progress >= 80:
-            urgency_color = "#ef4444"  # Red
-            urgency_text = "APROAPE PLIN!"
-            border_color = "#ef444450"
+            urgency_color = "#ef4444"
+            urgency_text = "APROAPE SOLD OUT!"
+            badge_bg = "linear-gradient(135deg, #ef4444, #dc2626)"
         elif progress >= 60:
-            urgency_color = "#f97316"  # Orange
-            urgency_text = "SE UMPLE RAPID!"
-            border_color = "#f9731650"
+            urgency_color = "#f97316"
+            urgency_text = "SE VINDE RAPID!"
+            badge_bg = "linear-gradient(135deg, #f97316, #ea580c)"
+        elif is_free:
+            urgency_color = "#10b981"
+            urgency_text = "GRATUIT!"
+            badge_bg = "linear-gradient(135deg, #10b981, #059669)"
         else:
-            urgency_color = "#8b5cf6"  # Violet
+            urgency_color = "#8b5cf6"
             urgency_text = ""
-            border_color = "#8b5cf650"
+            badge_bg = ""
+        
+        price_display = "GRATUIT" if is_free else f"£{price:.2f}"
+        
+        image_section = ""
+        if image_url:
+            image_section = f'''
+                                                <a href="{comp_link}" style="text-decoration: none; display: block;">
+                                                    <img src="{image_url}" alt="{comp.get('title', '')}" style="width: 100%; height: 200px; object-fit: cover; display: block; border-radius: 12px 12px 0 0;" />
+                                                </a>'''
+        
+        urgency_badge = ""
+        if urgency_text:
+            urgency_badge = f'<span style="display: inline-block; background: {badge_bg}; color: white; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">{urgency_text}</span>'
         
         comp_cards += f'''
                     <tr>
-                        <td style="padding: 0 0 15px 0;">
-                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: linear-gradient(135deg, #0f0a1a 0%, #1a1033 100%); border: 1px solid {border_color}; border-radius: 16px; overflow: hidden;">
+                        <td style="padding: 0 0 16px 0;">
+                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: #0d0b1a; border: 1px solid #1e1b3a; border-radius: 12px; overflow: hidden;">
                                 <tr>
                                     <td style="padding: 0;">
+                                        {image_section}
                                         <table cellpadding="0" cellspacing="0" style="width: 100%;">
                                             <tr>
-                                                <td style="padding: 20px;">
+                                                <td style="padding: 16px 18px;">
                                                     <table cellpadding="0" cellspacing="0" style="width: 100%;">
                                                         <tr>
                                                             <td>
-                                                                <h3 style="color: #ffffff; margin: 0 0 5px 0; font-size: 18px; font-weight: 700;">{comp.get("title", "Competiție")}</h3>
-                                                                {f'<span style="color: {urgency_color}; font-size: 11px; font-weight: 700;">{urgency_text}</span>' if urgency_text else ''}
-                                                            </td>
-                                                            <td style="text-align: right; vertical-align: top;">
-                                                                <span style="background: linear-gradient(135deg, #8b5cf6, #f97316); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; display: inline-block;">{comp.get("ticket_price", 0):.2f} RON</span>
+                                                                <a href="{comp_link}" style="text-decoration: none; color: #ffffff; font-size: 17px; font-weight: 700; display: block; margin-bottom: 6px;">{comp.get("title", "")}</a>
+                                                                {urgency_badge}
                                                             </td>
                                                         </tr>
                                                     </table>
-                                                    <p style="color: #6b7280; margin: 10px 0 15px 0; font-size: 13px;">Premiu: <strong style="color: #fbbf24;">{prize}</strong></p>
-                                                    <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 12px;">
+                                                    <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 12px;">
                                                         <tr>
-                                                            <td style="background: #1f1f3a; border-radius: 8px; height: 10px; overflow: hidden;">
-                                                                <div style="background: linear-gradient(90deg, {urgency_color}, #f97316); height: 10px; width: {progress}%; border-radius: 8px;"></div>
+                                                            <td style="width: 50%;">
+                                                                <p style="color: #6b7280; margin: 0; font-size: 11px;">Premiu</p>
+                                                                <p style="color: #fbbf24; margin: 2px 0 0 0; font-size: 14px; font-weight: 700;">{prize[:40]}</p>
+                                                            </td>
+                                                            <td style="width: 50%; text-align: right;">
+                                                                <p style="color: #6b7280; margin: 0; font-size: 11px;">Pret loc</p>
+                                                                <p style="color: #10b981; margin: 2px 0 0 0; font-size: 14px; font-weight: 700;">{price_display}</p>
                                                             </td>
                                                         </tr>
                                                     </table>
-                                                    <table cellpadding="0" cellspacing="0" style="width: 100%;">
+                                                    <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 12px;">
                                                         <tr>
-                                                            <td style="color: #9ca3af; font-size: 12px;">
-                                                                <span style="color: {urgency_color}; font-weight: 700;">{progress}%</span> ocupat • <strong style="color: #10b981;">{remaining} locuri libere</strong>
+                                                            <td style="background: #1a1730; border-radius: 6px; height: 8px; overflow: hidden;">
+                                                                <div style="background: linear-gradient(90deg, {urgency_color}, #a855f7); height: 8px; width: {max(progress, 2)}%; border-radius: 6px;"></div>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                    <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 8px;">
+                                                        <tr>
+                                                            <td>
+                                                                <span style="color: #6b7280; font-size: 11px;"><span style="color: {urgency_color}; font-weight: 700;">{progress}%</span> ocupat</span>
+                                                                <span style="color: #6b7280; font-size: 11px; margin-left: 8px;"><span style="color: #10b981; font-weight: 600;">{remaining:,}</span> locuri</span>
                                                             </td>
                                                             <td style="text-align: right;">
-                                                                <a href="https://zektrix.uk/competitions/{comp.get('competition_id', '')}" style="color: #8b5cf6; text-decoration: none; font-size: 12px; font-weight: 600;">Vezi Detalii →</a>
+                                                                <a href="{comp_link}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; text-decoration: none; padding: 7px 18px; border-radius: 20px; font-size: 12px; font-weight: 600;">Participa</a>
                                                             </td>
                                                         </tr>
                                                     </table>
@@ -4502,18 +4539,16 @@ async def generate_daily_email_html(competitions: list, user_name: str, user_id:
                         </td>
                     </tr>'''
     
-    # Hot alert section (if any hot competitions)
-    hot_count = len(hot_comps)
+    # Hot alert
     hot_alert_html = ""
     if hot_comps:
-        hot_alert_html = f'''<!-- Hot Alert -->
-                    <tr>
+        hot_alert_html = f'''<tr>
                         <td style="padding-bottom: 20px;">
-                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); border: 1px solid #ef444450; border-radius: 12px;">
+                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: linear-gradient(135deg, #451a03 0%, #7c2d12 100%); border: 1px solid #f9731640; border-radius: 12px;">
                                 <tr>
-                                    <td style="padding: 15px 20px; text-align: center;">
-                                        <p style="color: #fca5a5; margin: 0; font-size: 13px;">
-                                            &#128293; <strong style="color: #ffffff;">{hot_count} competitii</strong> sunt aproape pline! Nu rata sansa!
+                                    <td style="padding: 14px 20px; text-align: center;">
+                                        <p style="color: #fed7aa; margin: 0; font-size: 13px; font-weight: 600;">
+                                            &#128293; <strong style="color: #ffffff;">{len(hot_comps)} competitii</strong> se vand rapid! Nu rata sansa!
                                         </p>
                                     </td>
                                 </tr>
@@ -4521,97 +4556,111 @@ async def generate_daily_email_html(competitions: list, user_name: str, user_id:
                         </td>
                     </tr>'''
     
-    # Recent winners (last 3)
+    # Recent winners
     recent_winners = await db.winners.find({}, {"_id": 0}).sort("announced_at", -1).limit(3).to_list(3)
     winners_html = ""
     if recent_winners:
-        winners_html = '''
+        winner_items = ""
+        for w in recent_winners:
+            winner_items += f'''
+                                <tr>
+                                    <td style="padding: 10px 16px; border-bottom: 1px solid #1e1b3a;">
+                                        <table cellpadding="0" cellspacing="0" style="width: 100%;">
+                                            <tr>
+                                                <td style="width: 36px; vertical-align: middle;">
+                                                    <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 50%; text-align: center; line-height: 32px; font-size: 14px;">&#127942;</div>
+                                                </td>
+                                                <td style="vertical-align: middle;">
+                                                    <p style="color: #ffffff; margin: 0; font-size: 13px; font-weight: 600;">{w.get("username", "Castigator")}</p>
+                                                    <p style="color: #6b7280; margin: 0; font-size: 11px;">Loc #{w.get("ticket_number", "?")}</p>
+                                                </td>
+                                                <td style="text-align: right; vertical-align: middle;">
+                                                    <p style="color: #fbbf24; margin: 0; font-size: 11px; font-weight: 600;">{w.get("competition_title", "")[:25]}</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>'''
+        winners_html = f'''
                     <tr>
-                        <td style="padding: 30px 0 20px 0;">
-                            <p style="color: #fbbf24; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0; font-weight: 700;">&#127942; Castigatori Recenti</p>
+                        <td style="padding: 25px 0 15px 0;">
+                            <p style="color: #fbbf24; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0; font-weight: 700;">&#127942; CASTIGATORI RECENTI</p>
                         </td>
                     </tr>
                     <tr>
-                        <td style="padding-bottom: 30px;">
-                            <table cellpadding="0" cellspacing="0" style="width: 100%;">
-                                <tr>'''
-        for winner in recent_winners:
-            winners_html += f'''
-                                    <td style="width: 32%; background: linear-gradient(135deg, #1a1033, #0f0a1a); border: 1px solid #fbbf2430; border-radius: 12px; padding: 15px; text-align: center; vertical-align: top;">
-                                        <div style="font-size: 24px; margin-bottom: 8px;">&#127881;</div>
-                                        <p style="color: #ffffff; margin: 0 0 4px 0; font-size: 13px; font-weight: 600;">{winner.get("username", "Câștigător")}</p>
-                                        <p style="color: #fbbf24; margin: 0; font-size: 11px;">#{winner.get("ticket_number", "?")}</p>
-                                    </td>
-                                    <td style="width: 2%;"></td>'''
-        winners_html = winners_html.rstrip('<td style="width: 2%;"></td>')
-        winners_html += '''
-                                </tr>
+                        <td style="padding-bottom: 25px;">
+                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: #0d0b1a; border: 1px solid #1e1b3a; border-radius: 12px; overflow: hidden;">
+                                {winner_items}
                             </table>
                         </td>
                     </tr>'''
+    
+    # Format prize pool display
+    if total_prize_pool >= 1000:
+        prize_display = f"£{total_prize_pool:,.0f}"
+    else:
+        prize_display = f"£{total_prize_pool:.0f}"
     
     email_html = f'''<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zektrix - Competiții Zilnice</title>
+    <title>Zektrix - Competitii Active</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #030014; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
     <table cellpadding="0" cellspacing="0" style="width: 100%; background-color: #030014;">
         <tr>
-            <td style="padding: 40px 20px;">
+            <td style="padding: 30px 16px;">
                 <table cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; width: 100%;">
                     
                     <!-- Header -->
                     <tr>
-                        <td style="text-align: center; padding-bottom: 30px;">
-                            <h1 style="margin: 0; font-size: 36px; font-weight: 900; letter-spacing: -1px;">
-                                <span style="color: #8b5cf6;">ZEKTRIX</span><span style="color: #ffffff;">.UK</span>
-                            </h1>
-                            <p style="color: #6b7280; margin-top: 8px; font-size: 13px;">Premii reale. Șanse reale. Câștigători reali.</p>
-                        </td>
-                    </tr>
-                    
-                    <!-- Personal Greeting -->
-                    <tr>
-                        <td style="padding-bottom: 25px;">
-                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: linear-gradient(135deg, #1a1033 0%, #0f0a1a 100%); border: 1px solid #8b5cf650; border-radius: 20px;">
+                        <td style="text-align: center; padding-bottom: 24px;">
+                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: linear-gradient(135deg, #0d0b1a 0%, #1a0a2e 50%, #0d0b1a 100%); border: 1px solid #8b5cf630; border-radius: 16px;">
                                 <tr>
-                                    <td style="padding: 30px; text-align: center;">
-                                        <p style="color: #9ca3af; margin: 0 0 5px 0; font-size: 14px;">Salut,</p>
-                                        <h2 style="color: #ffffff; margin: 0 0 15px 0; font-size: 26px; font-weight: 800;">{user_name}!</h2>
-                                        <p style="color: #9ca3af; margin: 0; font-size: 15px; line-height: 1.6;">
-                                            Avem <strong style="color: #8b5cf6;">{len(sorted_comps)} competiții active</strong> cu premii totale de 
-                                            <strong style="color: #fbbf24;">{total_prizes:,.0f} RON</strong>!
-                                        </p>
+                                    <td style="padding: 28px 20px;">
+                                        <h1 style="margin: 0 0 4px 0; font-size: 32px; font-weight: 900; letter-spacing: -1px; text-align: center;">
+                                            <span style="color: #8b5cf6;">ZEKTRIX</span><span style="color: #ffffff;">.UK</span>
+                                        </h1>
+                                        <p style="color: #6b7280; margin: 0; font-size: 12px; text-align: center; letter-spacing: 1px;">PREMII REALE &bull; SANSE REALE &bull; CASTIGATORI REALI</p>
                                     </td>
                                 </tr>
                             </table>
                         </td>
                     </tr>
                     
-                    <!-- Stats Bar -->
+                    <!-- Greeting + Stats -->
                     <tr>
-                        <td style="padding-bottom: 25px;">
-                            <table cellpadding="0" cellspacing="0" style="width: 100%;">
+                        <td style="padding-bottom: 20px;">
+                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: linear-gradient(135deg, #0d0b1a 0%, #130d24 100%); border: 1px solid #1e1b3a; border-radius: 16px;">
                                 <tr>
-                                    <td style="width: 32%; background: #0f0a1a; border: 1px solid #8b5cf630; border-radius: 12px; padding: 18px; text-align: center;">
-                                        <div style="font-size: 28px; margin-bottom: 8px;">&#127919;</div>
-                                        <p style="color: #8b5cf6; margin: 0 0 4px 0; font-size: 22px; font-weight: 800;">{len(sorted_comps)}</p>
-                                        <p style="color: #6b7280; margin: 0; font-size: 11px;">Competitii Active</p>
-                                    </td>
-                                    <td style="width: 2%;"></td>
-                                    <td style="width: 32%; background: #0f0a1a; border: 1px solid #f9731630; border-radius: 12px; padding: 18px; text-align: center;">
-                                        <div style="font-size: 28px; margin-bottom: 8px;">&#127915;</div>
-                                        <p style="color: #f97316; margin: 0 0 4px 0; font-size: 22px; font-weight: 800;">{total_tickets_available}</p>
-                                        <p style="color: #6b7280; margin: 0; font-size: 11px;">Locuri Disponibile</p>
-                                    </td>
-                                    <td style="width: 2%;"></td>
-                                    <td style="width: 32%; background: #0f0a1a; border: 1px solid #10b98130; border-radius: 12px; padding: 18px; text-align: center;">
-                                        <div style="font-size: 28px; margin-bottom: 8px;">&#128176;</div>
-                                        <p style="color: #10b981; margin: 0 0 4px 0; font-size: 22px; font-weight: 800;">{total_prizes:,.0f}</p>
-                                        <p style="color: #6b7280; margin: 0; font-size: 11px;">RON Premii</p>
+                                    <td style="padding: 24px;">
+                                        <p style="color: #9ca3af; margin: 0 0 4px 0; font-size: 14px;">Salut, <strong style="color: #ffffff;">{user_name}</strong>!</p>
+                                        <p style="color: #6b7280; margin: 0 0 20px 0; font-size: 13px; line-height: 1.5;">
+                                            Avem <strong style="color: #8b5cf6;">{len(sorted_comps)} competitii active</strong> cu premii in valoare totala de
+                                        </p>
+                                        <p style="text-align: center; margin: 0 0 20px 0;">
+                                            <span style="font-size: 36px; font-weight: 900; color: #fbbf24; letter-spacing: -1px;">{prize_display}</span>
+                                        </p>
+                                        <table cellpadding="0" cellspacing="0" style="width: 100%;">
+                                            <tr>
+                                                <td style="width: 33%; text-align: center; padding: 12px 4px; background: #0a0818; border-radius: 10px;">
+                                                    <p style="color: #8b5cf6; margin: 0; font-size: 20px; font-weight: 800;">{len(sorted_comps)}</p>
+                                                    <p style="color: #6b7280; margin: 2px 0 0 0; font-size: 10px;">Competitii</p>
+                                                </td>
+                                                <td style="width: 1%;"></td>
+                                                <td style="width: 33%; text-align: center; padding: 12px 4px; background: #0a0818; border-radius: 10px;">
+                                                    <p style="color: #f97316; margin: 0; font-size: 20px; font-weight: 800;">{total_tickets_available:,}</p>
+                                                    <p style="color: #6b7280; margin: 2px 0 0 0; font-size: 10px;">Locuri Libere</p>
+                                                </td>
+                                                <td style="width: 1%;"></td>
+                                                <td style="width: 33%; text-align: center; padding: 12px 4px; background: #0a0818; border-radius: 10px;">
+                                                    <p style="color: #10b981; margin: 0; font-size: 20px; font-weight: 800;">{prize_display}</p>
+                                                    <p style="color: #6b7280; margin: 2px 0 0 0; font-size: 10px;">Premii Totale</p>
+                                                </td>
+                                            </tr>
+                                        </table>
                                     </td>
                                 </tr>
                             </table>
@@ -4622,48 +4671,39 @@ async def generate_daily_email_html(competitions: list, user_name: str, user_id:
                     
                     <!-- Section Title -->
                     <tr>
-                        <td style="padding-bottom: 15px;">
-                            <p style="color: #a78bfa; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0; font-weight: 700;">&#128203; Competitii Active</p>
+                        <td style="padding-bottom: 12px;">
+                            <p style="color: #a78bfa; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0; font-weight: 700;">COMPETITII DISPONIBILE</p>
                         </td>
                     </tr>
                     
-                    <!-- Competition Cards -->
                     {comp_cards}
                     
-                    <!-- CTA Button -->
+                    <!-- CTA -->
                     <tr>
-                        <td style="text-align: center; padding: 25px 0 35px 0;">
-                            <a href="https://zektrix.uk/competitions" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6, #f97316); color: white; text-decoration: none; padding: 18px 50px; border-radius: 12px; font-weight: 700; font-size: 16px;">
-                                PARTICIPĂ ACUM →
+                        <td style="text-align: center; padding: 20px 0 30px 0;">
+                            <a href="https://zektrix.uk/competitions" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; text-decoration: none; padding: 16px 48px; border-radius: 50px; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
+                                VEZI TOATE COMPETITIILE &#8594;
                             </a>
                         </td>
                     </tr>
                     
                     {winners_html}
                     
-                    <!-- Features -->
+                    <!-- Why Zektrix -->
                     <tr>
-                        <td style="padding-bottom: 30px;">
-                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: linear-gradient(135deg, #0f0a1a, #1a1033); border: 1px solid #8b5cf620; border-radius: 16px;">
+                        <td style="padding-bottom: 25px;">
+                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: #0d0b1a; border: 1px solid #1e1b3a; border-radius: 12px;">
                                 <tr>
-                                    <td style="padding: 25px;">
-                                        <p style="color: #ffffff; margin: 0 0 15px 0; font-size: 15px; font-weight: 700; text-align: center;">De ce să alegi Zektrix?</p>
+                                    <td style="padding: 20px;">
+                                        <p style="color: #ffffff; margin: 0 0 14px 0; font-size: 14px; font-weight: 700; text-align: center;">De ce Zektrix?</p>
                                         <table cellpadding="0" cellspacing="0" style="width: 100%;">
                                             <tr>
-                                                <td style="width: 50%; padding: 10px;">
-                                                    <p style="color: #9ca3af; margin: 0; font-size: 12px;"><span style="color: #10b981;">&#10003;</span> Extrageri automate transparente</p>
-                                                </td>
-                                                <td style="width: 50%; padding: 10px;">
-                                                    <p style="color: #9ca3af; margin: 0; font-size: 12px;"><span style="color: #10b981;">&#10003;</span> Premii platite instant</p>
-                                                </td>
+                                                <td style="padding: 6px 8px; width: 50%;"><p style="color: #9ca3af; margin: 0; font-size: 12px;"><span style="color: #10b981;">&#10003;</span> Extrageri transparente</p></td>
+                                                <td style="padding: 6px 8px; width: 50%;"><p style="color: #9ca3af; margin: 0; font-size: 12px;"><span style="color: #10b981;">&#10003;</span> Premii platite instant</p></td>
                                             </tr>
                                             <tr>
-                                                <td style="width: 50%; padding: 10px;">
-                                                    <p style="color: #9ca3af; margin: 0; font-size: 12px;"><span style="color: #10b981;">&#10003;</span> Bilete de la 7.99 RON</p>
-                                                </td>
-                                                <td style="width: 50%; padding: 10px;">
-                                                    <p style="color: #9ca3af; margin: 0; font-size: 12px;"><span style="color: #10b981;">&#10003;</span> Suport 24/7 pe WhatsApp</p>
-                                                </td>
+                                                <td style="padding: 6px 8px;"><p style="color: #9ca3af; margin: 0; font-size: 12px;"><span style="color: #10b981;">&#10003;</span> Locuri de la £0.99</p></td>
+                                                <td style="padding: 6px 8px;"><p style="color: #9ca3af; margin: 0; font-size: 12px;"><span style="color: #10b981;">&#10003;</span> Suport 24/7 WhatsApp</p></td>
                                             </tr>
                                         </table>
                                     </td>
@@ -4672,99 +4712,69 @@ async def generate_daily_email_html(competitions: list, user_name: str, user_id:
                         </td>
                     </tr>
                     
-                    <!-- GDPR Modern Footer -->
+                    <!-- Footer -->
                     <tr>
-                        <td style="padding-top: 40px;">
-                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: linear-gradient(135deg, #0f0a1a 0%, #1a0a2e 50%, #0f0a1a 100%); border: 1px solid #8b5cf630; border-radius: 24px; overflow: hidden;">
+                        <td style="padding-top: 10px;">
+                            <table cellpadding="0" cellspacing="0" style="width: 100%; background: #0d0b1a; border: 1px solid #1e1b3a; border-radius: 16px; overflow: hidden;">
                                 <tr>
-                                    <td style="padding: 35px 30px;">
-                                        <!-- Logo & Tagline -->
-                                        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 25px;">
+                                    <td style="padding: 28px 24px;">
+                                        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 20px;">
                                             <tr>
                                                 <td style="text-align: center;">
-                                                    <h3 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px;">
-                                                        <span style="background: linear-gradient(135deg, #8b5cf6, #d946ef, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">ZEKTRIX</span><span style="color: #ffffff;">.UK</span>
+                                                    <h3 style="margin: 0; font-size: 22px; font-weight: 900;">
+                                                        <span style="color: #8b5cf6;">ZEKTRIX</span><span style="color: #ffffff;">.UK</span>
                                                     </h3>
-                                                    <p style="color: #6b7280; margin: 8px 0 0 0; font-size: 12px; letter-spacing: 1px;">PREMII REALE &#8226; SANSE REALE &#8226; CASTIGATORI REALI</p>
                                                 </td>
                                             </tr>
                                         </table>
-                                        
-                                        <!-- Social Links -->
-                                        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 25px;">
-                                            <tr>
-                                                <td style="text-align: center;">
-                                                    <a href="https://zektrix.uk" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; text-decoration: none; padding: 10px 20px; border-radius: 25px; font-size: 12px; font-weight: 600; margin: 0 5px;">&#127760; Website</a>
-                                                    <a href="https://wa.me/40730268067" style="display: inline-block; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; text-decoration: none; padding: 10px 20px; border-radius: 25px; font-size: 12px; font-weight: 600; margin: 0 5px;">&#128172; WhatsApp</a>
-                                                    <a href="https://tiktok.com/@zektrix.uk" style="display: inline-block; background: linear-gradient(135deg, #000000, #1a1a1a); color: white; text-decoration: none; padding: 10px 20px; border-radius: 25px; font-size: 12px; font-weight: 600; margin: 0 5px; border: 1px solid #333;">&#9835; TikTok</a>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                        
-                                        <!-- Divider -->
-                                        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 25px;">
-                                            <tr>
-                                                <td style="height: 1px; background: linear-gradient(90deg, transparent, #8b5cf650, transparent);"></td>
-                                            </tr>
-                                        </table>
-                                        
-                                        <!-- GDPR Info -->
                                         <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 20px;">
                                             <tr>
                                                 <td style="text-align: center;">
-                                                    <p style="color: #9ca3af; font-size: 11px; margin: 0 0 10px 0; line-height: 1.6;">
-                                                        Ai primit acest email pentru ca esti inregistrat pe <strong style="color: #8b5cf6;">Zektrix.uk</strong>
-                                                    </p>
-                                                    <p style="color: #6b7280; font-size: 10px; margin: 0 0 15px 0; line-height: 1.5;">
-                                                        Conform GDPR, ai dreptul sa iti gestionezi preferintele de comunicare.<br/>
-                                                        Datele tale sunt in siguranta si nu sunt partajate cu terti.
-                                                    </p>
+                                                    <a href="https://zektrix.uk" style="display: inline-block; background: #1a1730; color: #8b5cf6; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: 600; margin: 0 3px;">&#127760; Website</a>
+                                                    <a href="https://wa.me/40730268067" style="display: inline-block; background: #1a1730; color: #22c55e; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: 600; margin: 0 3px;">&#128172; WhatsApp</a>
+                                                    <a href="https://tiktok.com/@zektrix.uk" style="display: inline-block; background: #1a1730; color: #ffffff; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: 600; margin: 0 3px;">&#9835; TikTok</a>
                                                 </td>
                                             </tr>
                                         </table>
-                                        
-                                        <!-- Quick Links -->
-                                        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 20px;">
+                                        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 16px;">
+                                            <tr><td style="height: 1px; background: linear-gradient(90deg, transparent, #1e1b3a, transparent);"></td></tr>
+                                        </table>
+                                        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 16px;">
                                             <tr>
                                                 <td style="text-align: center;">
-                                                    <a href="https://zektrix.uk/faq" style="color: #8b5cf6; text-decoration: none; font-size: 11px; margin: 0 12px;">&#10067; FAQ</a>
-                                                    <span style="color: #4b5563;">|</span>
-                                                    <a href="https://zektrix.uk/privacy" style="color: #8b5cf6; text-decoration: none; font-size: 11px; margin: 0 12px;">&#128274; Confidentialitate</a>
-                                                    <span style="color: #4b5563;">|</span>
-                                                    <a href="https://zektrix.uk/terms" style="color: #8b5cf6; text-decoration: none; font-size: 11px; margin: 0 12px;">&#128196; Termeni</a>
-                                                    <span style="color: #4b5563;">|</span>
-                                                    <a href="https://zektrix.uk/dashboard" style="color: #8b5cf6; text-decoration: none; font-size: 11px; margin: 0 12px;">&#128100; Contul Meu</a>
+                                                    <p style="color: #6b7280; font-size: 10px; margin: 0 0 8px 0; line-height: 1.5;">
+                                                        Ai primit acest email pentru ca esti inregistrat pe <strong style="color: #8b5cf6;">Zektrix.uk</strong>.<br/>
+                                                        Conform GDPR, datele tale sunt in siguranta si nu sunt partajate cu terti.
+                                                    </p>
                                                 </td>
                                             </tr>
                                         </table>
-                                        
-                                        <!-- Unsubscribe Section -->
-                                        <table cellpadding="0" cellspacing="0" style="width: 100%; background: #0a0512; border-radius: 12px; margin-bottom: 20px;">
+                                        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 16px;">
                                             <tr>
-                                                <td style="padding: 20px; text-align: center;">
-                                                    <p style="color: #6b7280; font-size: 11px; margin: 0 0 12px 0;">
-                                                        Nu mai vrei sa primesti aceste email-uri?
-                                                    </p>
-                                                    <a href="https://zektrix.uk/unsubscribe/{user_id}" style="display: inline-block; background: transparent; color: #ef4444; text-decoration: none; padding: 8px 24px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1px solid #ef444450; transition: all 0.3s;">
-                                                        &#128683; Dezabonare din newsletter
-                                                    </a>
-                                                    <p style="color: #4b5563; font-size: 10px; margin: 12px 0 0 0;">
-                                                        Vei continua sa primesti email-uri importante despre contul tau.
-                                                    </p>
+                                                <td style="text-align: center;">
+                                                    <a href="https://zektrix.uk/faq" style="color: #6b7280; text-decoration: none; font-size: 10px; margin: 0 8px;">FAQ</a>
+                                                    <span style="color: #374151;">|</span>
+                                                    <a href="https://zektrix.uk/privacy" style="color: #6b7280; text-decoration: none; font-size: 10px; margin: 0 8px;">Confidentialitate</a>
+                                                    <span style="color: #374151;">|</span>
+                                                    <a href="https://zektrix.uk/terms" style="color: #6b7280; text-decoration: none; font-size: 10px; margin: 0 8px;">Termeni</a>
+                                                    <span style="color: #374151;">|</span>
+                                                    <a href="https://zektrix.uk/dashboard" style="color: #6b7280; text-decoration: none; font-size: 10px; margin: 0 8px;">Contul Meu</a>
                                                 </td>
                                             </tr>
                                         </table>
-                                        
-                                        <!-- Copyright & Address -->
+                                        <table cellpadding="0" cellspacing="0" style="width: 100%; background: #0a0818; border-radius: 10px; margin-bottom: 16px;">
+                                            <tr>
+                                                <td style="padding: 14px; text-align: center;">
+                                                    <p style="color: #4b5563; font-size: 10px; margin: 0 0 8px 0;">Nu mai vrei aceste email-uri?</p>
+                                                    <a href="https://zektrix.uk/unsubscribe/{user_id}" style="color: #ef4444; text-decoration: none; font-size: 11px; font-weight: 600;">Dezabonare</a>
+                                                </td>
+                                            </tr>
+                                        </table>
                                         <table cellpadding="0" cellspacing="0" style="width: 100%;">
                                             <tr>
                                                 <td style="text-align: center;">
-                                                    <p style="color: #4b5563; font-size: 10px; margin: 0 0 8px 0;">
-                                                        &#169; 2026 Zektrix UK Ltd. Toate drepturile rezervate.
-                                                    </p>
-                                                    <p style="color: #374151; font-size: 9px; margin: 0; line-height: 1.5;">
-                                                        Zektrix UK Ltd &#8226; c/o Bartle House, Oxford Court &#8226; Manchester, M23 WQ &#8226; United Kingdom
-                                                    </p>
+                                                    <p style="color: #374151; font-size: 9px; margin: 0;">&#169; 2026 Zektrix UK Ltd. Toate drepturile rezervate.</p>
+                                                    <p style="color: #2d3748; font-size: 8px; margin: 4px 0 0 0;">Zektrix UK Ltd &bull; c/o Bartle House, Oxford Court &bull; Manchester, M23 WQ &bull; United Kingdom</p>
                                                 </td>
                                             </tr>
                                         </table>
@@ -4794,10 +4804,17 @@ async def send_daily_digest_to_user(user: dict, competitions: list) -> bool:
         user_id = user.get("user_id", "")
         email_html = await generate_daily_email_html(competitions, user_name, user_id)
         
+        # Calculate total prize pool for subject line
+        total_pool = 0
+        for c in competitions:
+            p = c.get("ticket_price", 0) or 0
+            m = c.get("max_tickets", 0) or 0
+            total_pool += p * m if p > 0 else (c.get("auto_prize_amount") or 0)
+        
         resend.Emails.send({
             "from": SENDER_EMAIL,
             "to": [user["email"]],
-            "subject": f"[ZEKTRIX] {len(competitions)} Competitii Active cu Premii de pana la 5000 RON!",
+            "subject": f"[ZEKTRIX] {len(competitions)} Competitii Active - Premii de £{total_pool:,.0f}!",
             "html": email_html
         })
         return True
