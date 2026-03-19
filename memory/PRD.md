@@ -32,10 +32,16 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - **FIXED: Push Notifications (P0)** - Root cause: 3 different VAPID keys that didn't match each other. Solution: generated new synchronized key pair, replaced manual crypto with pywebpush library, auto-derive public key from private key at runtime, cleared stale subscriptions.
 - **FIXED: Frontend .env** - Had old preview URL, replaced with production Railway URL
 - **FIXED: DB_NAME** - Changed from zektrix_db (dev) to ektrix_db (production)
+- **VERIFIED: Live Chat E2E** - All components tested and working:
+  - AI Chat (Gemini Flash) responds correctly
+  - Chat escalation creates messages and sends push notifications
+  - REST fallback for when WebSocket is unavailable
+  - WebSocket connections work on Railway production
+  - Admin reply system works (saves + sends email + broadcasts via WS)
+  - Chat history loads correctly
 - **Deployed** both frontend (Hostinger) and backend (Railway)
 
 ## Upcoming Tasks (P1)
-- Verify Live Chat reliability end-to-end
 - Integrate Facebook Pixel
 - Add dedicated Terms & Conditions page improvements
 
@@ -52,3 +58,5 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - PEM file auto-generated from VAPID_PRIVATE_KEY env var at server startup
 - deploy_production.sh handles safe frontend deployment
 - Railway auto-deploys from GitHub main branch
+- Live chat uses WebSocket with REST API polling fallback
+- Admin replies are delivered via WebSocket + email notification
