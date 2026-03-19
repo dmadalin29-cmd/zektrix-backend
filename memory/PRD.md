@@ -1,95 +1,54 @@
-# Zektrix.UK - Competition Platform PRD
+# Zektrix UK - Competition Platform PRD
 
 ## Original Problem Statement
 Full-stack competition platform with Viva Payments, modern UI, AI-powered live chat with push notifications for admins, and PWA.
 
-## Core Architecture
-- **Frontend**: React (CRA) deployed on Hostinger (zektrix.uk)
-- **Backend**: FastAPI deployed on Railway (auto-deploy from GitHub main branch)
-- **Database**: MongoDB Atlas (production DB: `ektrix_db`, preview DB: `zektrix_db`)
-- **PWA**: Service worker with network-first caching strategy
+## Tech Stack
+- **Frontend:** React (Hostinger - zektrix.uk)
+- **Backend:** FastAPI (Railway - zektrix-backend-production.up.railway.app)
+- **Database:** MongoDB Atlas (DB: ektrix_db)
+- **Payments:** Viva Payments
+- **AI Chat:** Gemini Flash via emergentintegrations
+- **Push Notifications:** pywebpush + VAPID
+- **Auth:** JWT + Google Auth (Emergent-managed)
 
-## What's Been Implemented
-
-### Authentication
-- JWT + Google Auth (Emergent-managed)
-- Admin and user roles
-
-### Competitions
-- Browse, search, filter competitions
-- Ticket purchase via Viva Payments
-- Free competition entry
-- Instant prizes at percentage thresholds (auto-awarded to different users)
-- Auto-draw when max tickets reached (both paid and free entries)
-- Flash sales
-
-### User Dashboard
-- My Tickets/Locs with ticket numbers
-- Transaction history
-- Profile management
-
-### AI Chat & Live Chat
-- Gemini Flash AI chatbot for initial queries
-- Escalation to live chat with admin
-- REST API fallback + polling for reliability
-- Push notifications to admin for new chat requests
-- Email notifications to admin
-
-### Admin Panel
-- Competition CRUD
-- User management
-- Live chat interface
-- Push notification subscription + test button
-- Analytics dashboard
-
-### Push Notifications
-- VAPID key-based web push (pywebpush)
-- Real browser push subscription via pushManager
-- Test endpoint: POST /api/push/test
-- Auto-cleanup of expired subscriptions
-
-### Deployment
-- `deploy_production.sh` script: GitHub push + Hostinger clean deploy
-- Service worker cache busting with versioning
-- Production URL verification in build
-
-### UI/UX
-- Floating ultra-modern navbar with Lucide icons, glassmorphism
-- Properly centered dialog/modal using flexbox (works on iOS PWA, Android, Desktop)
-- Dark theme with violet/orange accents
-
-## Key API Endpoints
-- POST /api/push/vapid-key - Get VAPID public key
-- POST /api/push/subscribe - Subscribe to push (admin only)
-- POST /api/push/test - Send test push notification
-- POST /api/chat/message - REST fallback for chat messages
-- POST /api/chat/escalate - Escalate AI chat to live
-- POST /api/chat/ai - AI chatbot endpoint
-
-## 3rd Party Integrations
-- Viva Payments (payment processing)
-- Emergent Google Auth
-- Resend (email)
-- Gemini Flash via emergentintegrations (AI chat)
-- pywebpush (push notifications)
-- apscheduler (scheduled tasks)
-
-## Prioritized Backlog
-
-### P0 (Critical)
-- User must re-subscribe to push notifications from admin panel
-- Verify push notifications work end-to-end
-
-### P1 (Important)
-- Verify live chat reliability on production
-- Refactor server.py (4800+ lines) into modules
-
-### P2 (Nice to have)
-- Facebook Pixel integration
+## Core Features (Implemented)
+- JWT & Google Auth
+- Competition browsing, ticket purchasing via Viva Payments
+- "My Account" dashboard with ticket history
+- AI Chat (Gemini Flash) with live chat escalation
+- Admin panel (user/competition/winner management)
+- PWA with service worker
+- Push notifications for admins (live chat alerts)
+- Modern floating navbar with glassmorphism
+- Bilingual (Romanian/English)
+- Free competition "MEGA PREMIU £5.000" with tiered instant prizes
+- Robust deployment scripts (deploy_production.sh)
 - Terms & Conditions page
+- FAQ page
+- Public ticket search
 
-### P3 (Future - IDEE BOMBA)
-- Bundle Deals
-- SMS Marketing
-- Leaderboard
-- Referral System
+## Completed This Session (March 19, 2026)
+- **FIXED: Push Notifications (P0)** - Root cause: 3 different VAPID keys that didn't match each other. Solution: generated new synchronized key pair, replaced manual crypto with pywebpush library, auto-derive public key from private key at runtime, cleared stale subscriptions.
+- **FIXED: Frontend .env** - Had old preview URL, replaced with production Railway URL
+- **FIXED: DB_NAME** - Changed from zektrix_db (dev) to ektrix_db (production)
+- **Deployed** both frontend (Hostinger) and backend (Railway)
+
+## Upcoming Tasks (P1)
+- Verify Live Chat reliability end-to-end
+- Integrate Facebook Pixel
+- Add dedicated Terms & Conditions page improvements
+
+## Future Tasks (P2)
+- **CRITICAL REFACTOR:** server.py is 5000+ lines monolithic file - needs routing
+- "IDEE BOMBA" features:
+  - Bundle Deals
+  - SMS Marketing
+  - Leaderboard
+  - Referral System
+
+## Key Architecture Notes
+- VAPID keys are derived at runtime from private key PEM (ensures sync)
+- PEM file auto-generated from VAPID_PRIVATE_KEY env var at server startup
+- deploy_production.sh handles safe frontend deployment
+- Railway auto-deploys from GitHub main branch
