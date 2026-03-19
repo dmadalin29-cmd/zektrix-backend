@@ -13,7 +13,7 @@ import {
 import { 
     Ticket, History, ArrowRight, Loader2, Trophy, 
     ArrowUpRight, Gift, 
-    ChevronRight, Activity, User, Save, Edit3
+    ChevronRight, Activity, User, Save, Edit3, Bell
 } from 'lucide-react';
 import { Input } from '../components/ui/input';
 
@@ -213,6 +213,44 @@ const DashboardPage = () => {
     const [locs, setLocs] = useState([]);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [pushSubscribed, setPushSubscribed] = useState(null);
+
+    // Check push status
+    useEffect(() => {
+        if (token) {
+            axios.get(`${API}/push/status`, { headers: { Authorization: `Bearer ${token}` } })
+                .then(r => setPushSubscribed(r.data.subscribed))
+                .catch(() => setPushSubscribed(false));
+        }
+    }, [token]);
+
+    const handlePushSubscribe = async () => {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            toast.error(isRomanian ? 'Browser-ul nu suportă notificări push' : 'Browser does not support push notifications');
+            return;
+        }
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') { toast.error(isRomanian ? 'Permite notificările din setările browser-ului' : 'Allow notifications in browser settings'); return; }
+            const vapidRes = await axios.get(`${API}/push/vapid-key`);
+            const key = vapidRes.data.public_key;
+            const padding = '='.repeat((4 - key.length % 4) % 4);
+            const base64 = (key + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const arr = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) arr[i] = rawData.charCodeAt(i);
+            const reg = await navigator.serviceWorker.ready;
+            const old = await reg.pushManager.getSubscription();
+            if (old) await old.unsubscribe();
+            const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr });
+            const j = sub.toJSON();
+            await axios.post(`${API}/push/subscribe`, { endpoint: j.endpoint, keys: j.keys }, { headers: { Authorization: `Bearer ${token}` } });
+            setPushSubscribed(true);
+            toast.success(isRomanian ? 'Notificări activate!' : 'Notifications enabled!');
+        } catch (e) {
+            toast.error(isRomanian ? 'Eroare la activare notificări' : 'Error enabling notifications');
+        }
+    };
 
     // Fetch on mount and when token changes
     useEffect(() => { 
@@ -345,6 +383,25 @@ const DashboardPage = () => {
                                         onClick={() => handleTabChange('history')}
                                     />
                                 </div>
+
+                                {/* Push Notification Banner */}
+                                {pushSubscribed === false && (
+                                    <div className="rounded-2xl p-4 flex items-center justify-between"
+                                        style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                                                <Bell className="w-5 h-5 text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-white">{isRomanian ? 'Activează Notificările' : 'Enable Notifications'}</p>
+                                                <p className="text-xs text-gray-400">{isRomanian ? 'Fii primul care află când câștigi sau când se apropie extragerea' : 'Be the first to know when you win or a draw is near'}</p>
+                                            </div>
+                                        </div>
+                                        <Button onClick={handlePushSubscribe} size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white" data-testid="dashboard-push-subscribe">
+                                            <Bell className="w-4 h-4 mr-1" /> {isRomanian ? 'Activează' : 'Enable'}
+                                        </Button>
+                                    </div>
+                                )}
 
                                 {/* Quick Actions */}
                                 <div className="grid md:grid-cols-2 gap-4">

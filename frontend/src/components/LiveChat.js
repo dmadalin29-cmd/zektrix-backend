@@ -3,12 +3,37 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { MessageCircle, X, Send, Bot, User, Headphones, Loader2, Wifi, WifiOff, ArrowLeft, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Headphones, Loader2, Wifi, WifiOff, ArrowLeft, Sparkles, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const WS_URL = process.env.REACT_APP_BACKEND_URL?.replace('https://', 'wss://').replace('http://', 'ws://');
+
+async function subscribeToPush(token) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return false;
+        const vapidRes = await axios.get(`${API}/push/vapid-key`);
+        const key = vapidRes.data.public_key;
+        const padding = '='.repeat((4 - key.length % 4) % 4);
+        const base64 = (key + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+        const reg = await navigator.serviceWorker.ready;
+        const existingSub = await reg.pushManager.getSubscription();
+        if (existingSub) await existingSub.unsubscribe();
+        const subscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: outputArray });
+        const subJson = subscription.toJSON();
+        await axios.post(`${API}/push/subscribe`, { endpoint: subJson.endpoint, keys: subJson.keys }, { headers: { Authorization: `Bearer ${token}` } });
+        return true;
+    } catch (e) {
+        console.error('Push subscribe error:', e);
+        return false;
+    }
+}
 
 const LiveChat = () => {
     const { user, token } = useAuth();
@@ -18,12 +43,23 @@ const LiveChat = () => {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
-    const [mode, setMode] = useState('ai'); // 'ai' or 'live'
+    const [mode, setMode] = useState('ai');
     const [connected, setConnected] = useState(false);
     const [sessionId, setSessionId] = useState(null);
+    const [pushSubscribed, setPushSubscribed] = useState(false);
+    const [showPushPrompt, setShowPushPrompt] = useState(false);
     const messagesEndRef = useRef(null);
     const wsRef = useRef(null);
     const reconnectTimer = useRef(null);
+
+    // Check push subscription status
+    useEffect(() => {
+        if (user && token) {
+            axios.get(`${API}/push/status`, { headers: { Authorization: `Bearer ${token}` } })
+                .then(r => setPushSubscribed(r.data.subscribed))
+                .catch(() => {});
+        }
+    }, [user, token]);
 
     useEffect(() => {
         if (messagesEndRef.current) {
@@ -295,6 +331,26 @@ const LiveChat = () => {
                             </button>
                         </div>
                     </div>
+
+                    {/* Push notification prompt */}
+                    {user && !pushSubscribed && (
+                        <div className="px-3 py-2 flex items-center justify-between" style={{ background: 'rgba(16, 185, 129, 0.1)', borderBottom: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                            <span className="text-[11px] text-emerald-400 flex items-center gap-1.5">
+                                <Bell className="w-3 h-3" /> {isRomanian ? 'Primește notificări pe telefon' : 'Get push notifications'}
+                            </span>
+                            <button
+                                onClick={async () => {
+                                    const ok = await subscribeToPush(token);
+                                    if (ok) { setPushSubscribed(true); toast.success(isRomanian ? 'Notificări activate!' : 'Notifications enabled!'); }
+                                    else toast.error(isRomanian ? 'Permite notificările din setările browser-ului' : 'Allow notifications in browser settings');
+                                }}
+                                className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
+                                data-testid="push-subscribe-chat-btn"
+                            >
+                                {isRomanian ? 'Activează' : 'Enable'}
+                            </button>
+                        </div>
+                    )}
 
                     {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-3 space-y-3">

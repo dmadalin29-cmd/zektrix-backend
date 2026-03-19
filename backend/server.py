@@ -2245,6 +2245,22 @@ async def draw_winner(competition_id: str, admin: dict = Depends(get_admin_user)
         "ticket_number": winner_ticket["ticket_number"]
     })
     
+    # Push notification to winner
+    await notify_user_push(
+        winner_ticket["user_id"],
+        "Felicitări! Ai câștigat!",
+        f"Ai câștigat la {comp['title']}! Locul #{winner_ticket['ticket_number']} este câștigător!",
+        f"https://zektrix.uk/competitions/{competition_id}"
+    )
+    
+    # Push notification to all participants
+    await notify_competition_participants_push(
+        competition_id,
+        f"{comp['title']} - Câștigător extras!",
+        f"Câștigătorul a fost extras! Verifică rezultatele.",
+        "https://zektrix.uk/winners"
+    )
+    
     return winner_doc
 
 @api_router.get("/admin/users", response_model=List[UserResponse])
@@ -2835,24 +2851,16 @@ async def check_and_send_competition_alerts(competition_id: str, sold_tickets: i
             upsert=True
         )
         
-        # Get all subscribed users
-        subscriptions = await db.push_subscriptions.find().to_list(1000)
+        # Send push notifications to all participants of this competition
+        remaining = 100 - int(percentage)
+        await notify_competition_participants_push(
+            competition_id,
+            f"{comp.get('title', 'Competiție')} - Aproape sold out!",
+            f"Doar {remaining}% locuri rămase! Grăbește-te!",
+            f"https://zektrix.uk/competitions/{competition_id}"
+        )
         
-        # Send notification to all subscribers
-        for sub in subscriptions:
-            try:
-                # For now, broadcast via WebSocket (browser will show notification)
-                await ws_manager.broadcast({
-                    "type": "competition_alert",
-                    "competition_id": competition_id,
-                    "title": comp.get("title", "Competiție"),
-                    "message": f"Doar {100 - int(percentage)}% bilete rămase!",
-                    "percentage": int(percentage)
-                })
-            except Exception as e:
-                logger.error(f"Failed to send push notification: {e}")
-        
-        logger.info(f"Competition {competition_id} reached 80% - alerts sent")
+        logger.info(f"Competition {competition_id} reached 80% - push alerts sent to participants")
 
 # Lucky Wheel removed
 
@@ -3190,14 +3198,12 @@ async def get_vapid_key():
 
 @api_router.post("/push/subscribe")
 async def push_subscribe(subscription: PushSubscription, current_user: dict = Depends(get_current_user)):
-    """Subscribe admin to push notifications"""
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
-    
+    """Subscribe any user to push notifications"""
     await db.push_subscriptions.update_one(
         {"user_id": current_user["user_id"]},
         {"$set": {
             "user_id": current_user["user_id"],
+            "role": current_user.get("role", "user"),
             "endpoint": subscription.endpoint,
             "keys": subscription.keys,
             "updated_at": datetime.now(timezone.utc).isoformat()
@@ -3205,6 +3211,12 @@ async def push_subscribe(subscription: PushSubscription, current_user: dict = De
         upsert=True
     )
     return {"message": "Subscribed to push notifications"}
+
+@api_router.get("/push/status")
+async def push_status(current_user: dict = Depends(get_current_user)):
+    """Check if user has an active push subscription"""
+    sub = await db.push_subscriptions.find_one({"user_id": current_user["user_id"]}, {"_id": 0, "endpoint": 1})
+    return {"subscribed": bool(sub)}
 
 @api_router.post("/push/unsubscribe")
 async def push_unsubscribe(current_user: dict = Depends(get_current_user)):
@@ -3268,11 +3280,39 @@ async def send_web_push(subscription: dict, data: dict) -> bool:
         raise Exception(f"Push failed: {status_code} {str(e)[:200]}")
 
 
+async def notify_user_push(user_id: str, title: str, body: str, url: str = "https://zektrix.uk"):
+    """Send push notification to a specific user"""
+    subs = await db.push_subscriptions.find({"user_id": user_id}, {"_id": 0}).to_list(5)
+    for sub in subs:
+        try:
+            await send_web_push(sub, {"title": title, "body": body, "url": url})
+        except Exception as e:
+            logger.error(f"Push to user {user_id} failed: {e}")
+            if "410" in str(e) or "404" in str(e):
+                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
+
+
+async def notify_competition_participants_push(competition_id: str, title: str, body: str, url: str = None):
+    """Send push notification to all participants of a competition"""
+    tickets = await db.tickets.find({"competition_id": competition_id}, {"_id": 0, "user_id": 1}).to_list(10000)
+    user_ids = list(set(t["user_id"] for t in tickets))
+    if not url:
+        url = f"https://zektrix.uk/competitions/{competition_id}"
+    subs = await db.push_subscriptions.find({"user_id": {"$in": user_ids}}, {"_id": 0}).to_list(1000)
+    for sub in subs:
+        try:
+            await send_web_push(sub, {"title": title, "body": body, "url": url})
+        except Exception as e:
+            if "410" in str(e) or "404" in str(e):
+                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
+
 
 async def notify_admins_live_chat(user_name: str, user_email: str, message: str):
     """Send push notification + email to all admins when user requests live chat"""
-    # 1. Push notifications
-    subscriptions = await db.push_subscriptions.find({}, {"_id": 0}).to_list(50)
+    # 1. Push notifications to admins
+    subscriptions = await db.push_subscriptions.find({"role": "admin"}, {"_id": 0}).to_list(50)
+    if not subscriptions:
+        subscriptions = await db.push_subscriptions.find({}, {"_id": 0}).to_list(50)
     for sub in subscriptions:
         try:
             await send_web_push(sub, {
@@ -3594,6 +3634,14 @@ async def admin_reply_to_chat(reply: AdminChatReply, admin: dict = Depends(get_a
         "replied_by": admin.get("username", "Admin"),
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
+    
+    # Push notification to user
+    await notify_user_push(
+        original["user_id"],
+        "Răspuns de la Suport",
+        f"{reply.reply[:100]}",
+        "https://zektrix.uk"
+    )
     
     return {"message": "Reply sent successfully", "email_sent": bool(user and user.get("email"))}
 
@@ -4280,6 +4328,22 @@ async def auto_draw_winner(competition_id: str) -> dict:
         "ticket_number": winner_ticket["ticket_number"],
         "is_automatic": True
     })
+    
+    # Push notification to winner
+    await notify_user_push(
+        winner_ticket["user_id"],
+        "Felicitări! Ai câștigat!",
+        f"Ai câștigat la {comp['title']}! Locul #{winner_ticket['ticket_number']} este câștigător!",
+        f"https://zektrix.uk/competitions/{competition_id}"
+    )
+    
+    # Push notification to all other participants
+    await notify_competition_participants_push(
+        competition_id,
+        f"{comp['title']} - Câștigător extras!",
+        f"Câștigătorul a fost extras! Verifică rezultatele.",
+        "https://zektrix.uk/winners"
+    )
     
     return winner_doc
 
