@@ -62,6 +62,12 @@ VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '').replace('\\n', '\n')
 VAPID_MAILTO = os.environ.get('VAPID_MAILTO', 'mailto:support@zektrix.uk')
 
+# Write VAPID PEM file from env variable if it doesn't exist or is outdated
+vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
+if VAPID_PRIVATE_KEY and VAPID_PRIVATE_KEY.startswith('-----BEGIN'):
+    with open(vapid_pem_path, 'w') as f:
+        f.write(VAPID_PRIVATE_KEY.strip() + '\n')
+
 # Helper function to generate random unique ticket numbers
 async def generate_random_ticket_number(competition_id: str, max_tickets: int) -> int:
     """Generate a random ticket number that hasn't been used yet for this competition"""
@@ -3226,95 +3232,27 @@ async def test_push_notification(current_user: dict = Depends(get_admin_user)):
 
 
 async def send_web_push(subscription: dict, data: dict) -> bool:
-    """Send web push notification using only cryptography + httpx (no pywebpush needed)"""
-    from cryptography.hazmat.primitives.asymmetric import ec
-    from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-    import struct, time
+    """Send web push notification using pywebpush"""
+    from pywebpush import webpush, WebPushException
     
-    endpoint = subscription["endpoint"]
-    p256dh_b64 = subscription["keys"]["p256dh"]
-    auth_b64 = subscription["keys"]["auth"]
-    
-    # Decode client keys
-    def url_b64_decode(s):
-        s = s + '=' * (4 - len(s) % 4)
-        return base64.urlsafe_b64decode(s)
-    
-    client_pub_bytes = url_b64_decode(p256dh_b64)
-    auth_secret = url_b64_decode(auth_b64)
-    
-    # Load VAPID private key
     vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
-    with open(vapid_pem_path, 'rb') as f:
-        vapid_private_key = serialization.load_pem_private_key(f.read(), password=None)
     
-    # Generate ephemeral ECDH key pair for content encryption
-    server_key = ec.generate_private_key(ec.SECP256R1())
-    server_pub_bytes = server_key.public_key().public_bytes(
-        serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint
-    )
-    
-    # ECDH shared secret
-    client_pub_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), client_pub_bytes)
-    shared_secret = server_key.exchange(ec.ECDH(), client_pub_key)
-    
-    # Web Push content encryption (RFC 8291 / aes128gcm)
-    # PRK = HKDF-Extract(auth_secret, shared_secret)
-    auth_info = b"WebPush: info\x00" + client_pub_bytes + server_pub_bytes
-    prk = HKDF(algorithm=hashes.SHA256(), length=32, salt=auth_secret, info=auth_info).derive(shared_secret)
-    
-    # Content encryption key
-    cek = HKDF(algorithm=hashes.SHA256(), length=16, salt=os.urandom(16), info=b"Content-Encoding: aes128gcm\x00").derive(prk)
-    
-    # Nonce
-    nonce = HKDF(algorithm=hashes.SHA256(), length=12, salt=os.urandom(16), info=b"Content-Encoding: nonce\x00").derive(prk)
-    
-    # Encrypt payload
-    payload = json.dumps(data).encode('utf-8')
-    # Add padding (RFC 8188)
-    padded = payload + b'\x02'
-    
-    aesgcm = AESGCM(cek)
-    encrypted = aesgcm.encrypt(nonce, padded, None)
-    
-    # Build aes128gcm body: salt(16) + rs(4) + idlen(1) + keyid(65) + encrypted
-    salt = os.urandom(16)
-    rs = struct.pack('!I', 4096)
-    keyid = server_pub_bytes
-    idlen = struct.pack('!B', len(keyid))
-    body = salt + rs + idlen + keyid + encrypted
-    
-    # VAPID authorization
-    parsed_url = endpoint.split('/')
-    aud = '/'.join(parsed_url[:3])
-    now = int(time.time())
-    vapid_payload = {"aud": aud, "exp": now + 43200, "sub": VAPID_MAILTO}
-    vapid_token = jwt.encode(vapid_payload, vapid_private_key, algorithm="ES256")
-    
-    vapid_pub_bytes = vapid_private_key.public_key().public_bytes(
-        serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint
-    )
-    vapid_pub_b64 = base64.urlsafe_b64encode(vapid_pub_bytes).rstrip(b'=').decode()
-    
-    # Send push
-    headers = {
-        "Content-Type": "application/octet-stream",
-        "Content-Encoding": "aes128gcm",
-        "Authorization": f"vapid t={vapid_token},k={vapid_pub_b64}",
-        "TTL": "86400",
-    }
-    
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(endpoint, content=body, headers=headers, timeout=30)
-    
-    if resp.status_code in (200, 201, 202):
+    try:
+        webpush(
+            subscription_info={
+                "endpoint": subscription["endpoint"],
+                "keys": subscription["keys"]
+            },
+            data=json.dumps(data),
+            vapid_private_key=vapid_pem_path,
+            vapid_claims={"sub": VAPID_MAILTO}
+        )
         return True
-    elif resp.status_code in (404, 410):
-        raise Exception(f"{resp.status_code} push subscription expired")
-    else:
-        raise Exception(f"Push failed: {resp.status_code} {resp.text[:100]}")
+    except WebPushException as e:
+        status_code = e.response.status_code if e.response is not None else 0
+        if status_code in (404, 410):
+            raise Exception(f"{status_code} push subscription expired")
+        raise Exception(f"Push failed: {status_code} {str(e)[:200]}")
 
 
 
