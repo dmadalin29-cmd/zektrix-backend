@@ -9,7 +9,7 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - **Database:** MongoDB Atlas (DB: ektrix_db)
 - **Payments:** Viva Payments
 - **AI Chat:** Gemini Flash via emergentintegrations
-- **Push Notifications:** pywebpush + VAPID
+- **Push Notifications:** pywebpush + VAPID (for ALL users)
 - **Auth:** JWT + Google Auth (Emergent-managed)
 
 ## Core Features (Implemented)
@@ -19,44 +19,38 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - AI Chat (Gemini Flash) with live chat escalation
 - Admin panel (user/competition/winner management)
 - PWA with service worker
-- Push notifications for admins (live chat alerts)
+- Push notifications for ALL users:
+  - Admins: live chat requests
+  - Users: chat reply notifications, winner announcements, competition 80% alerts
 - Modern floating navbar with glassmorphism
 - Bilingual (Romanian/English)
 - Free competition "MEGA PREMIU £5.000" with tiered instant prizes
 - Robust deployment scripts (deploy_production.sh)
-- Terms & Conditions page
-- FAQ page
-- Public ticket search
+- Terms & Conditions page, FAQ page, Public ticket search
 
 ## Completed This Session (March 19, 2026)
-- **FIXED: Push Notifications (P0)** - Root cause: 3 different VAPID keys that didn't match each other. Solution: generated new synchronized key pair, replaced manual crypto with pywebpush library, auto-derive public key from private key at runtime, cleared stale subscriptions.
-- **FIXED: Frontend .env** - Had old preview URL, replaced with production Railway URL
-- **FIXED: DB_NAME** - Changed from zektrix_db (dev) to ektrix_db (production)
-- **VERIFIED: Live Chat E2E** - All components tested and working:
-  - AI Chat (Gemini Flash) responds correctly
-  - Chat escalation creates messages and sends push notifications
-  - REST fallback for when WebSocket is unavailable
-  - WebSocket connections work on Railway production
-  - Admin reply system works (saves + sends email + broadcasts via WS)
-  - Chat history loads correctly
+- **FIXED: Push Notifications (P0)** - Synced VAPID keys, replaced manual crypto with pywebpush, auto-derive public key at runtime
+- **FIXED: Frontend .env** - Preview URL → production URL
+- **FIXED: DB_NAME** - zektrix_db → ektrix_db (production)
+- **VERIFIED: Live Chat E2E** - All components tested and working
+- **NEW: Push notifications for all users** - Chat replies, winner draws, competition 80% alerts
+  - Subscribe prompt in LiveChat widget and Dashboard overview
+  - `/api/push/status` endpoint to check subscription state
+  - `/api/push/subscribe` now open to all authenticated users
+  - `notify_user_push()` and `notify_competition_participants_push()` helpers
 - **Deployed** both frontend (Hostinger) and backend (Railway)
 
-## Upcoming Tasks (P1)
-- Integrate Facebook Pixel
-- Add dedicated Terms & Conditions page improvements
+## Upcoming Tasks
+- **P1:** Integrate Facebook Pixel
+- **P1:** Terms & Conditions page improvements
 
 ## Future Tasks (P2)
-- **CRITICAL REFACTOR:** server.py is 5000+ lines monolithic file - needs routing
-- "IDEE BOMBA" features:
-  - Bundle Deals
-  - SMS Marketing
-  - Leaderboard
-  - Referral System
+- **CRITICAL REFACTOR:** server.py is 5000+ lines - needs routing
+- "IDEE BOMBA": Bundle Deals, SMS Marketing, Leaderboard, Referral System
 
 ## Key Architecture Notes
-- VAPID keys are derived at runtime from private key PEM (ensures sync)
-- PEM file auto-generated from VAPID_PRIVATE_KEY env var at server startup
-- deploy_production.sh handles safe frontend deployment
-- Railway auto-deploys from GitHub main branch
-- Live chat uses WebSocket with REST API polling fallback
-- Admin replies are delivered via WebSocket + email notification
+- VAPID keys derived at runtime from private key PEM
+- PEM file auto-generated from env at startup
+- Push subscribe open to all users (role stored in subscription doc)
+- Admin notifications filter by role=admin
+- Competition alerts sent to participants only
