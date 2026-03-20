@@ -6,8 +6,11 @@ import { useCart } from '../context/CartContext';
 import { Button } from '../components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '../components/ui/sheet';
-import { Menu, User, LogOut, LayoutDashboard, Ticket, Shield, ShoppingCart, ChevronDown, X, Trophy, Search, HelpCircle, Crosshair } from 'lucide-react';
+import { Menu, User, LogOut, LayoutDashboard, Ticket, Shield, ShoppingCart, ChevronDown, X, Trophy, Search, HelpCircle, Crosshair, Wallet } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
+import axios from 'axios';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const TikTokIcon = ({ className }) => (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -16,10 +19,19 @@ const TikTokIcon = ({ className }) => (
 );
 
 const Navbar = () => {
-    const { user, isAuthenticated, isAdmin, logout } = useAuth();
+    const { user, isAuthenticated, isAdmin, logout, token } = useAuth();
     const { t, language, toggleLanguage, isRomanian } = useLanguage();
     const { totalItems } = useCart();
     const location = useLocation();
+    const [walletBalance, setWalletBalance] = React.useState(null);
+
+    React.useEffect(() => {
+        if (token) {
+            axios.get(`${API}/wallet/balance`, { headers: { Authorization: `Bearer ${token}` }})
+                .then(r => setWalletBalance(r.data.balance || 0))
+                .catch(() => {});
+        }
+    }, [token, location.pathname]);
 
     const navLinks = [
         { href: '/competitions', label: isRomanian ? 'Competitii' : 'Competitions', icon: Crosshair },
@@ -82,6 +94,16 @@ const Navbar = () => {
                             {language.toUpperCase()}
                         </button>
 
+                        {/* Wallet Balance */}
+                        {isAuthenticated && walletBalance !== null && (
+                            <Link to="/wallet" data-testid="wallet-nav-btn">
+                                <button className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-emerald-400 hover:bg-emerald-500/10 transition-all duration-200">
+                                    <Wallet className="w-[18px] h-[18px]" />
+                                    <span className="text-xs font-bold">£{walletBalance.toFixed(2)}</span>
+                                </button>
+                            </Link>
+                        )}
+
                         {/* Cart */}
                         <Link to="/cart" data-testid="cart-btn">
                             <button className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-all duration-200">
@@ -114,6 +136,13 @@ const Navbar = () => {
                                         <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                                     </div>
                                     <div className="p-1">
+                                        <DropdownMenuItem asChild>
+                                            <Link to="/wallet" className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer hover:bg-emerald-500/10" data-testid="menu-wallet">
+                                                <Wallet className="w-4 h-4 text-emerald-400" />
+                                                <span className="text-sm text-emerald-300">{isRomanian ? 'Portofel' : 'Wallet'}</span>
+                                                {walletBalance !== null && <span className="ml-auto text-xs font-bold text-emerald-400">£{walletBalance.toFixed(2)}</span>}
+                                            </Link>
+                                        </DropdownMenuItem>
                                         <DropdownMenuItem asChild>
                                             <Link to="/dashboard" className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer hover:bg-white/[0.06]" data-testid="menu-dashboard">
                                                 <LayoutDashboard className="w-4 h-4 text-gray-500" />
@@ -229,6 +258,13 @@ const Navbar = () => {
                                     {isAuthenticated && (
                                         <>
                                             <div className="border-t border-white/[0.06] my-2"></div>
+                                            <SheetClose asChild>
+                                                <Link to="/wallet" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-emerald-400 hover:bg-emerald-500/10 transition-all duration-200">
+                                                    <Wallet className="w-[18px] h-[18px]" />
+                                                    <span>{isRomanian ? 'Portofel' : 'Wallet'}</span>
+                                                    {walletBalance !== null && <span className="ml-auto text-xs font-bold">£{walletBalance.toFixed(2)}</span>}
+                                                </Link>
+                                            </SheetClose>
                                             <SheetClose asChild>
                                                 <Link to="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/[0.06] hover:text-white transition-all duration-200">
                                                     <LayoutDashboard className="w-[18px] h-[18px]" />

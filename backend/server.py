@@ -1250,7 +1250,331 @@ async def get_viva_access_token():
         viva_token_cache["expires_at"] = datetime.now(timezone.utc) + timedelta(seconds=data.get("expires_in", 3600) - 60)
         return viva_token_cache["token"]
 
-# Wallet deposit removed - direct payments only
+@api_router.post("/wallet/deposit")
+async def wallet_deposit(deposit: WalletDeposit, current_user: dict = Depends(get_current_user)):
+    """Create Viva Payments checkout for wallet deposit"""
+    if deposit.amount < 5:
+        raise HTTPException(status_code=400, detail="Minimum deposit is £5")
+    if deposit.amount > 5000:
+        raise HTTPException(status_code=400, detail="Maximum deposit is £5,000")
+    
+    # Get deposit bonus settings
+    settings = await db.site_settings.find_one({"setting_id": "deposit_bonus"}, {"_id": 0})
+    bonus_percent = settings.get("bonus_percent", 0) if settings else 0
+    bonus_max = settings.get("bonus_max", 0) if settings else 0
+    bonus_active = settings.get("active", False) if settings else False
+    
+    calculated_bonus = 0
+    if bonus_active and bonus_percent > 0:
+        calculated_bonus = min(deposit.amount * (bonus_percent / 100), bonus_max) if bonus_max > 0 else deposit.amount * (bonus_percent / 100)
+    
+    # Create Viva order
+    access_token = await get_viva_access_token()
+    if not access_token:
+        raise HTTPException(status_code=500, detail="Payment service unavailable")
+    
+    transaction_id = f"txn_{uuid.uuid4().hex[:12]}"
+    amount_cents = int(deposit.amount * 100)
+    
+    async with httpx.AsyncClient() as http_client:
+        order_data = {
+            "amount": amount_cents,
+            "customerTrns": f"Wallet Deposit £{deposit.amount:.2f}",
+            "merchantTrns": transaction_id,
+            "sourceCode": VIVA_SOURCE_CODE,
+            "paymentTimeout": 1800,
+            "currencyCode": "826",
+            "successUrl": "https://zektrix.uk/wallet?deposit=success",
+            "failureUrl": "https://zektrix.uk/wallet?deposit=failed",
+            "cancelUrl": "https://zektrix.uk/wallet?deposit=cancel"
+        }
+        
+        resp = await http_client.post(
+            f"{VIVA_API_URL}/checkout/v2/orders",
+            json=order_data,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=30.0
+        )
+        
+        if resp.status_code != 200:
+            logger.error(f"Viva deposit order error: {resp.text}")
+            raise HTTPException(status_code=500, detail="Failed to create deposit order")
+        
+        order_code = str(resp.json().get("orderCode", ""))
+    
+    # Record pending transaction
+    await db.transactions.insert_one({
+        "transaction_id": transaction_id,
+        "user_id": current_user["user_id"],
+        "transaction_type": "deposit",
+        "amount": deposit.amount,
+        "bonus_preview": calculated_bonus,
+        "status": "pending",
+        "viva_order_code": order_code,
+        "description": f"Wallet deposit £{deposit.amount:.2f}" + (f" (+£{calculated_bonus:.2f} bonus)" if calculated_bonus > 0 else ""),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    checkout_url = f"{VIVA_CHECKOUT_URL}?ref={order_code}"
+    return {
+        "checkout_url": checkout_url,
+        "order_code": order_code,
+        "transaction_id": transaction_id,
+        "amount": deposit.amount,
+        "bonus": calculated_bonus
+    }
+
+class WithdrawalRequest(BaseModel):
+    amount: float
+    method: str = "bank_transfer"
+    bank_details: Optional[str] = None
+
+@api_router.post("/wallet/withdraw")
+async def request_withdrawal(req: WithdrawalRequest, current_user: dict = Depends(get_current_user)):
+    """Request a withdrawal from wallet balance"""
+    if req.amount < 10:
+        raise HTTPException(status_code=400, detail="Minimum withdrawal is £10")
+    
+    balance = current_user.get("balance", 0)
+    if req.amount > balance:
+        raise HTTPException(status_code=400, detail=f"Insufficient balance. You have £{balance:.2f}")
+    
+    # Check for pending withdrawals
+    pending = await db.withdrawal_requests.count_documents({
+        "user_id": current_user["user_id"],
+        "status": "pending"
+    })
+    if pending > 0:
+        raise HTTPException(status_code=400, detail="You already have a pending withdrawal request")
+    
+    withdrawal_id = f"wd_{uuid.uuid4().hex[:12]}"
+    
+    # Freeze the amount (deduct from balance immediately)
+    await db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$inc": {"balance": -req.amount}}
+    )
+    
+    withdrawal_doc = {
+        "withdrawal_id": withdrawal_id,
+        "user_id": current_user["user_id"],
+        "username": current_user.get("username", ""),
+        "email": current_user.get("email", ""),
+        "amount": req.amount,
+        "method": req.method,
+        "bank_details": req.bank_details,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None,
+        "admin_note": None
+    }
+    await db.withdrawal_requests.insert_one(withdrawal_doc)
+    
+    # Record transaction
+    await db.transactions.insert_one({
+        "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
+        "user_id": current_user["user_id"],
+        "transaction_type": "withdrawal_request",
+        "amount": -req.amount,
+        "status": "pending",
+        "description": f"Withdrawal request £{req.amount:.2f} ({req.method})",
+        "withdrawal_id": withdrawal_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Notify admins
+    asyncio.create_task(notify_user_push(
+        "admin_broadcast",
+        "New Withdrawal Request",
+        f"{current_user.get('username', 'User')} requested £{req.amount:.2f} withdrawal",
+        "https://zektrix.uk/admin"
+    ))
+    
+    return {"withdrawal_id": withdrawal_id, "amount": req.amount, "status": "pending"}
+
+@api_router.get("/wallet/withdrawals")
+async def get_my_withdrawals(current_user: dict = Depends(get_current_user)):
+    """Get user's withdrawal requests"""
+    withdrawals = await db.withdrawal_requests.find(
+        {"user_id": current_user["user_id"]}, {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    return withdrawals
+
+@api_router.get("/wallet/bonus-info")
+async def get_deposit_bonus_info():
+    """Public endpoint to show current deposit bonus"""
+    settings = await db.site_settings.find_one({"setting_id": "deposit_bonus"}, {"_id": 0})
+    if not settings or not settings.get("active"):
+        return {"active": False, "bonus_percent": 0, "bonus_max": 0}
+    return {
+        "active": True,
+        "bonus_percent": settings.get("bonus_percent", 0),
+        "bonus_max": settings.get("bonus_max", 0)
+    }
+
+# ==================== ADMIN WALLET MANAGEMENT ====================
+
+@api_router.get("/admin/wallet/withdrawals")
+async def get_all_withdrawals(status: Optional[str] = None, admin: dict = Depends(get_admin_user)):
+    """Get all withdrawal requests (admin)"""
+    query = {}
+    if status:
+        query["status"] = status
+    withdrawals = await db.withdrawal_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return withdrawals
+
+@api_router.post("/admin/wallet/withdrawal/{withdrawal_id}/approve")
+async def approve_withdrawal(withdrawal_id: str, admin: dict = Depends(get_admin_user)):
+    """Approve a withdrawal request"""
+    wd = await db.withdrawal_requests.find_one({"withdrawal_id": withdrawal_id}, {"_id": 0})
+    if not wd:
+        raise HTTPException(status_code=404, detail="Withdrawal not found")
+    if wd["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Withdrawal is already {wd['status']}")
+    
+    await db.withdrawal_requests.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {"status": "approved", "processed_at": datetime.now(timezone.utc).isoformat(), "admin_note": "Approved"}}
+    )
+    
+    # Update related transaction
+    await db.transactions.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {"status": "completed", "description": f"Withdrawal £{wd['amount']:.2f} - Approved"}}
+    )
+    
+    # Notify user
+    asyncio.create_task(notify_user_push(
+        wd["user_id"],
+        "Withdrawal Approved!",
+        f"Your withdrawal of £{wd['amount']:.2f} has been approved and is being processed.",
+        "https://zektrix.uk/wallet"
+    ))
+    
+    return {"success": True, "withdrawal_id": withdrawal_id, "status": "approved"}
+
+@api_router.post("/admin/wallet/withdrawal/{withdrawal_id}/reject")
+async def reject_withdrawal(withdrawal_id: str, reason: str = "Rejected by admin", admin: dict = Depends(get_admin_user)):
+    """Reject a withdrawal and refund balance"""
+    wd = await db.withdrawal_requests.find_one({"withdrawal_id": withdrawal_id}, {"_id": 0})
+    if not wd:
+        raise HTTPException(status_code=404, detail="Withdrawal not found")
+    if wd["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Withdrawal is already {wd['status']}")
+    
+    # Refund balance
+    await db.users.update_one(
+        {"user_id": wd["user_id"]},
+        {"$inc": {"balance": wd["amount"]}}
+    )
+    
+    await db.withdrawal_requests.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {"status": "rejected", "processed_at": datetime.now(timezone.utc).isoformat(), "admin_note": reason}}
+    )
+    
+    await db.transactions.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {"status": "refunded", "description": f"Withdrawal £{wd['amount']:.2f} - Rejected: {reason}"}}
+    )
+    
+    # Notify user
+    asyncio.create_task(notify_user_push(
+        wd["user_id"],
+        "Withdrawal Update",
+        f"Your withdrawal of £{wd['amount']:.2f} was returned to your wallet.",
+        "https://zektrix.uk/wallet"
+    ))
+    
+    return {"success": True, "withdrawal_id": withdrawal_id, "status": "rejected"}
+
+class AdminWalletAdjust(BaseModel):
+    user_id: str
+    amount: float
+    reason: str = "Admin adjustment"
+
+@api_router.post("/admin/wallet/adjust")
+async def admin_adjust_wallet(adj: AdminWalletAdjust, admin: dict = Depends(get_admin_user)):
+    """Admin manually add/subtract wallet funds"""
+    user = await db.users.find_one({"user_id": adj.user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_balance = user.get("balance", 0) + adj.amount
+    if new_balance < 0:
+        raise HTTPException(status_code=400, detail="Would result in negative balance")
+    
+    await db.users.update_one(
+        {"user_id": adj.user_id},
+        {"$set": {"balance": new_balance}}
+    )
+    
+    await db.transactions.insert_one({
+        "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
+        "user_id": adj.user_id,
+        "transaction_type": "admin_adjustment",
+        "amount": adj.amount,
+        "status": "completed",
+        "description": f"{adj.reason} ({'+' if adj.amount > 0 else ''}£{adj.amount:.2f})",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"success": True, "new_balance": new_balance}
+
+class DepositBonusSettings(BaseModel):
+    active: bool = False
+    bonus_percent: float = 10
+    bonus_max: float = 20
+
+@api_router.get("/admin/wallet/bonus-settings")
+async def get_bonus_settings(admin: dict = Depends(get_admin_user)):
+    """Get deposit bonus configuration"""
+    settings = await db.site_settings.find_one({"setting_id": "deposit_bonus"}, {"_id": 0})
+    if not settings:
+        return {"active": False, "bonus_percent": 10, "bonus_max": 20}
+    return {"active": settings.get("active", False), "bonus_percent": settings.get("bonus_percent", 10), "bonus_max": settings.get("bonus_max", 20)}
+
+@api_router.put("/admin/wallet/bonus-settings")
+async def set_bonus_settings(settings: DepositBonusSettings, admin: dict = Depends(get_admin_user)):
+    """Update deposit bonus configuration"""
+    await db.site_settings.update_one(
+        {"setting_id": "deposit_bonus"},
+        {"$set": {
+            "setting_id": "deposit_bonus",
+            "active": settings.active,
+            "bonus_percent": settings.bonus_percent,
+            "bonus_max": settings.bonus_max,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    return {"success": True, **settings.model_dump()}
+
+@api_router.get("/admin/wallet/stats")
+async def get_wallet_stats(admin: dict = Depends(get_admin_user)):
+    """Get wallet-related statistics"""
+    total_deposits = await db.transactions.aggregate([
+        {"$match": {"transaction_type": "deposit", "status": "completed"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    
+    total_withdrawals = await db.withdrawal_requests.aggregate([
+        {"$match": {"status": "approved"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    
+    pending_withdrawals = await db.withdrawal_requests.count_documents({"status": "pending"})
+    
+    total_user_balances = await db.users.aggregate([
+        {"$group": {"_id": None, "total": {"$sum": "$balance"}}}
+    ]).to_list(1)
+    
+    return {
+        "total_deposits": total_deposits[0]["total"] if total_deposits else 0,
+        "total_withdrawals": total_withdrawals[0]["total"] if total_withdrawals else 0,
+        "pending_withdrawals": pending_withdrawals,
+        "total_user_balances": total_user_balances[0]["total"] if total_user_balances else 0
+    }
 
 @api_router.post("/wallet/webhook")
 async def wallet_viva_webhook(request: Request):
@@ -1279,24 +1603,24 @@ async def wallet_viva_webhook(request: Request):
                 deposit_amount = transaction["amount"]
                 bonus_amount = 0
                 
-                # Check if user has deposit bonus from Lucky Wheel
+                # Check site-wide deposit bonus settings
+                bonus_settings = await db.site_settings.find_one({"setting_id": "deposit_bonus"}, {"_id": 0})
+                if bonus_settings and bonus_settings.get("active"):
+                    bp = bonus_settings.get("bonus_percent", 0)
+                    bm = bonus_settings.get("bonus_max", 0)
+                    calculated = deposit_amount * (bp / 100)
+                    bonus_amount = min(calculated, bm) if bm > 0 else calculated
+                
+                # Also check user-specific bonus (from Lucky Wheel etc.)
                 if user and user.get("next_deposit_bonus"):
-                    bonus_percent = user.get("next_deposit_bonus", 0)
-                    bonus_max = user.get("next_deposit_bonus_max", 50)  # Default max 50 GBP
-                    
-                    # Calculate bonus (percentage of deposit, capped at max)
-                    calculated_bonus = deposit_amount * (bonus_percent / 100)
-                    bonus_amount = min(calculated_bonus, bonus_max)
-                    
-                    # Clear the bonus after applying
+                    user_bp = user.get("next_deposit_bonus", 0)
+                    user_bm = user.get("next_deposit_bonus_max", 50)
+                    user_bonus = min(deposit_amount * (user_bp / 100), user_bm)
+                    bonus_amount = max(bonus_amount, user_bonus)
                     await db.users.update_one(
                         {"user_id": transaction["user_id"]},
-                        {
-                            "$unset": {"next_deposit_bonus": "", "next_deposit_bonus_max": "", "milestone_bonus": ""}
-                        }
+                        {"$unset": {"next_deposit_bonus": "", "next_deposit_bonus_max": "", "milestone_bonus": ""}}
                     )
-                    
-                    logger.info(f"Applied {bonus_percent}% bonus: {bonus_amount} GBP for user {transaction['user_id']}")
                 
                 # Add deposit + bonus to balance
                 total_credit = deposit_amount + bonus_amount

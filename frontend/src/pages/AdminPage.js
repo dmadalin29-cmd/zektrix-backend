@@ -23,7 +23,8 @@ import {
     Wand2, MessageCircle, Mail, TrendingUp, Menu, X, ChevronRight,
     ArrowUpRight, ArrowDownRight, Eye, Calendar, Target, Sparkles,
     Activity, CreditCard, ShoppingCart, Bell, Moon, Sun, ChevronDown,
-    PieChart as PieIcon, Layers, Hash, Gift, Crown, Flame, Star, Upload
+    PieChart as PieIcon, Layers, Hash, Gift, Crown, Flame, Star, Upload,
+    Wallet, ArrowUpCircle, ArrowDownCircle, Banknote
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -205,6 +206,9 @@ const AdminPage = () => {
     const [liveStatus, setLiveStatus] = useState({ isLive: false, message: '' });
     const [featuredCompId, setFeaturedCompId] = useState('');
     const [analyticsData, setAnalyticsData] = useState(null);
+    const [walletWithdrawals, setWalletWithdrawals] = useState([]);
+    const [walletStats, setWalletStats] = useState({});
+    const [bonusSettings, setBonusSettings] = useState({ active: false, bonus_percent: 10, bonus_max: 20 });
 
     // Modals
     const [showCompModal, setShowCompModal] = useState(false);
@@ -252,6 +256,9 @@ const AdminPage = () => {
         axios.get(`${API}/settings/tiktok-live`).then(r => setLiveStatus({ isLive: r.data.is_live, message: '', tiktok_url: r.data.tiktok_url })).catch(() => {});
         axios.get(`${API}/admin/chat/messages`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setChatMsgs(r.data)).catch(() => {});
         axios.get(`${API}/settings/featured-competition`).then(r => { if (r.data.competition) setFeaturedCompId(r.data.competition.competition_id); }).catch(() => {});
+        axios.get(`${API}/admin/wallet/withdrawals`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setWalletWithdrawals(r.data || [])).catch(() => {});
+        axios.get(`${API}/admin/wallet/stats`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setWalletStats(r.data || {})).catch(() => {});
+        axios.get(`${API}/admin/wallet/bonus-settings`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setBonusSettings(r.data || {})).catch(() => {});
         
         // Admin WebSocket for live chat
         let ws = null;
@@ -484,6 +491,7 @@ const AdminPage = () => {
         { id: 'users', icon: Users, label: 'Utilizatori', badge: users.length },
         { id: 'locuri', icon: Ticket, label: 'Locuri', badge: locuri.length },
         { id: 'winners', icon: Crown, label: 'Premianți', badge: winners.length },
+        { id: 'wallet', icon: Wallet, label: 'Wallet', badge: walletWithdrawals.filter(w => w.status === 'pending').length || null },
         { id: 'analytics', icon: BarChart3, label: 'Analitics' },
         { id: 'settings', icon: Settings, label: 'Setări' },
         { id: 'chat', icon: MessageCircle, label: 'Chat', badge: chatMsgs.length },
@@ -1125,6 +1133,135 @@ const AdminPage = () => {
                                 <StatCard icon={ShoppingCart} label="Comenzi" value={847} change={22} changeType="up" gradient="linear-gradient(135deg, #10b981, #059669)" loading={loading} />
                                 <StatCard icon={CreditCard} label="Plăți Procesate" value={623} change={18} changeType="up" gradient="linear-gradient(135deg, #f97316, #ea580c)" loading={loading} />
                                 <StatCard icon={Star} label="Rating Mediu" value={4.8} gradient="linear-gradient(135deg, #fbbf24, #f59e0b)" loading={loading} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ============== WALLET TAB ============== */}
+                    {tab === 'wallet' && (
+                        <div className="space-y-6 max-w-5xl">
+                            {/* Wallet Stats */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.08))', border: '1px solid rgba(16,185,129,0.2)' }}>
+                                    <ArrowDownCircle className="w-6 h-6 text-emerald-400 mb-2" />
+                                    <p className="text-xs text-gray-400">Total Depuneri</p>
+                                    <p className="text-xl font-bold text-white">£{(walletStats.total_deposits || 0).toFixed(2)}</p>
+                                </div>
+                                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(234,88,12,0.08))', border: '1px solid rgba(249,115,22,0.2)' }}>
+                                    <ArrowUpCircle className="w-6 h-6 text-orange-400 mb-2" />
+                                    <p className="text-xs text-gray-400">Total Retrageri</p>
+                                    <p className="text-xl font-bold text-white">£{(walletStats.total_withdrawals || 0).toFixed(2)}</p>
+                                </div>
+                                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(124,58,237,0.08))', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                    <Wallet className="w-6 h-6 text-violet-400 mb-2" />
+                                    <p className="text-xs text-gray-400">Solduri Utilizatori</p>
+                                    <p className="text-xl font-bold text-white">£{(walletStats.total_user_balances || 0).toFixed(2)}</p>
+                                </div>
+                                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.15), rgba(245,158,11,0.08))', border: '1px solid rgba(251,191,36,0.2)' }}>
+                                    <Clock className="w-6 h-6 text-amber-400 mb-2" />
+                                    <p className="text-xs text-gray-400">Retrageri In Asteptare</p>
+                                    <p className="text-xl font-bold text-white">{walletStats.pending_withdrawals || 0}</p>
+                                </div>
+                            </div>
+
+                            {/* Deposit Bonus Settings */}
+                            <div className="rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
+                                        <Gift className="w-7 h-7 text-emerald-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white">Bonus Depunere</h3>
+                                        <p className="text-sm text-gray-500">Configureaza bonusul acordat la fiecare depunere in wallet</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                                    <div>
+                                        <label className="text-sm text-gray-400 mb-1.5 block">Status</label>
+                                        <button 
+                                            onClick={() => setBonusSettings(p => ({...p, active: !p.active}))}
+                                            className={`w-full h-10 rounded-xl font-medium text-sm transition-all ${bonusSettings.active ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-gray-500 border border-white/10'}`}
+                                            data-testid="bonus-toggle"
+                                        >
+                                            {bonusSettings.active ? 'ACTIV' : 'INACTIV'}
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm text-gray-400 mb-1.5 block">Procent Bonus (%)</label>
+                                        <Input type="number" value={bonusSettings.bonus_percent} onChange={e => setBonusSettings(p => ({...p, bonus_percent: parseFloat(e.target.value) || 0}))} className="bg-white/5 border-white/10 text-white" min="0" max="100" data-testid="bonus-percent-input" />
+                                    </div>
+                                    <div>
+                                        <label className="text-sm text-gray-400 mb-1.5 block">Bonus Maxim (£)</label>
+                                        <Input type="number" value={bonusSettings.bonus_max} onChange={e => setBonusSettings(p => ({...p, bonus_max: parseFloat(e.target.value) || 0}))} className="bg-white/5 border-white/10 text-white" min="0" data-testid="bonus-max-input" />
+                                    </div>
+                                </div>
+                                <Button onClick={async () => {
+                                    try {
+                                        await axios.put(`${API}/admin/wallet/bonus-settings`, bonusSettings, { headers: { Authorization: `Bearer ${token}` }});
+                                        toast.success('Setari bonus salvate!');
+                                    } catch { toast.error('Eroare'); }
+                                }} className="bg-emerald-600 hover:bg-emerald-500 text-white" data-testid="save-bonus-btn">
+                                    Salveaza Setari Bonus
+                                </Button>
+                            </div>
+
+                            {/* Pending Withdrawals */}
+                            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+                                    <div className="flex items-center gap-3">
+                                        <Banknote className="w-5 h-5 text-orange-400" />
+                                        <h3 className="text-white font-semibold">Cereri de Retragere</h3>
+                                    </div>
+                                    <button onClick={() => axios.get(`${API}/admin/wallet/withdrawals`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setWalletWithdrawals(r.data))} className="text-xs text-violet-400 hover:text-violet-300">
+                                        <RefreshCw className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="divide-y divide-white/[0.04]">
+                                    {walletWithdrawals.length === 0 && (
+                                        <div className="p-8 text-center text-gray-500 text-sm">Nicio cerere de retragere</div>
+                                    )}
+                                    {walletWithdrawals.map((wd, i) => (
+                                        <div key={i} className="p-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div>
+                                                    <p className="text-sm text-white font-medium">{wd.username || wd.email}</p>
+                                                    <p className="text-xs text-gray-500">{new Date(wd.created_at).toLocaleString('ro-RO')}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-lg font-bold text-orange-400">£{wd.amount?.toFixed(2)}</p>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${wd.status === 'pending' ? 'bg-amber-500/10 text-amber-400' : wd.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                        {wd.status}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {wd.bank_details && (
+                                                <p className="text-xs text-gray-400 bg-white/[0.03] rounded-lg p-2 mb-2 font-mono">{wd.bank_details}</p>
+                                            )}
+                                            {wd.status === 'pending' && (
+                                                <div className="flex gap-2 mt-2">
+                                                    <Button size="sm" onClick={async () => {
+                                                        try {
+                                                            await axios.post(`${API}/admin/wallet/withdrawal/${wd.withdrawal_id}/approve`, {}, { headers: { Authorization: `Bearer ${token}` }});
+                                                            toast.success('Retragere aprobata!');
+                                                            setWalletWithdrawals(prev => prev.map(w => w.withdrawal_id === wd.withdrawal_id ? {...w, status: 'approved'} : w));
+                                                        } catch(e) { toast.error(e.response?.data?.detail || 'Eroare'); }
+                                                    }} className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1" data-testid={`approve-wd-${wd.withdrawal_id}`}>
+                                                        <CheckCircle className="w-3 h-3" /> Aproba
+                                                    </Button>
+                                                    <Button size="sm" variant="outline" onClick={async () => {
+                                                        try {
+                                                            await axios.post(`${API}/admin/wallet/withdrawal/${wd.withdrawal_id}/reject?reason=Rejected%20by%20admin`, {}, { headers: { Authorization: `Bearer ${token}` }});
+                                                            toast.success('Retragere respinsa, banii returnati.');
+                                                            setWalletWithdrawals(prev => prev.map(w => w.withdrawal_id === wd.withdrawal_id ? {...w, status: 'rejected'} : w));
+                                                        } catch(e) { toast.error(e.response?.data?.detail || 'Eroare'); }
+                                                    }} className="border-red-500/30 text-red-400 hover:bg-red-500/10 gap-1" data-testid={`reject-wd-${wd.withdrawal_id}`}>
+                                                        <XCircle className="w-3 h-3" /> Respinge
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
