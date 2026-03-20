@@ -44,7 +44,7 @@ const Navbar = () => {
 
     return (
         <nav className="fixed top-3 left-3 right-3 sm:left-4 sm:right-4 lg:left-6 lg:right-6 z-50" data-testid="navbar">
-            <div className="max-w-7xl mx-auto rounded-2xl bg-[#0a0614]/80 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <div className="max-w-7xl mx-auto rounded-2xl bg-[#060311]/70 backdrop-blur-2xl border border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
                 <div className="flex items-center justify-between h-14 sm:h-16 px-3 sm:px-5">
                     {/* Logo */}
                     <Link to="/" className="flex items-center shrink-0" data-testid="navbar-logo">
@@ -194,7 +194,7 @@ const Navbar = () => {
                                     <Menu className="w-5 h-5" />
                                 </button>
                             </SheetTrigger>
-                            <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0 border-l border-white/[0.06] bg-[#0a0614]/95 backdrop-blur-xl">
+                            <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0 border-l border-white/[0.06] bg-[#060311]/95 backdrop-blur-2xl">
                                 {/* Mobile Header */}
                                 <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
                                     <AnimatedLogo size="default" />

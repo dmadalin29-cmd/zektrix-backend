@@ -327,7 +327,7 @@ const DashboardPage = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#030014]" data-testid="dashboard-page">
+        <div className="min-h-screen" data-testid="dashboard-page">
             <Navbar />
             
             <main className="pt-24 pb-16">
@@ -336,7 +336,7 @@ const DashboardPage = () => {
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
                         <div>
                             <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-                                {t('welcome')}, <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">{user?.first_name || user?.username}</span>
+                                {t('welcome')}, <span className="bg-gradient-to-r from-[#A666FF] to-[#FF5E00] bg-clip-text text-transparent">{user?.first_name || user?.username}</span>
                             </h1>
                             <p className="text-gray-500">{t('dashboard_subtitle')}</p>
                         </div>

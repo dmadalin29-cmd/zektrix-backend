@@ -73,7 +73,7 @@ export default function UnsubscribePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#030014] flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px]" />

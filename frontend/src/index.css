@@ -18,18 +18,40 @@ html {
 }
 
 body {
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #030014;
+    background-color: #060311;
     color: #ffffff;
     overflow-x: hidden;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
+    position: relative;
+}
+
+/* Apple-style Mesh Gradient Background */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-color: #060311;
+    background-image:
+        radial-gradient(ellipse 80% 50% at 20% 40%, hsla(263,100%,60%,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 80% at 80% 20%, hsla(240,100%,50%,0.10) 0%, transparent 70%),
+        radial-gradient(ellipse 70% 50% at 60% 80%, hsla(22,100%,50%,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at 10% 90%, hsla(280,100%,40%,0.06) 0%, transparent 70%);
+    animation: meshPulse 20s ease-in-out infinite alternate;
+}
+
+@keyframes meshPulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Outfit', sans-serif;
     font-weight: 700;
     letter-spacing: -0.03em;
 }
@@ -95,7 +117,7 @@ code, .font-mono {
 }
 
 ::-webkit-scrollbar-track {
-    background: #030014;
+    background: #060311;
 }
 
 ::-webkit-scrollbar-thumb {

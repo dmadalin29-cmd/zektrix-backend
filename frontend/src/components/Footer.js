@@ -15,7 +15,7 @@ const Footer = () => {
     const { t, isRomanian } = useLanguage();
 
     return (
-        <footer className="bg-muted/30 border-t border-white/5">
+        <footer className="bg-white/[0.02] backdrop-blur-sm border-t border-white/[0.04]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     {/* Brand */}

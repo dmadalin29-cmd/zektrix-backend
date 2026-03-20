@@ -73,7 +73,7 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#030014] flex items-center justify-center p-4" data-testid="login-page">
+        <div className="min-h-screen flex items-center justify-center p-4" data-testid="login-page">
             {/* Background effects */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-[120px]" />
@@ -197,7 +197,7 @@ const LoginPage = () => {
 
                             <div className="relative my-6">
                                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
-                                <div className="relative flex justify-center text-xs"><span className="px-3 bg-[#0a0614] text-gray-500">{isRomanian ? 'sau' : 'or'}</span></div>
+                                <div className="relative flex justify-center text-xs"><span className="px-3 bg-[#060311] text-[#6E6987]">{isRomanian ? 'sau' : 'or'}</span></div>
                             </div>
 
                             <Button

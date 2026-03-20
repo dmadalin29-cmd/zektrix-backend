@@ -54,7 +54,7 @@ const SearchTicketsPage = () => {
     }, {}) || {};
 
     return (
-        <div className="min-h-screen bg-[#030014]" data-testid="search-tickets-page">
+        <div className="min-h-screen" data-testid="search-tickets-page">
             <Navbar />
             
             <main className="pt-24 pb-16">

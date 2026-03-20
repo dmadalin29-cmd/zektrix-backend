@@ -9,7 +9,7 @@ import { Progress } from './ui/progress';
 import { Zap, Clock, Ticket, ShoppingCart, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
-const CompetitionCard = ({ competition, featured = false }) => {
+const CompetitionCard = React.memo(({ competition, featured = false }) => {
     const { isRomanian } = useLanguage();
     const { addToCart } = useCart();
 
@@ -50,7 +50,7 @@ const CompetitionCard = ({ competition, featured = false }) => {
     return (
         <Link 
             to={`/competitions/${competition.competition_id}`}
-            className={`bento-item card-hover block ${featured ? 'md:col-span-2 md:row-span-2' : ''}`}
+            className={`block rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] hover:border-violet-500/25 ${featured ? 'md:col-span-2 md:row-span-2' : ''}`}
             data-testid={`competition-card-${competition.competition_id}`}
         >
             {/* Image */}
@@ -59,6 +59,7 @@ const CompetitionCard = ({ competition, featured = false }) => {
                     src={competition.image_url || 'https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?w=800'} 
                     alt={competition.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
                 />
                 
                 {/* Overlay gradient */}
@@ -179,6 +180,8 @@ const CompetitionCard = ({ competition, featured = false }) => {
             </div>
         </Link>
     );
-};
+});
+
+CompetitionCard.displayName = 'CompetitionCard';
 
 export default CompetitionCard;

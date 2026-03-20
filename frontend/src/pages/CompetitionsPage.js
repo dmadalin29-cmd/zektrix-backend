@@ -17,12 +17,7 @@ const CompCard = ({ comp, featured = false }) => {
     
     return (
         <Link to={`/competitions/${comp.competition_id}`} 
-            className={`group block rounded-2xl overflow-hidden transition-all duration-500 hover:scale-[1.02] ${featured ? 'h-full' : ''}`}
-            style={{
-                background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.95) 0%, rgba(10, 6, 20, 0.98) 100%)',
-                border: '1px solid rgba(139, 92, 246, 0.15)',
-                boxShadow: featured ? '0 0 40px rgba(139, 92, 246, 0.1)' : 'none'
-            }}
+            className={`group block rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] hover:border-violet-500/25 ${featured ? 'h-full' : ''}`}
             data-testid={`comp-${comp.competition_id}`}
         >
             <div className={`relative ${featured ? 'aspect-[16/10]' : 'aspect-[4/3]'}`}>
@@ -149,31 +144,28 @@ const CompetitionsPage = () => {
     const regularCompetitions = filteredCompetitions.slice(1);
 
     return (
-        <div className="min-h-screen bg-[#030014]" data-testid="competitions-page">
+        <div className="min-h-screen" data-testid="competitions-page">
             <Navbar />
 
             <main className="pt-24 pb-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Header */}
                     <div className="text-center mb-10">
-                        <Badge className="mb-6 px-4 py-2 text-sm font-bold"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.15) 100%)',
-                                border: '1px solid rgba(139, 92, 246, 0.4)',
-                                color: '#a78bfa'
-                            }}>
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            {isRomanian ? 'Competiții Active' : 'Live Competitions'}
-                        </Badge>
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#8B3DFF]/10 border border-[#8B3DFF]/20 mb-4">
+                            <Sparkles className="w-4 h-4 text-[#A666FF]" />
+                            <span className="text-sm text-[#A666FF] font-medium">
+                                {isRomanian ? 'Competitii Active' : 'Live Competitions'}
+                            </span>
+                        </div>
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-4">
-                            <span className="text-white">{isRomanian ? 'Descoperă ' : 'Discover '}</span>
-                            <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-orange-400 bg-clip-text text-transparent">
+                            <span className="text-white">{isRomanian ? 'Descopera ' : 'Discover '}</span>
+                            <span className="bg-gradient-to-r from-[#A666FF] via-[#FF5E00] to-[#A666FF] bg-clip-text text-transparent">
                                 {isRomanian ? 'Premii Incredibile' : 'Amazing Prizes'}
                             </span>
                         </h1>
-                        <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                        <p className="text-[#A39EBD] max-w-2xl mx-auto text-base sm:text-lg">
                             {isRomanian 
-                                ? 'Alege competiția ta și intră în cursa pentru premii extraordinare!'
+                                ? 'Alege competitia ta si intra in cursa pentru premii extraordinare!'
                                 : 'Choose your competition and enter the race for extraordinary prizes!'
                             }
                         </p>
@@ -182,24 +174,15 @@ const CompetitionsPage = () => {
                     {/* Category Filters */}
                     <div className="flex flex-wrap gap-2 justify-center mb-10">
                         {categories.map((cat) => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setActiveFilter(cat.id)}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300"
-                                style={{
-                                    background: activeFilter === cat.id 
-                                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(124, 58, 237, 0.2) 100%)'
-                                        : 'rgba(255,255,255,0.05)',
-                                    border: activeFilter === cat.id 
-                                        ? '1px solid rgba(139, 92, 246, 0.5)'
-                                        : '1px solid rgba(255,255,255,0.1)',
-                                    color: activeFilter === cat.id ? '#a78bfa' : '#9ca3af',
-                                    boxShadow: activeFilter === cat.id ? '0 0 20px rgba(139, 92, 246, 0.3)' : 'none'
-                                }}
+                            <button key={cat.id} onClick={() => setActiveFilter(cat.id)}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                                    activeFilter === cat.id
+                                        ? 'bg-[#8B3DFF]/15 text-[#A666FF] border border-[#8B3DFF]/30 shadow-[0_0_15px_rgba(139,61,255,0.2)]'
+                                        : 'bg-white/[0.03] text-[#6E6987] border border-white/[0.06] hover:text-white hover:bg-white/[0.06]'
+                                }`}
                                 data-testid={`filter-${cat.id}`}
                             >
-                                <cat.icon className="w-4 h-4" />
-                                {cat.label}
+                                <cat.icon className="w-4 h-4" /> {cat.label}
                             </button>
                         ))}
                     </div>
@@ -247,11 +230,7 @@ const CompetitionsPage = () => {
                                     { icon: Banknote, value: `£${Math.min(...competitions.filter(c => c.status === 'active' && !c.is_free).map(c => c.ticket_price) || [0]).toFixed(0)}`, label: isRomanian ? 'Preț Minim' : 'From', color: '#10b981' },
                                     { icon: Zap, value: competitions.filter(c => c.competition_type === 'instant_win').length, label: 'Autodraw', color: '#f97316' },
                                 ].map((stat, i) => (
-                                    <div key={i} className="rounded-xl p-4 text-center"
-                                        style={{
-                                            background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
-                                            border: '1px solid rgba(139, 92, 246, 0.15)'
-                                        }}>
+                                    <div key={i} className="rounded-2xl p-4 text-center bg-white/[0.03] backdrop-blur-xl border border-white/[0.06]">
                                         <stat.icon className="w-5 h-5 mx-auto mb-2" style={{ color: stat.color }} />
                                         <p className="text-2xl font-bold text-white">{stat.value}</p>
                                         <p className="text-xs text-gray-500">{stat.label}</p>

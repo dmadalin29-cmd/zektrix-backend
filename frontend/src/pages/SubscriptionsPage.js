@@ -103,7 +103,7 @@ export default function SubscriptionsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#060311]">
+            <div className="min-h-screen">
                 <Navbar />
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
@@ -113,7 +113,7 @@ export default function SubscriptionsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#060311]" data-testid="subscriptions-page">
+        <div className="min-h-screen" data-testid="subscriptions-page">
             <Navbar />
             <div className="max-w-6xl mx-auto px-4 pt-24 pb-20">
 

@@ -30,7 +30,7 @@ const WinnersPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#030014]" data-testid="winners-page">
+        <div className="min-h-screen" data-testid="winners-page">
             <Navbar />
             
             <main className="pt-24 pb-16">

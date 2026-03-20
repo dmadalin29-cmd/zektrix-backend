@@ -23,7 +23,7 @@ const FAQPage = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#030014]" data-testid="faq-page">
+        <div className="min-h-screen" data-testid="faq-page">
             <Navbar />
             
             <main className="pt-24 pb-16">
