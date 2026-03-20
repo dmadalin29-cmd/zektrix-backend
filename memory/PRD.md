@@ -41,13 +41,24 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - Modern floating navbar with glassmorphism
 - Bilingual (Romanian/English)
 - Free competition "MEGA PREMIU £5.000" with tiered instant prizes
-- **Wallet System (NEW)**: Full deposit/withdraw/history/bonus system
+- **Wallet System**: Full deposit/withdraw/history/bonus system
   - Wallet balance in navbar
   - Deposit via Viva Payments with quick amounts (£10-£500)
   - Configurable deposit bonus (% + max cap from Admin)
   - Withdrawal requests with admin approval flow
   - Transaction history with icons and status
   - Admin Wallet Management: stats, bonus config, approve/reject withdrawals, manual fund adjustment
+- **Subscription System (NEW)**: 3 fixed plans with auto ticket distribution
+  - Abonament 25 (£25/luna, 2 bilete/competitie)
+  - Abonament 50 (£50/luna, 5 bilete/competitie) — Cel Mai Popular
+  - Abonament 100 (£100/luna, 12 bilete/competitie)
+  - Plata din wallet sau cu cardul (Viva Payments)
+  - Auto-distribuire bilete la toate competitiile active (pret ≤ £3.99)
+  - Auto-distribuire la competitii noi lansate
+  - Auto-reinnoire din wallet (sau expira daca fonduri insuficiente)
+  - Anulare reinoire oricand
+  - Push notifications la distribuire bilete si reinnoire
+  - Admin: statistici abonamente, lista abonati, venituri
 - Featured Competition (Ofertă Recomandată) customizable from Admin Settings
 
 ## Completed This Session (March 20, 2026)
@@ -61,6 +72,7 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - **NEW: Personalized milestone emails** - Automated at 70%/80%/90% for participants
 - **NEW: Featured Competition (Ofertă Recomandată)** - Admin can select which competition appears as featured on homepage
 - **NEW: Wallet System** - Complete wallet with deposit (Viva), withdrawals, history, bonus, admin management
+- **NEW: Subscription System** - 3 plans (£25/£50/£100), auto ticket distribution, auto-renewal, Viva + wallet payment
 - **MODERNIZED: Daily digest emails** - Premium design, realistic prize calculation (price×tickets), competition images
 - **REFACTORED: server.py** - Extracted models.py, email_service.py, push_service.py (-540 lines)
 - **FIXED: Admin Settings crash (March 20)** - `competitions` → `comps` variable reference in Settings tab
