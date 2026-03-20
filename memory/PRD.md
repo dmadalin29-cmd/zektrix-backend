@@ -73,6 +73,15 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - **NEW: Featured Competition (Ofertă Recomandată)** - Admin can select which competition appears as featured on homepage
 - **NEW: Wallet System** - Complete wallet with deposit (Viva), withdrawals, history, bonus, admin management
 - **NEW: Subscription System** - 3 plans (£25/£50/£100), auto ticket distribution, auto-renewal, Viva + wallet payment
+- **REDESIGN: Complete visual modernization**
+  - Apple-style mesh gradient backgrounds (animated, subtle)
+  - Glassmorphism cards (backdrop-blur, transparent backgrounds)
+  - Outfit font for headings, Inter for body
+  - Framer Motion animations on cards and sections
+  - Removed all hardcoded dark backgrounds → mesh gradient shows through
+  - Updated: Navbar, Footer, CompetitionCard, HomePage, CompetitionsPage, WalletPage, SubscriptionsPage, DashboardPage, LoginPage, WinnersPage, FAQPage, PrivacyPage, TermsPage, SearchPage
+  - React.memo on CompetitionCard for performance
+  - Lazy loading on all images
 - **MODERNIZED: Daily digest emails** - Premium design, realistic prize calculation (price×tickets), competition images
 - **REFACTORED: server.py** - Extracted models.py, email_service.py, push_service.py (-540 lines)
 - **FIXED: Admin Settings crash (March 20)** - `competitions` → `comps` variable reference in Settings tab
