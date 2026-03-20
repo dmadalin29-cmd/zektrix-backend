@@ -1,75 +1,33 @@
-<analysis>**original_problem_statement:**
-The user's initial request was for a full-stack competition platform. The scope has expanded to include Viva Payments, a modern UI, AI-powered live chat with push notifications for admins, and a PWA.
+<analysis>**original_problem_statement**: The user requested a series of critical fixes and enhancements: resolving the production  preview URL error, fixing a recurring VAPID 403 error for push notifications, verifying live chat end-to-end, adding push notifications for all normal users, modernizing daily automated emails (with realistic prize calculations and clickable images), enabling direct file upload for competition images (with multi-image gallery support), and making the Featured Competition (Ofertă Recomandată) on the homepage customizable from the Admin Panel. Add PRODUCT REQUIREMENTS also.
 
-Recent user requests from this session:
-- Fix the recurring production deployment issue where the frontend is built with a preview backend URL.
-- Fix the layout and alignment of the success modal/dialog that appears after claiming a free ticket.
-- Modernize the main header/navbar, making it floating and using better icons.
-- Fix the bug where ticket numbers weren't appearing in the My Locs section of the user dashboard.
-- Create a new, attractive free competition (MEGA PREMIU £5.000) with tiered instant prizes and automatic winner drawing, and delete the old free competition.
-- **CRITICAL:** Fix the push notification system, which has been broken for multiple sessions. The user has reported errors like  and VAPID credential mismatches.
-- The user has explicitly cancelled the request for an age disclaimer on an escorts page.
+**User's preferred language**: Romanian (You MUST respond in Romanian only).
 
-**User's preferred language**: Romanian
-
-**what currently exists?**
-A full-stack competition platform using FastAPI, React, and MongoDB. The backend is deployed on Railway and the frontend on Hostinger.
-- **User Features:** JWT & Google Auth, competition browsing, ticket purchasing via Viva Payments, a My Account dashboard, and a PWA.
-- **AI Chat & Live Chat:** A Gemini Flash-powered AI assistant with a live chat escalation system that uses a REST API fallback for reliability.
-- **Admin Features:** An admin panel with user/competition management and a live chat interface. A new Test Push button has been added to the settings.
-- **Deployment:** A robust  script now handles frontend deployment, and the backend is configured to auto-deploy from the  GitHub branch to Railway, though this has been unreliable. The production database is .
-- **Push Notifications:** The infrastructure is in place (, VAPID keys in , frontend subscription logic), but it is currently broken due to a VAPID credential mismatch.
+**what currently exists?**: A full-stack competition platform built with FastAPI, React, and MongoDB. It features user authentication, a ticket purchasing system (Viva Payments), an AI-powered live chat (Gemini Flash), an admin dashboard, automated marketing emails, push notifications, and a multi-image upload system for competitions. The backend is deployed on Railway, and the frontend on Hostinger.
 
 **Last working item**:
-    - Last item agent was working: Debugging a  error for push notifications. After a long session debugging Railway's build environment (fixing missing  dependency), the final error indicates that the VAPID keys used by the backend to send the push do not match the keys the frontend used to create the user's subscription.
-    - Status: **IN PROGRESS**
-    - Agent Testing Done: Y (The agent's last test produced the 403 VAPID error, confirming the new point of failure).
-    - Which testing method agent to use? Manual testing by curl/python -c. The next agent needs to synchronize VAPID keys across the stack.
-    - User Testing Done: Y (User confirmed the error persists).
+    - Last item agent was working: Implementing the customizable Ofertă Recomandată (Featured Competition) for the homepage. The agent created the backend endpoints, updated the  to fetch and display the selected competition instead of a hardcoded one, and added a dropdown selector in the Admin Panel settings.
+    - Status: IN PROGRESS
+    - Agent Testing Done: Y (Manually tested the API via bash script successfully).
+    - Which testing method agent to use? Screenshot tool for frontend UI verification after deployment.
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - **Issue 1: Push Notifications Not Working (P0)**
-     - **Description:** The core issue preventing push notifications is a VAPID credential mismatch. The error  means the public key used to subscribe the browser doesn't match the private key used by the server to sign the push request.
-     - **Attempted fixes:** The agent went through a lengthy process to fix the prerequisite issue where  was not installed on Railway. This involved correcting the root  and . The agent also tried reimplementing push from scratch, generating new keys (which likely caused the mismatch), and adding test endpoints. The root dependency issue on Railway is now solved, revealing the VAPID key mismatch as the final blocker.
-     - **Next debug checklist:**
-       1.  **Synchronize Keys:** Ensure the  in  and the  file content correspond to each other. If unsure, generate a new pair and update both.
-       2.  **Clear Stale Subscriptions:** Connect to the production database () and delete all documents from the  collection to remove any subscriptions created with old/invalid keys.
-       3.  **Deploy Backend:** Push the updated  (if any changes) and  to GitHub to trigger a Railway deploy.
-       4.  **User Action:** Instruct the user to go to the live site () -> Admin -> Settings, and click Activate Push Notifications to create a fresh subscription with the correct synchronized keys.
-       5.  **Test:** Instruct the user to click the Trimite Notificare de Test button. This should now succeed.
-     - **Why fix this issue and what will be achieved with the fix?** This is a critical feature for admins to provide timely live support and has been a recurring blocker for a long time.
-     - **Status:** IN PROGRESS
-     - **Is recurring issue?** Y
-     - **Should Test frontend/backend/both after fix?** Both.
-
-**In progress Task List**:
-  - None.
-
-**Upcoming and Future Tasks**
-    **Upcoming Tasks:**
-    - **P0**: User Verification of Push Notifications (once fixed).
-    - **P1**: User Verification of Live Chat reliability.
-
-    **Future Tasks:**
-    - **CRITICAL:** Refactor  into a proper routed structure.
-    - Integrate Facebook Pixel.
-    - Add a dedicated Terms & Conditions page.
-    - Implement IDEE BOMBA: Bundle Deals, SMS Marketing, a Leaderboard, and a Referral System.
-
-**Completed work in this session**
-- **Fixed Production Deployment Workflow:** Created a robust ============================================
+  Issue 1: Finalize & Deploy Featured Competition Feature (P0)
+     - Attempted fixes: The code is fully implemented and API tested locally. It needs to be committed, pushed to GitHub, deployed to production, and verified by the user.
+     - Next debug checklist: [main 0638493] feat: customizable featured competition
+ 4 files changed, 84 insertions(+), 6 deletions(-), wait for Railway deploy, run ============================================
    DEPLOY PRODUCTION - zektrix.uk
 ============================================
 
 [1/5] Pushing to GitHub...
-[main b7266e6] Production deploy 20260319-122419
+[main b52ae0a] Production deploy 20260320-204815
  8 files changed, 8 insertions(+), 8 deletions(-)
 To https://github.com/dmadalin29-cmd/zektrix-backend.git
-   679675f..b7266e6  main -> main
+   9eba3d5..b52ae0a  main -> main
 
 [2/5] Building frontend...
 
-Done in 18.68s.
+Done in 22.24s.
 
 [3/5] Verifying...
 Build verified: production URL only
@@ -83,81 +41,75 @@ LIVE VERIFIED: production URL only
    DEPLOY COMPLETE
    Backend: GitHub -> Railway
    Frontend: Hostinger (zektrix.uk)
-============================================ script to prevent deploying preview URLs to production, which was a major recurring issue.
-- **Fixed Success Dialog Layout:** After multiple attempts, completely resolved the layout issue of the success dialog by using a universally compatible Flexbox centering method in .
-- **Redesigned Header/Navbar:** Replaced the old top menu with a modern, floating, glassmorphism-style Navbar using Lucide icons.
-- **Fixed My Locs Number Display:** Corrected a bug in  where ticket numbers were not appearing by changing  to .
-- **Created New Competition:** Successfully deleted the old free competition and created the new MEGA PREMIU £5.000 Cash with tiered instant prizes and automatic winner drawing logic on the backend.
-- **Resolved Railway Dependency Hell:** Diagnosed and fixed the critical issue where  and other dependencies were not being installed on Railway by correcting the root  and .
-- **Removed Age Disclaimer Task:** Acknowledged the user's request to cancel this task and updated the product requirements.
+============================================, ask the user to assign a competition in Admin -> Settings and verify it appears on the homepage.
+     - Why fix this issue and what will be achieved with the fix? It gives the admin direct control over the main promotional banner on the homepage.
+     - Status: TESTING PENDING / USER VERIFICATION PENDING
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Frontend (Screenshot Tool)
+
+**In progress Task List**: None
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - P1: Facebook Pixel integration.
+    - P2: Add Countdown Timer to competitions (Enhancement suggested by agent).
+    Future Tasks:
+    - P2: IDEE BOMBA feature set (Bundle Deals, SMS Marketing, Leaderboard, Referral System).
+
+**Completed work in this session**
+- Fixed production  to prevent preview URL bleeding into the live build (DONE)
+- Fixed VAPID 403 Push Notification blocker by regenerating and syncing keys across environments (DONE)
+- E2E Verification of Live Chat (REST fallback, WebSocket, AI) (DONE)
+- Added push notification subscriptions for all users (alerts for chat, draws, 80% sold) (DONE)
+- Modernized automated emails with accurate prize calculation logic and clickable images (DONE)
+- Extracted , , and  from the monolithic  (DONE)
+- Added direct image upload functionality () using  (DONE)
+- Implemented multi-image arrays for competitions, displaying them in a frontend gallery (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-   - None.
+   - None
 
 **Known issue recurrence from previous fork**
-  - **Issue recurrence in previous fork**: Frontend deployment with the wrong backend URL and general deployment/caching problems.
-  - **Recurrence count**: Very High.
-  - **Status**: RESOLVED. A new, robust  script was created and validated to prevent this.
+  - Issue recurrence in previous fork: VAPID Key mismatch error.
+  - Recurrence count: 3+
+  - Status: RESOLVED (Keys regenerated, logic rewritten to derive public key at runtime dynamically, stale subscriptions cleared).
 
 **Code Architecture**
-ticket_numberloc_number
+
 
 **Key Technical Concepts**
-- **Railway Build Process:** The agent learned that Railway uses the root  and  for its build process. All Python dependencies must be correctly specified there.
-- **Robust Deployment Scripting:** The creation of  was a key achievement, solving a persistent problem of deploying incorrect environment configurations.
-- **CSS Centering:** The agent switched from a  +  CSS centering method (which was buggy on iOS/PWA) to a universally compatible  approach ().
-- **VAPID Credential Mismatch:** The final push notification bug was diagnosed as a 403 error, indicating a sync issue between the frontend's subscription key and the backend's sending key.
+- Full-stack architecture with FastAPI backend and React frontend.
+- PyWebPush for browser notifications.
+- Axios for API calls with token authentication.
+- Multipart/form-data for file uploads directly to the backend filesystem.
+- Static file mounting via FastAPI for serving uploaded images.
 
 **key DB schema**
-  - **push_subscriptions**:  - This collection should be cleared of all documents to fix the VAPID issue.
+  - : Added  array.
+  - : Added  to track the Ofertă Recomandată.
 
 **changes in tech stack**
-  - No changes.
+  - Added direct backend static file hosting for user-uploaded images ().
 
 **All files of reference**
-- : Contains all push notification logic.
-- : Contains the frontend logic for subscribing to push notifications.
-- : Defines the Railway build environment. CRITICAL for dependency installation.
-- : Root dependencies for the Railway build.
-- : Contains the  and  (as PEM content).
-- ============================================
-   DEPLOY PRODUCTION - zektrix.uk
-============================================
-
-[1/5] Pushing to GitHub...
-No changes
-Everything up-to-date
-
-[2/5] Building frontend...
-
-Done in 16.06s.
-
-[3/5] Verifying...
-Build verified: production URL only
-
-[4/5] Deploying to Hostinger...
-
-[5/5] Verifying live...
-LIVE VERIFIED: production URL only
-
-============================================
-   DEPLOY COMPLETE
-   Backend: GitHub -> Railway
-   Frontend: Hostinger (zektrix.uk)
-============================================: The new standard for deploying the frontend.
+- : Main routing and business logic.
+- , , : Extracted modules from refactoring.
+- : Contains logic for image uploads and site settings.
+- : Contains logic for rendering the Featured Competition.
+- : Contains the multi-image gallery implementation.
 
 **Areas that need refactoring**:
-- **CRITICAL:**  is a massive monolithic file (over 5000 lines) and is the primary source of technical debt. It desperately needs to be broken into smaller, routed modules.
+-  is still quite large (~4600 lines) despite recent extraction. Future refactoring should focus on extracting API route groups (e.g., ).
 
 **key api endpoints**
-- : Subscribes a user's browser for push notifications.
-- : New admin-only endpoint to send a test notification.
-- : Used to delete the old free competition.
-- : Used to create the new free competition.
+- : Direct file upload returning URL.
+- : Fetches the currently highlighted competition.
+- : Admin sets the featured competition.
+- : Subscribes any user to push notifications.
 
 **Critical Info for New Agent**
-- **PRODUCTION DATABASE:** The production environment uses the MongoDB database named ****. The development environment was mistakenly using . All production-related database operations must target .
-- **DEPLOYMENT SCRIPT:** **ALWAYS** use ============================================
+- **Railway Deployment**: The backend auto-deploys from GitHub. Important: The import paths in  use a fallback pattern () to ensure compatibility between local execution and Railway's root-level Docker execution.
+- **Frontend Deployment**: **ALWAYS** use ============================================
    DEPLOY PRODUCTION - zektrix.uk
 ============================================
 
@@ -167,7 +119,7 @@ Everything up-to-date
 
 [2/5] Building frontend...
 
-Done in 15.17s.
+Done in 17.60s.
 
 [3/5] Verifying...
 Build verified: production URL only
@@ -181,47 +133,90 @@ LIVE VERIFIED: production URL only
    DEPLOY COMPLETE
    Backend: GitHub -> Railway
    Frontend: Hostinger (zektrix.uk)
-============================================ for frontend deployments. It is designed to be safe and prevents deploying preview URLs to production.
-- **PUSH NOTIFICATION BUG:** The current blocker is a **VAPID credential mismatch (403 error)**. The backend is trying to send a push with a key that doesn't match the key used to subscribe the user. The next step is to sync these keys, clear old subscriptions from the DB, and have the user re-subscribe.
-- **RAILWAY DEPLOYMENT:** The backend auto-deploy from GitHub is now working since the build issues in the  were fixed. Any push to  should trigger a new deployment.
+============================================.
+- The user expects proactive deployments ( + ============================================
+   DEPLOY PRODUCTION - zektrix.uk
+============================================
+
+[1/5] Pushing to GitHub...
+[main eed6a23] Production deploy 20260320-204917
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+ delete mode 100644 frontend/.env.dev.bak
+To https://github.com/dmadalin29-cmd/zektrix-backend.git
+   b52ae0a..eed6a23  main -> main
+
+[2/5] Building frontend...
+
+Done in 16.91s.
+
+[3/5] Verifying...
+Build verified: production URL only
+
+[4/5] Deploying to Hostinger...
+
+[5/5] Verifying live...
+LIVE VERIFIED: production URL only
+
+============================================
+   DEPLOY COMPLETE
+   Backend: GitHub -> Railway
+   Frontend: Hostinger (zektrix.uk)
+============================================) whenever features are verified locally.
 
 **documents and test reports created in this job**
--  (Updated to remove the cancelled age disclaimer task).
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1. **LATEST:** User reports the same VAPID error again and is frustrated.
-2. User asks the agent to use the provided Railway token to deploy directly.
-3. User provides extensive Railway build logs showing an  install failure.
-4. User confirms the dialog fix is Perfect.
-5. User asks to fix push notifications and cancels the age disclaimer task.
-6. User sends a screenshot showing the dialog is still not centered correctly.
-7. User asks to fix the dialog and modernize the top menu.
-8. User sends a screenshot showing the success dialog text is cut off.
-9. User complains that the  script deployed a preview link. (This was fixed with a more robust version of the script).
-10. User asks the agent to create the new MEGA PREMIU £5.000 competition.
+1. User: nu merge sa uploadez poze... (Agent debugged, fixed an undefined  axios instance, and verified via Testing Agent).
+2. User: merge, dar vreau sa pot incarca m-ai multe poze la o competitie... (Agent implemented multi-image arrays and gallery).
+3. User: functioneaza
+4. User: auzi vezi unde este mercedesul gle pe prima pagina... acolo as vrea sa fie... Oferta Recomandata si eu in panoul admin sa pot alege ce competitie sa adaug... (Agent implemented logic, tested locally, pending deploy).
 
 **Project Health Check:**
-- **Broken:**
-  - Push Notifications.
-- **Mocked:**
-  - None.
+- Broken: None.
+- Mocked: None.
 
 **3rd Party Integrations**
-- Viva Payments
-- Emergent-managed Google Auth
-- Gemini Flash (via ) - Uses Emergent LLM Key
--  &  (for push notifications)
-- Railway (Backend Hosting)
-- Hostinger (Frontend Hosting)
+- Viva Payments (Payments) — requires User API Key
+- Emergent-managed Google Auth (Auth)
+- Gemini Flash 2.5 (AI Chat) — uses Emergent LLM Key
+- pywebpush (Notifications)
+- Resend (Emails) — requires User API Key
 
 **Testing status**
-  - Testing agent used after significant changes: NO
+  - Testing agent used after significant changes: YES
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
   - Known regressions: None
 
 **Credentials to test flow:**
-- Production admin credentials for  were found and used:  with password .
+- Admin:  / 
 
 **What agent forgot to execute**
-- The agent was stuck in a complex debugging loop and did not get to the final step of synchronizing the VAPID keys after fixing the underlying dependency issues. The core logic is there, but the configuration (keys and stale subscriptions) is incorrect.</analysis>
+- The agent finished writing and locally testing the Featured Competition update for  and , but the job ended before running On branch main
+nothing to commit, working tree clean, , and ============================================
+   DEPLOY PRODUCTION - zektrix.uk
+============================================
+
+[1/5] Pushing to GitHub...
+No changes
+Everything up-to-date
+
+[2/5] Building frontend...
+
+Done in 16.73s.
+
+[3/5] Verifying...
+Build verified: production URL only
+
+[4/5] Deploying to Hostinger...
+
+[5/5] Verifying live...
+LIVE VERIFIED: production URL only
+
+============================================
+   DEPLOY COMPLETE
+   Backend: GitHub -> Railway
+   Frontend: Hostinger (zektrix.uk)
+============================================ to get it live for the user.</analysis>

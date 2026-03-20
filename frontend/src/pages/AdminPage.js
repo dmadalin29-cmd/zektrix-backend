@@ -1191,7 +1191,7 @@ const AdminPage = () => {
                                             data-testid="featured-comp-select"
                                         >
                                             <option value="" className="bg-gray-900">-- Selectează --</option>
-                                            {competitions.filter(c => c.status === 'active').map(c => (
+                                            {comps.filter(c => c.status === 'active').map(c => (
                                                 <option key={c.competition_id} value={c.competition_id} className="bg-gray-900">{c.title}</option>
                                             ))}
                                         </select>
