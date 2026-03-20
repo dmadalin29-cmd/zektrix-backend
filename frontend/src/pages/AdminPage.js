@@ -214,7 +214,7 @@ const AdminPage = () => {
     // Forms
     const [compForm, setCompForm] = useState({
         title: '', description: '', ticket_price: '', max_tickets: '', 
-        competition_type: 'instant_win', image_url: '', prize_description: '', category: 'general',
+        competition_type: 'instant_win', image_url: '', images: [], prize_description: '', category: 'general',
         qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false,
         instant_prizes: []
     });
@@ -361,7 +361,8 @@ const AdminPage = () => {
         const data = {
             title: compForm.title, description: compForm.description,
             ticket_price: compForm.is_free ? 0 : parseFloat(compForm.ticket_price), max_tickets: parseInt(compForm.max_tickets),
-            competition_type: compForm.competition_type, image_url: compForm.image_url,
+            competition_type: compForm.competition_type, image_url: compForm.image_url || (compForm.images && compForm.images[0]) || '',
+            images: compForm.images || [],
             prize_description: compForm.prize_description, category: compForm.category,
             is_free: compForm.is_free,
             instant_prizes: compForm.instant_prizes.filter(p => p.percentage && p.prize_name).map(p => ({
@@ -384,7 +385,7 @@ const AdminPage = () => {
                 toast.success('Competiție creată!');
             }
             setShowCompModal(false); setEditingComp(null);
-            setCompForm({ title: '', description: '', ticket_price: '', max_tickets: '', competition_type: 'instant_win', image_url: '', prize_description: '', category: 'general', qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false, instant_prizes: [] });
+            setCompForm({ title: '', description: '', ticket_price: '', max_tickets: '', competition_type: 'instant_win', image_url: '', images: [], prize_description: '', category: 'general', qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false, instant_prizes: [] });
             fetchAll();
         } catch (e) { toast.error(e.response?.data?.detail || 'Eroare'); }
     };
@@ -399,7 +400,7 @@ const AdminPage = () => {
         setCompForm({
             title: c.title, description: c.description, ticket_price: c.ticket_price.toString(),
             max_tickets: c.max_tickets.toString(), competition_type: c.competition_type,
-            image_url: c.image_url || '', prize_description: c.prize_description || '', category: c.category || 'general',
+            image_url: c.image_url || '', images: c.images || (c.image_url ? [c.image_url] : []), prize_description: c.prize_description || '', category: c.category || 'general',
             qual_question: c.qualification_question?.question || '',
             qual_option1: c.qualification_question?.options?.[0] || '',
             qual_option2: c.qualification_question?.options?.[1] || '',
@@ -848,7 +849,7 @@ const AdminPage = () => {
                                     <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{comps.filter(c => c.status === 'active').length} Active</Badge>
                                 </div>
                                 <Button 
-                                    onClick={() => { setEditingComp(null); setCompForm({ title: '', description: '', ticket_price: '', max_tickets: '', competition_type: 'instant_win', image_url: '', prize_description: '', category: 'general', qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false, instant_prizes: [] }); setShowCompModal(true); }} 
+                                    onClick={() => { setEditingComp(null); setCompForm({ title: '', description: '', ticket_price: '', max_tickets: '', competition_type: 'instant_win', image_url: '', images: [], prize_description: '', category: 'general', qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false, instant_prizes: [] }); setShowCompModal(true); }} 
                                     className="bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-500/25"
                                     data-testid="add-competition-btn"
                                 >
@@ -1510,38 +1511,53 @@ const AdminPage = () => {
                             <Label htmlFor="is_free" className="text-emerald-400 font-medium cursor-pointer">Intrare Gratuită (doar pentru utilizatori înregistrați)</Label>
                         </div>
                         <div>
-                            <Label className="text-gray-400">Imagine Competiție</Label>
+                            <Label className="text-gray-400">Imagini Competiție ({(compForm.images || []).length} încărcate)</Label>
                             <div className="space-y-2">
-                                {/* Image Preview */}
-                                {compForm.image_url && (
-                                    <div className="relative w-full h-40 rounded-xl overflow-hidden border border-white/10">
-                                        <img src={compForm.image_url} alt="Preview" className="w-full h-full object-cover" onError={e => e.target.style.display='none'} />
-                                        <button onClick={() => setCompForm(p => ({...p, image_url: ''}))} className="absolute top-2 right-2 w-6 h-6 bg-red-500/80 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-500">✕</button>
+                                {/* Image Gallery Preview */}
+                                {(compForm.images && compForm.images.length > 0) && (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {compForm.images.map((img, idx) => (
+                                            <div key={idx} className="relative h-24 rounded-lg overflow-hidden border border-white/10 group">
+                                                <img src={img} alt={`Img ${idx+1}`} className="w-full h-full object-cover" onError={e => e.target.style.display='none'} />
+                                                {idx === 0 && <span className="absolute top-1 left-1 text-[9px] bg-violet-600/80 text-white px-1.5 py-0.5 rounded">Cover</span>}
+                                                <button onClick={() => setCompForm(p => ({...p, images: p.images.filter((_,i) => i !== idx), image_url: idx === 0 ? (p.images[1] || '') : p.image_url}))} className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 rounded-full flex items-center justify-center text-white text-[10px] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500">✕</button>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                                 {/* Upload Button */}
                                 <label className="flex items-center justify-center gap-2 w-full p-3 rounded-xl border-2 border-dashed border-white/10 hover:border-violet-500/50 cursor-pointer transition-colors bg-white/5">
                                     <Upload className="w-4 h-4 text-violet-400" />
-                                    <span className="text-sm text-gray-400">Click pentru upload imagine</span>
-                                    <input type="file" accept="image/*" className="hidden" data-testid="image-upload-input" onChange={async (e) => {
-                                        const file = e.target.files[0];
-                                        if (!file) return;
-                                        if (file.size > 10 * 1024 * 1024) { toast.error('Imaginea e prea mare (max 10MB)'); return; }
-                                        const fd = new FormData();
-                                        fd.append('file', file);
-                                        try {
-                                            toast.loading('Se încarcă imaginea...', { id: 'img-upload' });
-                                            const res = await axios.post(`${API}/upload/image`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } });
-                                            setCompForm(p => ({...p, image_url: res.data.url}));
-                                            toast.success('Imagine încărcată!', { id: 'img-upload' });
-                                        } catch(err) { toast.error('Eroare la upload: ' + (err.response?.data?.detail || err.message), { id: 'img-upload' }); }
+                                    <span className="text-sm text-gray-400">Click pentru upload imagini (poți selecta mai multe)</span>
+                                    <input type="file" accept="image/*" multiple className="hidden" data-testid="image-upload-input" onChange={async (e) => {
+                                        const files = Array.from(e.target.files);
+                                        if (!files.length) return;
+                                        toast.loading(`Se încarcă ${files.length} imagini...`, { id: 'img-upload' });
+                                        const newImages = [...(compForm.images || [])];
+                                        for (const file of files) {
+                                            if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} prea mare (max 10MB)`); continue; }
+                                            const fd = new FormData();
+                                            fd.append('file', file);
+                                            try {
+                                                const res = await axios.post(`${API}/upload/image`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } });
+                                                newImages.push(res.data.url);
+                                            } catch(err) { toast.error(`Eroare upload ${file.name}`); }
+                                        }
+                                        setCompForm(p => ({...p, images: newImages, image_url: newImages[0] || p.image_url}));
+                                        toast.success(`${files.length} imagini încărcate!`, { id: 'img-upload' });
                                         e.target.value = '';
                                     }} />
                                 </label>
                                 {/* Or URL input */}
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-500">sau</span>
-                                    <Input value={compForm.image_url} onChange={e => setCompForm(p => ({ ...p, image_url: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500 text-sm" placeholder="URL imagine (https://...)" data-testid="image-url-input" />
+                                    <span className="text-xs text-gray-500">sau adaugă URL</span>
+                                    <Input placeholder="https://..." className="bg-white/5 border-white/10 focus:border-violet-500 text-sm" data-testid="image-url-input" onKeyDown={e => {
+                                        if (e.key === 'Enter' && e.target.value.trim()) {
+                                            const url = e.target.value.trim();
+                                            setCompForm(p => ({...p, images: [...(p.images || []), url], image_url: (p.images || []).length === 0 ? url : p.image_url}));
+                                            e.target.value = '';
+                                        }
+                                    }} />
                                 </div>
                             </div>
                         </div>

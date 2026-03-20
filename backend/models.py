@@ -55,6 +55,7 @@ class CompetitionCreate(BaseModel):
     competition_type: str
     category: Optional[str] = "other"
     image_url: Optional[str] = None
+    images: Optional[List[str]] = []
     prize_description: Optional[str] = None
     draw_date: Optional[str] = None
     qualification_question: Optional[QualificationQuestion] = None
@@ -70,6 +71,7 @@ class CompetitionUpdate(BaseModel):
     category: Optional[str] = None
     status: Optional[str] = None
     image_url: Optional[str] = None
+    images: Optional[List[str]] = []
     prize_description: Optional[str] = None
     draw_date: Optional[str] = None
     qualification_question: Optional[QualificationQuestion] = None
@@ -88,6 +90,7 @@ class CompetitionResponse(BaseModel):
     category: Optional[str] = "other"
     status: str
     image_url: Optional[str] = None
+    images: Optional[List[str]] = []
     prize_description: Optional[str] = None
     draw_date: Optional[str] = None
     created_at: datetime

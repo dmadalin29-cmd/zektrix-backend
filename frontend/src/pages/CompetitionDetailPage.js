@@ -19,7 +19,7 @@ import axios from 'axios';
 import { 
     Zap, Clock, Ticket, Minus, Plus, Loader2, Trophy, ArrowLeft, 
     PartyPopper, CreditCard, Mail, HelpCircle, CheckCircle, XCircle, 
-    ShoppingCart, Users, Calendar, Gift
+    ShoppingCart, Users, Calendar, Gift, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -43,6 +43,7 @@ const CompetitionDetailPage = () => {
     const [answerError, setAnswerError] = useState(false);
     const [answerVerified, setAnswerVerified] = useState(false);
     const [enteringFree, setEnteringFree] = useState(false);
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
 
     useEffect(() => {
         fetchCompetition();
@@ -226,39 +227,65 @@ const CompetitionDetailPage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column - Main Content */}
                         <div className="lg:col-span-2 space-y-6">
-                            {/* Image Card */}
+                            {/* Image Card - Gallery */}
                             <Card className="glass border-white/10 overflow-hidden">
-                                <div className="relative aspect-video">
-                                    <img 
-                                        src={competition.image_url || 'https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?w=1200'} 
-                                        alt={competition.title}
-                                        className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
-                                    
-                                    {/* Badges */}
-                                    <div className="absolute top-4 left-4 flex gap-2">
-                                        {competition.competition_type === 'instant_win' ? (
-                                            <Badge className="badge-instant">
-                                                <Zap className="w-3 h-3 mr-1" /> Autodraw
-                                            </Badge>
-                                        ) : (
-                                            <Badge className="badge-classic">
-                                                <Clock className="w-3 h-3 mr-1" /> Draw
-                                            </Badge>
+                                <div className="relative">
+                                    {/* Main Image */}
+                                    <div className="relative aspect-video">
+                                        <img 
+                                            src={(competition.images && competition.images.length > 0 ? competition.images[activeImageIndex || 0] : competition.image_url) || 'https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?w=1200'} 
+                                            alt={competition.title}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                                        
+                                        {/* Gallery Navigation Arrows */}
+                                        {competition.images && competition.images.length > 1 && (
+                                            <>
+                                                <button onClick={() => setActiveImageIndex(i => (i || 0) > 0 ? (i || 0) - 1 : competition.images.length - 1)} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10">
+                                                    <ChevronLeft className="w-5 h-5" />
+                                                </button>
+                                                <button onClick={() => setActiveImageIndex(i => ((i || 0) + 1) % competition.images.length)} className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10">
+                                                    <ChevronRight className="w-5 h-5" />
+                                                </button>
+                                            </>
                                         )}
-                                    </div>
                                     
-                                    <div className="absolute top-4 right-4">
-                                        <ShareButton competitionId={competition.competition_id} competitionTitle={competition.title} />
-                                    </div>
+                                        {/* Badges */}
+                                        <div className="absolute top-4 left-4 flex gap-2">
+                                            {competition.competition_type === 'instant_win' ? (
+                                                <Badge className="badge-instant">
+                                                    <Zap className="w-3 h-3 mr-1" /> Autodraw
+                                                </Badge>
+                                            ) : (
+                                                <Badge className="badge-classic">
+                                                    <Clock className="w-3 h-3 mr-1" /> Draw
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    
+                                        <div className="absolute top-4 right-4">
+                                            <ShareButton competitionId={competition.competition_id} competitionTitle={competition.title} />
+                                        </div>
 
-                                    {/* Sold Percentage */}
-                                    {soldPercentage >= 50 && (
-                                        <div className="absolute bottom-4 right-4">
-                                            <Badge className={soldPercentage >= 80 ? 'status-ending' : 'badge-secondary'}>
-                                                {Math.round(soldPercentage)}% {isRomanian ? 'Vândut' : 'Sold'}
+                                        {/* Sold Percentage */}
+                                        {soldPercentage >= 50 && (
+                                            <div className="absolute bottom-4 right-4">
+                                                <Badge className={soldPercentage >= 80 ? 'status-ending' : 'badge-secondary'}>
+                                                    {Math.round(soldPercentage)}% {isRomanian ? 'Vândut' : 'Sold'}
                                             </Badge>
+                                        </div>
+                                    )}
+                                </div>
+
+                                    {/* Image Thumbnails */}
+                                    {competition.images && competition.images.length > 1 && (
+                                        <div className="flex gap-2 p-3 bg-black/20 overflow-x-auto">
+                                            {competition.images.map((img, idx) => (
+                                                <button key={idx} onClick={() => setActiveImageIndex(idx)} className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all ${(activeImageIndex || 0) === idx ? 'border-violet-500 scale-105' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                                                    <img src={img} alt={`${idx+1}`} className="w-full h-full object-cover" />
+                                                </button>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
