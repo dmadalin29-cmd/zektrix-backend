@@ -319,6 +319,14 @@ const AdminPage = () => {
         }));
     }, [analyticsData]);
 
+    const userGrowthChartData = useMemo(() => {
+        if (!analyticsData?.user_growth?.length) return [];
+        return analyticsData.user_growth.slice(-14).map(d => ({
+            name: new Date(d.date).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }),
+            utilizatori: d.users || 0,
+        }));
+    }, [analyticsData]);
+
     const pieData = useMemo(() => {
         if (!comps.length) return [];
         const categories = {};
@@ -340,7 +348,7 @@ const AdminPage = () => {
     }, [analyticsData]);
     const sparkDataUsers = useMemo(() => {
         if (!analyticsData?.user_growth?.length) return [0];
-        return analyticsData.user_growth.slice(-12).map(d => d.count || 0);
+        return analyticsData.user_growth.slice(-12).map(d => d.users || 0);
     }, [analyticsData]);
     const sparkDataTickets = useMemo(() => {
         if (!analyticsData?.top_competitions?.length) return [0];
@@ -1119,10 +1127,10 @@ const AdminPage = () => {
                                     </h3>
                                     <div className="h-64">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={chartData}>
+                                            <LineChart data={userGrowthChartData}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(139, 92, 246, 0.1)" />
                                                 <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
-                                                <YAxis stroke="#6b7280" fontSize={12} />
+                                                <YAxis stroke="#6b7280" fontSize={12} allowDecimals={false} />
                                                 <Tooltip content={<CustomTooltip />} />
                                                 <Line type="monotone" dataKey="utilizatori" stroke="#06b6d4" strokeWidth={3} dot={{ fill: '#06b6d4', strokeWidth: 2 }} />
                                             </LineChart>
@@ -1131,12 +1139,49 @@ const AdminPage = () => {
                                 </div>
                             </div>
 
-                            {/* Performance Metrics */}
+                            {/* Performance Metrics - REAL DATA */}
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <StatCard icon={Eye} label="Vizualizări" value={12453} change={15} changeType="up" gradient="linear-gradient(135deg, #8b5cf6, #7c3aed)" loading={loading} />
-                                <StatCard icon={ShoppingCart} label="Comenzi" value={847} change={22} changeType="up" gradient="linear-gradient(135deg, #10b981, #059669)" loading={loading} />
-                                <StatCard icon={CreditCard} label="Plăți Procesate" value={623} change={18} changeType="up" gradient="linear-gradient(135deg, #f97316, #ea580c)" loading={loading} />
-                                <StatCard icon={Star} label="Rating Mediu" value={4.8} gradient="linear-gradient(135deg, #fbbf24, #f59e0b)" loading={loading} />
+                                <StatCard icon={Users} label="Total Utilizatori" value={analyticsData?.total_users || 0} gradient="linear-gradient(135deg, #8b5cf6, #7c3aed)" loading={loading} />
+                                <StatCard icon={ShoppingCart} label="Total Locuri" value={analyticsData?.total_tickets || 0} gradient="linear-gradient(135deg, #10b981, #059669)" loading={loading} />
+                                <StatCard icon={CreditCard} label="Competitii Active" value={analyticsData?.active_competitions || 0} gradient="linear-gradient(135deg, #f97316, #ea580c)" loading={loading} />
+                                <StatCard icon={Trophy} label="Castigatori" value={analyticsData?.total_winners || 0} gradient="linear-gradient(135deg, #fbbf24, #f59e0b)" loading={loading} />
+                            </div>
+
+                            {/* Top Competitions Table */}
+                            <div className="rounded-2xl p-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
+                                    border: '1px solid rgba(139, 92, 246, 0.15)'
+                                }}>
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <BarChart3 className="w-5 h-5 text-violet-400" /> Top Competitii (dupa vanzari)
+                                </h3>
+                                <div className="space-y-3">
+                                    {(analyticsData?.top_competitions || []).filter(c => c.sold > 0).map((c, i) => {
+                                        const pct = c.max > 0 ? Math.round((c.sold / c.max) * 100) : 0;
+                                        return (
+                                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                                                <span className="text-sm font-bold text-violet-400 w-6 text-center">{i + 1}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm text-white truncate font-medium">{c.title}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-gradient-to-r from-violet-500 to-orange-500 rounded-full" style={{ width: `${pct}%` }} />
+                                                        </div>
+                                                        <span className="text-xs text-gray-400">{c.sold}/{c.max}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-sm font-bold text-emerald-400">£{(c.revenue || 0).toFixed(2)}</p>
+                                                    <p className="text-[10px] text-gray-500">{pct}% vandut</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {(analyticsData?.top_competitions || []).filter(c => c.sold > 0).length === 0 && (
+                                        <p className="text-center text-gray-500 text-sm py-4">Nicio vanzare inca</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
