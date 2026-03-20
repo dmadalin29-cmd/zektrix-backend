@@ -29,6 +29,7 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - JWT & Google Auth
 - Competition browsing, ticket purchasing via Viva Payments
 - Image upload for competitions (admin can upload or paste URL)
+- Multi-image gallery for competitions
 - "My Account" dashboard with ticket history
 - AI Chat (Gemini Flash) with live chat escalation
 - Admin panel (user/competition/winner management)
@@ -40,6 +41,14 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - Modern floating navbar with glassmorphism
 - Bilingual (Romanian/English)
 - Free competition "MEGA PREMIU £5.000" with tiered instant prizes
+- **Wallet System (NEW)**: Full deposit/withdraw/history/bonus system
+  - Wallet balance in navbar
+  - Deposit via Viva Payments with quick amounts (£10-£500)
+  - Configurable deposit bonus (% + max cap from Admin)
+  - Withdrawal requests with admin approval flow
+  - Transaction history with icons and status
+  - Admin Wallet Management: stats, bonus config, approve/reject withdrawals, manual fund adjustment
+- Featured Competition (Ofertă Recomandată) customizable from Admin Settings
 
 ## Completed This Session (March 20, 2026)
 - **FIXED: Push Notifications (P0)** - Synced VAPID keys, pywebpush library, auto-derive public key
@@ -51,6 +60,7 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - **NEW: Multi-image gallery** - Multiple images per competition with thumbnail gallery
 - **NEW: Personalized milestone emails** - Automated at 70%/80%/90% for participants
 - **NEW: Featured Competition (Ofertă Recomandată)** - Admin can select which competition appears as featured on homepage
+- **NEW: Wallet System** - Complete wallet with deposit (Viva), withdrawals, history, bonus, admin management
 - **MODERNIZED: Daily digest emails** - Premium design, realistic prize calculation (price×tickets), competition images
 - **REFACTORED: server.py** - Extracted models.py, email_service.py, push_service.py (-540 lines)
 - **FIXED: Admin Settings crash (March 20)** - `competitions` → `comps` variable reference in Settings tab
