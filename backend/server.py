@@ -2864,6 +2864,100 @@ async def set_featured_competition(competition_id: str, admin: dict = Depends(ge
     return {"success": True, "competition_id": competition_id, "title": comp.get("title")}
 
 
+@api_router.get("/admin/notifications")
+async def get_admin_notifications(admin: dict = Depends(get_admin_user)):
+    """Get real-time admin notifications"""
+    now = datetime.now(timezone.utc)
+    notifications = []
+    
+    # Pending withdrawals
+    pending_wd = await db.withdrawal_requests.find(
+        {"status": "pending"}, {"_id": 0}
+    ).sort("created_at", -1).to_list(10)
+    for wd in pending_wd:
+        notifications.append({
+            "id": wd["withdrawal_id"],
+            "type": "withdrawal",
+            "title": "Cerere de retragere",
+            "message": f"{wd.get('username', wd.get('email', 'User'))} cere £{wd['amount']:.2f}",
+            "action_url": "wallet",
+            "created_at": wd["created_at"],
+            "priority": "high"
+        })
+    
+    # New subscriptions (last 24h)
+    yesterday = (now - timedelta(hours=24)).isoformat()
+    recent_subs = await db.subscriptions.find(
+        {"created_at": {"$gte": yesterday}, "status": {"$in": ["active", "pending_payment"]}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(10)
+    for sub in recent_subs:
+        notifications.append({
+            "id": sub["subscription_id"],
+            "type": "subscription",
+            "title": "Abonament nou",
+            "message": f"{sub.get('username', sub.get('email', 'User'))} - {sub['plan_name']}",
+            "action_url": "wallet",
+            "created_at": sub["created_at"],
+            "priority": "medium"
+        })
+    
+    # Competitions near full (>80%)
+    comps = await db.competitions.find(
+        {"status": "active"}, {"_id": 0, "competition_id": 1, "title": 1, "sold_tickets": 1, "max_tickets": 1}
+    ).to_list(50)
+    for c in comps:
+        pct = (c["sold_tickets"] / c["max_tickets"] * 100) if c["max_tickets"] > 0 else 0
+        if pct >= 80:
+            notifications.append({
+                "id": f"comp_{c['competition_id']}",
+                "type": "competition_alert",
+                "title": f"Competitie {int(pct)}% vanduta",
+                "message": f"{c['title'][:40]} — {c['max_tickets'] - c['sold_tickets']} locuri ramase",
+                "action_url": "comps",
+                "created_at": now.isoformat(),
+                "priority": "high" if pct >= 95 else "medium"
+            })
+    
+    # Unanswered chat messages (waiting for admin)
+    unread_chats = await db.chat_messages.find(
+        {"sender": "user", "admin_read": {"$ne": True}},
+        {"_id": 0, "user_id": 1, "username": 1, "message": 1, "created_at": 1}
+    ).sort("created_at", -1).to_list(10)
+    for msg in unread_chats:
+        notifications.append({
+            "id": f"chat_{msg.get('user_id', '')}_{msg.get('created_at', '')}",
+            "type": "chat",
+            "title": "Mesaj nou",
+            "message": f"{msg.get('username', 'User')}: {msg.get('message', '')[:50]}",
+            "action_url": "chat",
+            "created_at": msg.get("created_at", now.isoformat()),
+            "priority": "medium"
+        })
+    
+    # New users (last 24h)
+    recent_users = await db.users.find(
+        {"created_at": {"$gte": yesterday}},
+        {"_id": 0, "user_id": 1, "username": 1, "email": 1, "created_at": 1}
+    ).sort("created_at", -1).to_list(10)
+    for u in recent_users:
+        notifications.append({
+            "id": f"user_{u['user_id']}",
+            "type": "new_user",
+            "title": "Utilizator nou",
+            "message": u.get("username", u.get("email", "?")),
+            "action_url": "users",
+            "created_at": u.get("created_at", now.isoformat()),
+            "priority": "low"
+        })
+    
+    # Sort by priority then date
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    notifications.sort(key=lambda n: (priority_order.get(n["priority"], 2), n.get("created_at", "")), reverse=False)
+    notifications.sort(key=lambda n: priority_order.get(n["priority"], 2))
+    
+    return {"notifications": notifications, "total": len(notifications), "high_priority": sum(1 for n in notifications if n["priority"] == "high")}
+
 @api_router.get("/admin/analytics")
 async def get_analytics(admin: dict = Depends(get_admin_user)):
     """Get comprehensive analytics for admin dashboard - optimized"""

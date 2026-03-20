@@ -211,6 +211,8 @@ const AdminPage = () => {
     const [bonusSettings, setBonusSettings] = useState({ active: false, bonus_percent: 10, bonus_max: 20 });
     const [subscriptionStats, setSubscriptionStats] = useState({});
     const [allSubscriptions, setAllSubscriptions] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+    const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
     // Modals
     const [showCompModal, setShowCompModal] = useState(false);
@@ -263,6 +265,7 @@ const AdminPage = () => {
         axios.get(`${API}/admin/wallet/bonus-settings`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setBonusSettings(r.data || {})).catch(() => {});
         axios.get(`${API}/admin/subscriptions/stats`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setSubscriptionStats(r.data || {})).catch(() => {});
         axios.get(`${API}/admin/subscriptions`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAllSubscriptions(r.data || [])).catch(() => {});
+        axios.get(`${API}/admin/notifications`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setNotifications(r.data?.notifications || [])).catch(() => {});
         
         // Admin WebSocket for live chat
         let ws = null;
@@ -636,10 +639,60 @@ const AdminPage = () => {
                             >
                                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                             </Button>
-                            <Button variant="ghost" size="sm" className="relative text-gray-400 hover:text-white hover:bg-white/5">
+                            <Button variant="ghost" size="sm" className="relative text-gray-400 hover:text-white hover:bg-white/5"
+                                onClick={() => setShowNotifDropdown(!showNotifDropdown)} data-testid="notif-bell-btn">
                                 <Bell className="w-4 h-4" />
-                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-violet-500 rounded-full" />
+                                {notifications.length > 0 && (
+                                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center">
+                                        {notifications.length}
+                                    </span>
+                                )}
                             </Button>
+                            {/* Notifications Dropdown */}
+                            {showNotifDropdown && (
+                                <div className="absolute right-0 top-14 w-80 sm:w-96 max-h-[70vh] rounded-2xl overflow-hidden z-50 shadow-2xl"
+                                    style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.98), rgba(10,6,20,0.99))', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                    <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
+                                        <h3 className="text-white font-bold text-sm">Notificari ({notifications.length})</h3>
+                                        <button onClick={() => setShowNotifDropdown(false)} className="text-gray-500 hover:text-white">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="overflow-y-auto max-h-[55vh] divide-y divide-white/[0.04]">
+                                        {notifications.length === 0 && (
+                                            <div className="p-6 text-center text-gray-500 text-sm">Nicio notificare</div>
+                                        )}
+                                        {notifications.map((n, i) => (
+                                            <button key={i} onClick={() => { setTab(n.action_url); setShowNotifDropdown(false); }}
+                                                className="w-full text-left p-3 hover:bg-white/[0.03] transition-colors flex items-start gap-3">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                                                    n.type === 'withdrawal' ? 'bg-orange-500/15' :
+                                                    n.type === 'subscription' ? 'bg-violet-500/15' :
+                                                    n.type === 'competition_alert' ? 'bg-red-500/15' :
+                                                    n.type === 'chat' ? 'bg-blue-500/15' :
+                                                    'bg-emerald-500/15'
+                                                }`}>
+                                                    {n.type === 'withdrawal' && <DollarSign className="w-4 h-4 text-orange-400" />}
+                                                    {n.type === 'subscription' && <Crown className="w-4 h-4 text-violet-400" />}
+                                                    {n.type === 'competition_alert' && <Flame className="w-4 h-4 text-red-400" />}
+                                                    {n.type === 'chat' && <MessageCircle className="w-4 h-4 text-blue-400" />}
+                                                    {n.type === 'new_user' && <User className="w-4 h-4 text-emerald-400" />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-xs font-semibold text-white truncate">{n.title}</p>
+                                                        {n.priority === 'high' && <span className="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0" />}
+                                                    </div>
+                                                    <p className="text-[11px] text-gray-400 truncate">{n.message}</p>
+                                                    <p className="text-[10px] text-gray-600 mt-0.5">
+                                                        {(() => { try { const d = new Date(n.created_at); const diff = Date.now() - d.getTime(); if (diff < 3600000) return `${Math.round(diff/60000)}m`; if (diff < 86400000) return `${Math.round(diff/3600000)}h`; return d.toLocaleDateString('ro-RO', {day:'2-digit',month:'short'}); } catch { return ''; }})()}
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>
