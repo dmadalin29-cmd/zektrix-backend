@@ -48,9 +48,12 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - **VERIFIED: Live Chat E2E** - All working
 - **NEW: Push notifications for all users** - Chat replies, winner draws, competition alerts
 - **NEW: Image upload for competitions** - Admin can upload images directly (not just URLs)
+- **NEW: Multi-image gallery** - Multiple images per competition with thumbnail gallery
 - **NEW: Personalized milestone emails** - Automated at 70%/80%/90% for participants
+- **NEW: Featured Competition (Ofertă Recomandată)** - Admin can select which competition appears as featured on homepage
 - **MODERNIZED: Daily digest emails** - Premium design, realistic prize calculation (price×tickets), competition images
 - **REFACTORED: server.py** - Extracted models.py, email_service.py, push_service.py (-540 lines)
+- **FIXED: Admin Settings crash (March 20)** - `competitions` → `comps` variable reference in Settings tab
 - Social sharing already existed (WhatsApp, Facebook, Twitter, Copy Link)
 - Terms & Conditions page already complete
 
