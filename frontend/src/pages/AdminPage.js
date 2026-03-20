@@ -1531,7 +1531,7 @@ const AdminPage = () => {
                                         fd.append('file', file);
                                         try {
                                             toast.loading('Se încarcă imaginea...', { id: 'img-upload' });
-                                            const res = await api.post('/upload/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                            const res = await axios.post(`${API}/upload/image`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } });
                                             setCompForm(p => ({...p, image_url: res.data.url}));
                                             toast.success('Imagine încărcată!', { id: 'img-upload' });
                                         } catch(err) { toast.error('Eroare la upload: ' + (err.response?.data?.detail || err.message), { id: 'img-upload' }); }
