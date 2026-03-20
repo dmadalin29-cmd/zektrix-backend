@@ -4,29 +4,46 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 
 # Import models from separate module
-from models import (
-    UserCreate, UserLogin, UserResponse, QualificationQuestion, PostalEntry,
-    CompetitionCreate, CompetitionUpdate, CompetitionResponse,
-    TicketPurchase, CartItem, CartPurchase, TicketResponse,
-    WalletDeposit, TransactionResponse, WinnerCreate, WinnerResponse,
-    AdminUserUpdate, TicketSearchResult, ReferralCreate, ReferralResponse,
-    AnalyticsResponse, PushSubscription, NotificationPreferences,
-    SpinResult, FlashSaleCreate, ChatMessage, PasswordResetRequest,
-    PasswordResetConfirm, ProfileUpdate, ChatReplyModel
-)
-
-# Import email service
-from email_service import (
-    send_winner_notification_email, send_welcome_email,
-    send_password_reset_email, send_competition_75_percent_email
-)
-
-# Import push service
-from push_service import (
-    send_web_push, notify_user_push as _notify_user_push,
-    notify_competition_participants_push as _notify_comp_push,
-    notify_admins_push as _notify_admins_push
-)
+try:
+    from models import (
+        UserCreate, UserLogin, UserResponse, QualificationQuestion, PostalEntry,
+        CompetitionCreate, CompetitionUpdate, CompetitionResponse,
+        TicketPurchase, CartItem, CartPurchase, TicketResponse,
+        WalletDeposit, TransactionResponse, WinnerCreate, WinnerResponse,
+        AdminUserUpdate, TicketSearchResult, ReferralCreate, ReferralResponse,
+        AnalyticsResponse, PushSubscription, NotificationPreferences,
+        SpinResult, FlashSaleCreate, ChatMessage, PasswordResetRequest,
+        PasswordResetConfirm, ProfileUpdate, ChatReplyModel
+    )
+    from email_service import (
+        send_winner_notification_email, send_welcome_email,
+        send_password_reset_email, send_competition_75_percent_email
+    )
+    from push_service import (
+        send_web_push, notify_user_push as _notify_user_push,
+        notify_competition_participants_push as _notify_comp_push,
+        notify_admins_push as _notify_admins_push
+    )
+except ImportError:
+    from backend.models import (
+        UserCreate, UserLogin, UserResponse, QualificationQuestion, PostalEntry,
+        CompetitionCreate, CompetitionUpdate, CompetitionResponse,
+        TicketPurchase, CartItem, CartPurchase, TicketResponse,
+        WalletDeposit, TransactionResponse, WinnerCreate, WinnerResponse,
+        AdminUserUpdate, TicketSearchResult, ReferralCreate, ReferralResponse,
+        AnalyticsResponse, PushSubscription, NotificationPreferences,
+        SpinResult, FlashSaleCreate, ChatMessage, PasswordResetRequest,
+        PasswordResetConfirm, ProfileUpdate, ChatReplyModel
+    )
+    from backend.email_service import (
+        send_winner_notification_email, send_welcome_email,
+        send_password_reset_email, send_competition_75_percent_email
+    )
+    from backend.push_service import (
+        send_web_push, notify_user_push as _notify_user_push,
+        notify_competition_participants_push as _notify_comp_push,
+        notify_admins_push as _notify_admins_push
+    )
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
