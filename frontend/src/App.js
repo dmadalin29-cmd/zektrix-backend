@@ -163,11 +163,7 @@ const AppRouter = () => {
                 />
                 <Route
                     path="/referral"
-                    element={
-                        <ProtectedRoute>
-                            <ReferralPage />
-                        </ProtectedRoute>
-                    }
+                    element={<ReferralPage />}
                 />
 
                 {/* Admin Routes */}

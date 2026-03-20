@@ -1,125 +1,32 @@
-<analysis>**original_problem_statement**: The user requested a series of critical fixes and enhancements: resolving the production  preview URL error, fixing a recurring VAPID 403 error for push notifications, verifying live chat end-to-end, adding push notifications for all normal users, modernizing daily automated emails (with realistic prize calculations and clickable images), enabling direct file upload for competition images (with multi-image gallery support), and making the Featured Competition (Ofertă Recomandată) on the homepage customizable from the Admin Panel. Add PRODUCT REQUIREMENTS also.
+<analysis>**original_problem_statement**: Initial focus was fixing the Featured Competition and Admin Panel bugs. The user subsequently requested a massive suite of features: a full Wallet System, a Subscription System for auto-tickets, a complete site-wide UI/UX modernization (Apple-style mesh gradients), a fix for fake Admin Analytics data, making the Admin Notification Bell functional, and finally, a Premium Referral System. PRODUCT REQUIREMENTS: Modern competition platform with Viva Payments, real-time admin notifications, wallet management, recurring auto-subscriptions, and a referral program.
 
-**User's preferred language**: Romanian (You MUST respond in Romanian only).
+**User's preferred language**: Romanian (You MUST INSTRUCT the next agent to respond in Romanian only).
 
-**what currently exists?**: A full-stack competition platform built with FastAPI, React, and MongoDB. It features user authentication, a ticket purchasing system (Viva Payments), an AI-powered live chat (Gemini Flash), an admin dashboard, automated marketing emails, push notifications, and a multi-image upload system for competitions. The backend is deployed on Railway, and the frontend on Hostinger.
+**what currently exists?** A fully functional full-stack competition platform (FastAPI, React, MongoDB) with a recently modernized UI (glassmorphism + mesh gradients). It features Viva Payments, push notifications, AI Chat, multi-image uploads, a wallet system, subscription system, and admin real-time bell notifications.
 
 **Last working item**:
-    - Last item agent was working: Implementing the customizable Ofertă Recomandată (Featured Competition) for the homepage. The agent created the backend endpoints, updated the  to fetch and display the selected competition instead of a hardcoded one, and added a dropdown selector in the Admin Panel settings.
+    - Last item agent was working: Implementing the Premium Referral System (£3 for referrer, £2 for referred on first purchase). The agent added backend endpoints, updated , and *just* completely overwrote  with the new design and logic.
     - Status: IN PROGRESS
-    - Agent Testing Done: Y (Manually tested the API via bash script successfully).
-    - Which testing method agent to use? Screenshot tool for frontend UI verification after deployment.
+    - Agent Testing Done: N (Backend curl tests passed, but the newly rewritten frontend  has not been tested or screenshotted yet).
+    - Which testing method agent to use? Screenshot tool (to verify UI rendering of ) followed by manual testing/curl or testing subagent for flow.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Finalize & Deploy Featured Competition Feature (P0)
-     - Attempted fixes: The code is fully implemented and API tested locally. It needs to be committed, pushed to GitHub, deployed to production, and verified by the user.
-     - Next debug checklist: [main 0638493] feat: customizable featured competition
- 4 files changed, 84 insertions(+), 6 deletions(-), wait for Railway deploy, run ============================================
+  Issue 1: Test & Deploy Premium Referral System (P0)
+     - Attempted fixes: Agent finished writing the code for  but the job ended before verifying if the page renders correctly, if code customization works, and if the leaderboard populates properly.
+     - Next debug checklist: Check screenshot of  page. Test generating a referral link, updating the referral code, and ensuring UI looks aligned with the new modern design guidelines. Commit, push, and run ============================================
    DEPLOY PRODUCTION - zektrix.uk
 ============================================
 
 [1/5] Pushing to GitHub...
-[main b52ae0a] Production deploy 20260320-204815
- 8 files changed, 8 insertions(+), 8 deletions(-)
+[main d907642] Production deploy 20260320-224333
+ 12 files changed, 609 insertions(+), 338 deletions(-)
 To https://github.com/dmadalin29-cmd/zektrix-backend.git
-   9eba3d5..b52ae0a  main -> main
+   4ea4ff2..d907642  main -> main
 
 [2/5] Building frontend...
 
-Done in 22.24s.
-
-[3/5] Verifying...
-Build verified: production URL only
-
-[4/5] Deploying to Hostinger...
-
-[5/5] Verifying live...
-LIVE VERIFIED: production URL only
-
-============================================
-   DEPLOY COMPLETE
-   Backend: GitHub -> Railway
-   Frontend: Hostinger (zektrix.uk)
-============================================, ask the user to assign a competition in Admin -> Settings and verify it appears on the homepage.
-     - Why fix this issue and what will be achieved with the fix? It gives the admin direct control over the main promotional banner on the homepage.
-     - Status: TESTING PENDING / USER VERIFICATION PENDING
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Frontend (Screenshot Tool)
-
-**In progress Task List**: None
-
-**Upcoming and Future Tasks**
-    Upcoming Tasks:
-    - P1: Facebook Pixel integration.
-    - P2: Add Countdown Timer to competitions (Enhancement suggested by agent).
-    Future Tasks:
-    - P2: IDEE BOMBA feature set (Bundle Deals, SMS Marketing, Leaderboard, Referral System).
-
-**Completed work in this session**
-- Fixed production  to prevent preview URL bleeding into the live build (DONE)
-- Fixed VAPID 403 Push Notification blocker by regenerating and syncing keys across environments (DONE)
-- E2E Verification of Live Chat (REST fallback, WebSocket, AI) (DONE)
-- Added push notification subscriptions for all users (alerts for chat, draws, 80% sold) (DONE)
-- Modernized automated emails with accurate prize calculation logic and clickable images (DONE)
-- Extracted , , and  from the monolithic  (DONE)
-- Added direct image upload functionality () using  (DONE)
-- Implemented multi-image arrays for competitions, displaying them in a frontend gallery (DONE)
-
-**Earlier issues found/mentioned but not fixed**
-   - None
-
-**Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: VAPID Key mismatch error.
-  - Recurrence count: 3+
-  - Status: RESOLVED (Keys regenerated, logic rewritten to derive public key at runtime dynamically, stale subscriptions cleared).
-
-**Code Architecture**
-
-
-**Key Technical Concepts**
-- Full-stack architecture with FastAPI backend and React frontend.
-- PyWebPush for browser notifications.
-- Axios for API calls with token authentication.
-- Multipart/form-data for file uploads directly to the backend filesystem.
-- Static file mounting via FastAPI for serving uploaded images.
-
-**key DB schema**
-  - : Added  array.
-  - : Added  to track the Ofertă Recomandată.
-
-**changes in tech stack**
-  - Added direct backend static file hosting for user-uploaded images ().
-
-**All files of reference**
-- : Main routing and business logic.
-- , , : Extracted modules from refactoring.
-- : Contains logic for image uploads and site settings.
-- : Contains logic for rendering the Featured Competition.
-- : Contains the multi-image gallery implementation.
-
-**Areas that need refactoring**:
--  is still quite large (~4600 lines) despite recent extraction. Future refactoring should focus on extracting API route groups (e.g., ).
-
-**key api endpoints**
-- : Direct file upload returning URL.
-- : Fetches the currently highlighted competition.
-- : Admin sets the featured competition.
-- : Subscribes any user to push notifications.
-
-**Critical Info for New Agent**
-- **Railway Deployment**: The backend auto-deploys from GitHub. Important: The import paths in  use a fallback pattern () to ensure compatibility between local execution and Railway's root-level Docker execution.
-- **Frontend Deployment**: **ALWAYS** use ============================================
-   DEPLOY PRODUCTION - zektrix.uk
-============================================
-
-[1/5] Pushing to GitHub...
-No changes
-Everything up-to-date
-
-[2/5] Building frontend...
-
-Done in 17.60s.
+Done in 24.43s.
 
 [3/5] Verifying...
 Build verified: production URL only
@@ -134,20 +41,80 @@ LIVE VERIFIED: production URL only
    Backend: GitHub -> Railway
    Frontend: Hostinger (zektrix.uk)
 ============================================.
-- The user expects proactive deployments ( + ============================================
+     - Why fix this issue and what will be achieved with the fix? Completes the user's requested top referral system to increase organic user acquisition.
+     - Status: TESTING PENDING
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Both (Frontend via screenshot, Backend via flow test).
+
+**In progress Task List**: None
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - P1: TikTok Pixel Integration (User explicitly stated they want this when they start running ads, postponed for now).
+    - P2: Add Countdown Timer to competitions.
+    Future Tasks:
+    - P2: Bundle Deals (Ticket packages with discounts).
+    - P2: SMS Marketing.
+    - P2: Refactor  to extract routes.
+
+**Completed work in this session**
+- Fixed Admin Panel Settings Crash () (DONE)
+- Implemented Wallet System (deposits, balance, webhook integrations, admin management) (DONE)
+- Implemented Subscriptions System (£25/£50/£100 monthly tiers for auto-ticket allocation) (DONE)
+- Global UI/UX Redesign (Framer Motion, Apple-style mesh gradients, Glassmorphism, Outfit font) (DONE)
+- Fixed Admin Analytics (Switched hardcoded/fake metrics to real MongoDB aggregation data) (DONE)
+- Admin Notification Bell (Functional dropdown with real-time alerts for subscriptions/withdrawals) (DONE)
+
+**Earlier issues found/mentioned but not fixed**
+   - None
+
+**Known issue recurrence from previous fork**
+  - None
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- Full-stack architecture with FastAPI backend and React frontend.
+- Framer Motion for animations ( and  recently added).
+- Custom Apple-style animated CSS mesh gradients via .
+- Background tasks (Auto-Bot) via  for distributing subscription tickets.
+
+**key DB schema**
+  - : , ,  (pending/completed).
+  - : , , , .
+  - : Track wallet deposits, ticket purchases, referral bonuses.
+
+**changes in tech stack**
+  - Added  and  for modern UI interactions.
+
+**All files of reference**
+- : Just completely rewritten, requires immediate UI verification.
+- : Contains new endpoints for referrals (, , , ).
+- : Strict design system established in this session.
+- : Contains the global CSS variables and mesh gradient logic.
+
+**Areas that need refactoring**:
+-  has grown massive (>5600 lines) and urgently needs to be refactored into modular routes ().
+
+**key api endpoints**
+- : Fetch user's referral stats.
+- : Allows user to set a custom referral code.
+- : Fetches pending unread alerts for admin bell.
+- : Initiates Viva payments wallet top-up.
+
+**Critical Info for New Agent**
+- **Deployment**: ALWAYS use ============================================
    DEPLOY PRODUCTION - zektrix.uk
 ============================================
 
 [1/5] Pushing to GitHub...
-[main eed6a23] Production deploy 20260320-204917
- 2 files changed, 2 insertions(+), 4 deletions(-)
- delete mode 100644 frontend/.env.dev.bak
-To https://github.com/dmadalin29-cmd/zektrix-backend.git
-   b52ae0a..eed6a23  main -> main
+No changes
+Everything up-to-date
 
 [2/5] Building frontend...
 
-Done in 16.91s.
+Done in 17.75s.
 
 [3/5] Verifying...
 Build verified: production URL only
@@ -161,17 +128,22 @@ LIVE VERIFIED: production URL only
    DEPLOY COMPLETE
    Backend: GitHub -> Railway
    Frontend: Hostinger (zektrix.uk)
-============================================) whenever features are verified locally.
+============================================ to push and deploy frontend/backend updates. The user expects deployments after every major feature.
+- **Design Rule**: The site now uses a global mesh gradient. Avoid applying hardcoded background colors (like ) to main wrappers so the gradient remains visible. Use  for cards.
 
 **documents and test reports created in this job**
 - 
-- 
+-  (Wallet testing)
+-  (Subscription testing)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1. User: nu merge sa uploadez poze... (Agent debugged, fixed an undefined  axios instance, and verified via Testing Agent).
-2. User: merge, dar vreau sa pot incarca m-ai multe poze la o competitie... (Agent implemented multi-image arrays and gallery).
-3. User: functioneaza
-4. User: auzi vezi unde este mercedesul gle pe prima pagina... acolo as vrea sa fie... Oferta Recomandata si eu in panoul admin sa pot alege ce competitie sa adaug... (Agent implemented logic, tested locally, pending deploy).
+1. User: requested Analytics page to show real data, not fake hardcoded data. (Agent fixed & deployed).
+2. User: asked why the bell icon in Admin panel top right doesn't work.
+3. Agent: offered to make it functional with real notifications.
+4. User: da fal functional (Make it functional). Agent implemented, tested, and deployed.
+5. User: haide sa imbunatatim adica sa il facem de top referral system (Let's improve to a top referral system).
+6. Agent: asked questions on reward amounts and conditions.
+7. User: cum crezi tu, la prima achizitie, da (Whatever you think is best, on first purchase, yes). Agent began implementation, rewriting backend and overwriting  (session ended here).
 
 **Project Health Check:**
 - Broken: None.
@@ -180,9 +152,8 @@ LIVE VERIFIED: production URL only
 **3rd Party Integrations**
 - Viva Payments (Payments) — requires User API Key
 - Emergent-managed Google Auth (Auth)
-- Gemini Flash 2.5 (AI Chat) — uses Emergent LLM Key
+- Gemini Flash (AI Chat) — uses Emergent LLM Key
 - pywebpush (Notifications)
-- Resend (Emails) — requires User API Key
 
 **Testing status**
   - Testing agent used after significant changes: YES
@@ -194,18 +165,20 @@ LIVE VERIFIED: production URL only
 - Admin:  / 
 
 **What agent forgot to execute**
-- The agent finished writing and locally testing the Featured Competition update for  and , but the job ended before running On branch main
-nothing to commit, working tree clean, , and ============================================
+- The agent successfully overwrote the  file with the newly styled referral system, but the session ended before taking a screenshot, confirming the UI renders without crash, and executing the production deployment script (============================================
    DEPLOY PRODUCTION - zektrix.uk
 ============================================
 
 [1/5] Pushing to GitHub...
-No changes
-Everything up-to-date
+[main 67ac1a5] Production deploy 20260320-224441
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+ delete mode 100644 frontend/.env.dev.bak
+To https://github.com/dmadalin29-cmd/zektrix-backend.git
+   d907642..67ac1a5  main -> main
 
 [2/5] Building frontend...
 
-Done in 16.73s.
+Done in 17.32s.
 
 [3/5] Verifying...
 Build verified: production URL only
@@ -219,4 +192,4 @@ LIVE VERIFIED: production URL only
    DEPLOY COMPLETE
    Backend: GitHub -> Railway
    Frontend: Hostinger (zektrix.uk)
-============================================ to get it live for the user.</analysis>
+============================================).</analysis>

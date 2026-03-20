@@ -109,15 +109,15 @@ export default function ReferralPage() {
                         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                             className="grid grid-cols-3 gap-4">
                             {[
-                                { icon: Users, label: isRomanian ? 'Invitati' : 'Invited', value: referralData?.total_invited || 0, color: 'violet' },
-                                { icon: CheckCircle2, label: isRomanian ? 'Finalizati' : 'Completed', value: referralData?.total_completed || 0, color: 'emerald' },
-                                { icon: Sparkles, label: isRomanian ? 'Castigat' : 'Earned', value: `£${(referralData?.total_earnings || 0).toFixed(2)}`, color: 'amber' },
+                                { icon: Users, label: isRomanian ? 'Invitati' : 'Invited', value: referralData?.total_invited || 0, iconClass: 'text-violet-400', valueClass: 'text-white' },
+                                { icon: CheckCircle2, label: isRomanian ? 'Finalizati' : 'Completed', value: referralData?.total_completed || 0, iconClass: 'text-emerald-400', valueClass: 'text-emerald-400' },
+                                { icon: Sparkles, label: isRomanian ? 'Castigat' : 'Earned', value: `£${(referralData?.total_earnings || 0).toFixed(2)}`, iconClass: 'text-amber-400', valueClass: 'text-amber-400' },
                             ].map((s, i) => {
                                 const Icon = s.icon;
                                 return (
                                     <div key={i} className="p-5 rounded-2xl text-center bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] hover:border-white/[0.12] transition-all">
-                                        <Icon className={`w-6 h-6 text-${s.color}-400 mx-auto mb-2`} />
-                                        <p className={`text-2xl font-black ${s.color === 'emerald' ? 'text-emerald-400' : s.color === 'amber' ? 'text-amber-400' : 'text-white'}`}>{s.value}</p>
+                                        <Icon className={`w-6 h-6 ${s.iconClass} mx-auto mb-2`} />
+                                        <p className={`text-2xl font-black ${s.valueClass}`}>{s.value}</p>
                                         <p className="text-xs text-[#6E6987] mt-1">{s.label}</p>
                                     </div>
                                 );
