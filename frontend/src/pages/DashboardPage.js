@@ -13,7 +13,8 @@ import {
 import { 
     Ticket, History, ArrowRight, Loader2, Trophy, 
     ArrowUpRight, Gift, 
-    ChevronRight, Activity, User, Save, Edit3, Bell
+    ChevronRight, Activity, User, Save, Edit3, Bell,
+    Copy, Share2, Users, Crown, CheckCircle2, Clock, Sparkles, RefreshCw
 } from 'lucide-react';
 import { Input } from '../components/ui/input';
 
@@ -602,40 +603,231 @@ const DashboardPage = () => {
                         )}
 
                         {/* Referral Tab */}
-                        {activeTab === 'referral' && (
-                            <div className="rounded-2xl p-8 text-center"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
-                                    border: '1px solid rgba(139, 92, 246, 0.15)'
-                                }}>
-                                <div className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center"
-                                    style={{ background: 'linear-gradient(135deg, #8b5cf6, #f97316)', boxShadow: '0 0 30px rgba(139, 92, 246, 0.4)' }}>
-                                    <Gift className="w-10 h-10 text-white" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-white mb-2">{isRomanian ? 'Program Referral' : 'Referral Program'}</h3>
-                                <p className="text-gray-400 mb-6 max-w-md mx-auto">
-                                    {isRomanian 
-                                        ? 'Invită prietenii și primești bonusuri pentru fiecare care se înregistrează!' 
-                                        : 'Invite friends and get bonuses for each one who signs up!'}
-                                </p>
-                                <div className="p-4 rounded-xl bg-white/5 mb-6 max-w-md mx-auto">
-                                    <p className="text-xs text-gray-500 mb-2">{isRomanian ? 'Codul Tău de Referral' : 'Your Referral Code'}</p>
-                                    <p className="text-2xl font-mono font-bold text-violet-400">{user?.referral_code || 'ZEKTRIX' + (user?.user_id?.slice(-4) || '0000')}</p>
-                                </div>
-                                <Button className="bg-violet-600 hover:bg-violet-500" onClick={() => {
-                                    navigator.clipboard.writeText(`https://zektrix.uk?ref=${user?.referral_code || 'ZEKTRIX'}`);
-                                    toast.success(isRomanian ? 'Link copiat!' : 'Link copied!');
-                                }}>
-                                    {isRomanian ? 'Copiază Link Referral' : 'Copy Referral Link'}
-                                </Button>
-                            </div>
-                        )}
+                        {activeTab === 'referral' && <ReferralTab user={user} token={token} isRomanian={isRomanian} />}
 
                         {/* Account Tab */}
                         {activeTab === 'account' && <AccountTab user={user} token={token} refreshUser={refreshUser} isRomanian={isRomanian} />}
                     </div>
                 </div>
             </main>
+        </div>
+    );
+};
+
+const ReferralTab = ({ user, token, isRomanian }) => {
+    const [referralData, setReferralData] = React.useState(null);
+    const [leaderboard, setLeaderboard] = React.useState([]);
+    const [customCode, setCustomCode] = React.useState('');
+    const [editingCode, setEditingCode] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
+    const [loading, setLoading] = React.useState(true);
+    const headers = { Authorization: `Bearer ${token}` };
+
+    React.useEffect(() => {
+        if (!token) return;
+        setLoading(true);
+        Promise.all([
+            axios.get(`${API}/referral/my`, { headers }),
+            axios.get(`${API}/referral/leaderboard`)
+        ]).then(([refRes, lbRes]) => {
+            setReferralData(refRes.data);
+            setCustomCode(refRes.data.referral_code || '');
+            setLeaderboard(lbRes.data || []);
+        }).catch(() => {}).finally(() => setLoading(false));
+    }, [token]);
+
+    const handleCustomize = async () => {
+        if (!customCode.trim()) return;
+        setSaving(true);
+        try {
+            const { data } = await axios.post(`${API}/referral/customize`, { code: customCode }, { headers });
+            setReferralData(p => ({ ...p, referral_code: data.referral_code, referral_link: data.referral_link }));
+            setEditingCode(false);
+            toast.success(isRomanian ? 'Cod actualizat!' : 'Code updated!');
+        } catch (e) {
+            toast.error(e.response?.data?.detail || 'Error');
+        }
+        setSaving(false);
+    };
+
+    const copyLink = () => {
+        navigator.clipboard.writeText(referralData?.referral_link || `https://zektrix.uk?ref=${user?.referral_code}`);
+        toast.success(isRomanian ? 'Link copiat!' : 'Link copied!');
+    };
+
+    const shareWhatsApp = () => {
+        const text = isRomanian
+            ? `Hai pe Zektrix UK! Castiga premii incredibile. Foloseste codul meu ${referralData?.referral_code} si primesti £2 bonus! ${referralData?.referral_link}`
+            : `Join Zektrix UK! Win amazing prizes. Use my code ${referralData?.referral_code} and get £2 bonus! ${referralData?.referral_link}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    };
+
+    if (loading) return <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>;
+
+    return (
+        <div className="space-y-5" data-testid="referral-tab">
+            {/* Hero Card */}
+            <div className="relative overflow-hidden rounded-3xl p-6" style={{
+                background: 'linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(249,115,22,0.08) 50%, rgba(139,92,246,0.06) 100%)',
+                border: '1px solid rgba(139,92,246,0.2)'
+            }}>
+                <div className="absolute top-0 right-0 w-48 h-48 bg-violet-500/5 rounded-full blur-3xl" />
+                <div className="relative">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#8B3DFF] to-[#FF5E00] flex items-center justify-center shadow-[0_0_20px_rgba(139,61,255,0.3)]">
+                            <Gift className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black text-white tracking-tight">{isRomanian ? 'Invita Prieteni' : 'Invite Friends'}</h2>
+                            <p className="text-sm text-[#A39EBD]">{isRomanian ? 'Tu primesti £3, prietenul £2' : 'You get £3, friend gets £2'}</p>
+                        </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-3 gap-3 mb-5">
+                        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-center">
+                            <Users className="w-4 h-4 text-violet-400 mx-auto mb-1" />
+                            <p className="text-lg font-bold text-white">{referralData?.total_invited || 0}</p>
+                            <p className="text-[10px] text-[#6E6987]">{isRomanian ? 'Invitati' : 'Invited'}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-center">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
+                            <p className="text-lg font-bold text-emerald-400">{referralData?.total_completed || 0}</p>
+                            <p className="text-[10px] text-[#6E6987]">{isRomanian ? 'Finalizati' : 'Completed'}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-center">
+                            <Sparkles className="w-4 h-4 text-amber-400 mx-auto mb-1" />
+                            <p className="text-lg font-bold text-amber-400">£{(referralData?.total_earnings || 0).toFixed(2)}</p>
+                            <p className="text-[10px] text-[#6E6987]">{isRomanian ? 'Castigat' : 'Earned'}</p>
+                        </div>
+                    </div>
+
+                    {/* Referral Code */}
+                    <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/[0.06] mb-4">
+                        <p className="text-xs text-[#6E6987] mb-2">{isRomanian ? 'Codul Tau de Referral' : 'Your Referral Code'}</p>
+                        {editingCode ? (
+                            <div className="flex gap-2">
+                                <Input value={customCode} onChange={e => setCustomCode(e.target.value.toUpperCase())}
+                                    className="bg-white/[0.06] border-white/[0.1] text-white font-mono text-lg h-10 uppercase" maxLength={15}
+                                    placeholder="CODTAU" data-testid="custom-code-input" />
+                                <Button onClick={handleCustomize} disabled={saving} size="sm"
+                                    className="bg-[#8B3DFF] hover:bg-[#A666FF] text-white" data-testid="save-code-btn">
+                                    {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                </Button>
+                                <Button onClick={() => setEditingCode(false)} size="sm" variant="ghost" className="text-gray-400">
+                                    <span className="text-xs">{isRomanian ? 'Anuleaza' : 'Cancel'}</span>
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between">
+                                <span className="text-2xl font-mono font-black text-[#A666FF] tracking-wider" data-testid="referral-code-display">
+                                    {referralData?.referral_code || 'ZEKTRIX'}
+                                </span>
+                                <Button onClick={() => setEditingCode(true)} variant="ghost" size="sm" className="text-[#6E6987] hover:text-white gap-1" data-testid="edit-code-btn">
+                                    <Edit3 className="w-3.5 h-3.5" /> {isRomanian ? 'Personalizeaza' : 'Customize'}
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Share Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button onClick={copyLink} className="bg-[#8B3DFF] hover:bg-[#A666FF] text-white rounded-xl gap-2 h-11" data-testid="copy-ref-link">
+                            <Copy className="w-4 h-4" /> {isRomanian ? 'Copiaza Link' : 'Copy Link'}
+                        </Button>
+                        <Button onClick={shareWhatsApp} className="bg-[#25D366] hover:bg-[#22c55e] text-white rounded-xl gap-2 h-11" data-testid="share-whatsapp">
+                            <Share2 className="w-4 h-4" /> WhatsApp
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            {/* How it works */}
+            <div className="rounded-2xl p-5" style={{
+                background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))',
+                border: '1px solid rgba(139,92,246,0.1)'
+            }}>
+                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#A666FF]" /> {isRomanian ? 'Cum Functioneaza' : 'How It Works'}
+                </h3>
+                <div className="space-y-3">
+                    {[
+                        { step: '1', text: isRomanian ? 'Trimite link-ul tau de referral prietenilor' : 'Send your referral link to friends', icon: Share2 },
+                        { step: '2', text: isRomanian ? 'Prietenul se inregistreaza cu codul tau' : 'Friend signs up with your code', icon: User },
+                        { step: '3', text: isRomanian ? 'Cand prietenul cumpara primul bilet, amandoi primiti credit!' : 'When friend buys first ticket, both get credit!', icon: Gift },
+                    ].map((s, i) => {
+                        const Icon = s.icon;
+                        return (
+                            <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02]">
+                                <div className="w-8 h-8 rounded-lg bg-[#8B3DFF]/15 flex items-center justify-center shrink-0">
+                                    <Icon className="w-4 h-4 text-[#A666FF]" />
+                                </div>
+                                <p className="text-sm text-[#A39EBD]"><span className="text-white font-semibold">{s.step}.</span> {s.text}</p>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Invited Friends List */}
+            {referralData?.invited_list?.length > 0 && (
+                <div className="rounded-2xl overflow-hidden" style={{
+                    background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))',
+                    border: '1px solid rgba(139,92,246,0.1)'
+                }}>
+                    <div className="p-4 border-b border-white/[0.06]">
+                        <h3 className="text-sm font-bold text-white">{isRomanian ? 'Prieteni Invitati' : 'Invited Friends'}</h3>
+                    </div>
+                    <div className="divide-y divide-white/[0.04]">
+                        {referralData.invited_list.map((f, i) => (
+                            <div key={i} className="flex items-center gap-3 p-3">
+                                <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center">
+                                    <User className="w-4 h-4 text-gray-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-white truncate">{f.username}</p>
+                                    <p className="text-[10px] text-[#6E6987]">{new Date(f.created_at).toLocaleDateString('ro-RO')}</p>
+                                </div>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                    f.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                                }`}>
+                                    {f.status === 'completed' ? (isRomanian ? 'Finalizat' : 'Completed') : (isRomanian ? 'In asteptare' : 'Pending')}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Leaderboard */}
+            {leaderboard.length > 0 && (
+                <div className="rounded-2xl overflow-hidden" style={{
+                    background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))',
+                    border: '1px solid rgba(139,92,246,0.1)'
+                }}>
+                    <div className="p-4 border-b border-white/[0.06]">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                            <Crown className="w-4 h-4 text-amber-400" /> {isRomanian ? 'Top Invitatii' : 'Top Referrers'}
+                        </h3>
+                    </div>
+                    <div className="divide-y divide-white/[0.04]">
+                        {leaderboard.slice(0, 10).map((entry, i) => (
+                            <div key={i} className="flex items-center gap-3 p-3">
+                                <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                    i === 0 ? 'bg-amber-500/20 text-amber-400' :
+                                    i === 1 ? 'bg-gray-400/20 text-gray-300' :
+                                    i === 2 ? 'bg-orange-500/20 text-orange-400' :
+                                    'bg-white/[0.04] text-[#6E6987]'
+                                }`}>{entry.rank}</span>
+                                <div className="flex-1">
+                                    <p className="text-sm text-white font-medium">{entry.username}</p>
+                                </div>
+                                <span className="text-sm font-bold text-[#A666FF]">{entry.referrals} {isRomanian ? 'ref' : 'refs'}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

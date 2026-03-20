@@ -17,7 +17,7 @@ import time
 import os
 
 # Use preview URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://dynamic-promo-2.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://invite-network-1.preview.emergentagent.com').rstrip('/')
 
 class TestChatAndPushFixes:
     """Test chat and push notification fixes"""

@@ -701,27 +701,37 @@ async def purchase_tickets(purchase: TicketPurchase, current_user: dict = Depend
             {"referral_id": pending_referral["referral_id"]},
             {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
         )
-        # Give bonus to both users
+        # Give bonus to both users (£3 referrer, £2 referred)
         await db.users.update_one(
             {"user_id": pending_referral["referrer_id"]},
-            {"$inc": {"balance": 5.0}}
+            {"$inc": {"balance": 3.0}}
         )
         await db.users.update_one(
             {"user_id": current_user["user_id"]},
-            {"$inc": {"balance": 5.0}}
+            {"$inc": {"balance": 2.0}}
         )
         # Record bonus transactions
-        for uid, desc in [(pending_referral["referrer_id"], "Referral bonus - friend made first purchase"), 
-                          (current_user["user_id"], "Welcome bonus - first purchase with referral")]:
+        for uid, amount, desc in [
+            (pending_referral["referrer_id"], 3.0, f"Referral bonus - {current_user.get('username', 'prieten')} a cumparat primul bilet"),
+            (current_user["user_id"], 2.0, "Bonus bun venit - prima achizitie cu cod referral")
+        ]:
             await db.transactions.insert_one({
                 "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
                 "user_id": uid,
                 "transaction_type": "referral_bonus",
-                "amount": 5.0,
+                "amount": amount,
                 "status": "completed",
                 "description": desc,
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
+        
+        # Notify referrer
+        asyncio.create_task(notify_user_push(
+            pending_referral["referrer_id"],
+            "Ai primit £3 bonus referral!",
+            f"Prietenul tau {current_user.get('username', '')} a cumparat primul bilet. £3 adaugati in wallet!",
+            "https://zektrix.uk/dashboard/referral"
+        ))
     
     # Broadcast ticket purchase via WebSocket
     await ws_manager.broadcast({
@@ -1194,6 +1204,120 @@ async def enter_free_competition(entry: FreeEntryRequest, current_user: dict = D
             "ticket_number": selected_number,
             "competition_title": comp["title"]
         }
+    }
+
+# ==================== REFERRAL SYSTEM ====================
+
+@api_router.get("/referral/my")
+async def get_my_referral(current_user: dict = Depends(get_current_user)):
+    """Get my referral stats and code"""
+    code = current_user.get("referral_code", "")
+    
+    referrals = await db.referrals.find(
+        {"referrer_id": current_user["user_id"]}, {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+    
+    total_invited = len(referrals)
+    completed = [r for r in referrals if r["status"] == "completed"]
+    pending = [r for r in referrals if r["status"] == "pending"]
+    
+    earnings_agg = await db.transactions.aggregate([
+        {"$match": {"user_id": current_user["user_id"], "transaction_type": "referral_bonus"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    total_earnings = earnings_agg[0]["total"] if earnings_agg else 0
+    
+    invited_list = []
+    for ref in referrals:
+        referred_user = await db.users.find_one(
+            {"user_id": ref["referred_id"]},
+            {"_id": 0, "username": 1, "created_at": 1}
+        )
+        invited_list.append({
+            "username": referred_user.get("username", "?") if referred_user else "?",
+            "status": ref["status"],
+            "created_at": ref["created_at"],
+            "completed_at": ref.get("completed_at"),
+        })
+    
+    return {
+        "referral_code": code,
+        "referral_link": f"https://zektrix.uk?ref={code}",
+        "total_invited": total_invited,
+        "total_completed": len(completed),
+        "total_pending": len(pending),
+        "total_earnings": total_earnings,
+        "invited_list": invited_list
+    }
+
+class CustomCodeRequest(BaseModel):
+    code: str
+
+@api_router.post("/referral/customize")
+async def customize_referral_code(req: CustomCodeRequest, current_user: dict = Depends(get_current_user)):
+    """Customize referral code"""
+    code = req.code.strip().upper().replace(" ", "")
+    if len(code) < 3 or len(code) > 15:
+        raise HTTPException(status_code=400, detail="Codul trebuie sa aiba intre 3 si 15 caractere")
+    if not code.isalnum():
+        raise HTTPException(status_code=400, detail="Codul poate contine doar litere si cifre")
+    existing = await db.users.find_one({"referral_code": code, "user_id": {"$ne": current_user["user_id"]}})
+    if existing:
+        raise HTTPException(status_code=400, detail="Acest cod este deja folosit de altcineva")
+    await db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {"referral_code": code}}
+    )
+    return {"referral_code": code, "referral_link": f"https://zektrix.uk?ref={code}"}
+
+@api_router.get("/referral/leaderboard")
+async def get_referral_leaderboard():
+    """Get top referrers leaderboard"""
+    pipeline = [
+        {"$match": {"status": "completed"}},
+        {"$group": {"_id": "$referrer_id", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 20}
+    ]
+    top = await db.referrals.aggregate(pipeline).to_list(20)
+    leaderboard = []
+    for i, entry in enumerate(top):
+        user = await db.users.find_one({"user_id": entry["_id"]}, {"_id": 0, "username": 1, "referral_code": 1})
+        if user:
+            leaderboard.append({
+                "rank": i + 1,
+                "username": user.get("username", "?"),
+                "referral_code": user.get("referral_code", ""),
+                "referrals": entry["count"]
+            })
+    return leaderboard
+
+@api_router.get("/admin/referral/stats")
+async def get_admin_referral_stats(admin: dict = Depends(get_admin_user)):
+    """Admin referral statistics"""
+    total = await db.referrals.count_documents({})
+    completed = await db.referrals.count_documents({"status": "completed"})
+    pending = await db.referrals.count_documents({"status": "pending"})
+    total_paid = await db.transactions.aggregate([
+        {"$match": {"transaction_type": "referral_bonus"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    top_referrers = await db.referrals.aggregate([
+        {"$match": {"status": "completed"}},
+        {"$group": {"_id": "$referrer_id", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 5}
+    ]).to_list(5)
+    top_list = []
+    for entry in top_referrers:
+        user = await db.users.find_one({"user_id": entry["_id"]}, {"_id": 0, "username": 1, "email": 1})
+        if user:
+            top_list.append({"username": user.get("username", user.get("email", "?")), "referrals": entry["count"]})
+    return {
+        "total_referrals": total, "completed": completed, "pending": pending,
+        "total_paid": total_paid[0]["total"] if total_paid else 0,
+        "conversion_rate": round((completed / total * 100), 1) if total > 0 else 0,
+        "top_referrers": top_list
     }
 
 @api_router.get("/wallet/balance")

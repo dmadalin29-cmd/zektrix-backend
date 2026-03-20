@@ -1,347 +1,302 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import axios from 'axios';
-import { Copy, Users, Gift, Share2, CheckCircle, Clock, Twitter, Facebook, MessageCircle, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import {
+    Gift, Copy, Share2, Users, CheckCircle2, Clock, Crown,
+    Sparkles, User, Save, Edit3, ArrowRight, Ticket, RefreshCw,
+    Trophy, Star, ChevronRight
+} from 'lucide-react';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const ReferralPage = () => {
-    const { user, token } = useAuth();
-    const { t, isRomanian } = useLanguage();
+export default function ReferralPage() {
+    const { user, token, isAuthenticated } = useAuth();
+    const { isRomanian } = useLanguage();
+    const headers = { Authorization: `Bearer ${token}` };
+
     const [referralData, setReferralData] = useState(null);
-    const [referrals, setReferrals] = useState([]);
+    const [leaderboard, setLeaderboard] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [applyCode, setApplyCode] = useState('');
-    const [applying, setApplying] = useState(false);
+    const [customCode, setCustomCode] = useState('');
+    const [editingCode, setEditingCode] = useState(false);
+    const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        if (token) {
-            fetchReferralData();
-        }
+    const fetchAll = useCallback(async () => {
+        if (!token) { setLoading(false); return; }
+        setLoading(true);
+        try {
+            const [refRes, lbRes] = await Promise.all([
+                axios.get(`${API}/referral/my`, { headers }),
+                axios.get(`${API}/referral/leaderboard`)
+            ]);
+            setReferralData(refRes.data);
+            setCustomCode(refRes.data.referral_code || '');
+            setLeaderboard(lbRes.data || []);
+        } catch (e) { console.error(e); }
+        setLoading(false);
     }, [token]);
 
-    const fetchReferralData = async () => {
+    useEffect(() => { fetchAll(); }, [fetchAll]);
+
+    const handleCustomize = async () => {
+        if (!customCode.trim()) return;
+        setSaving(true);
         try {
-            const [codeRes, referralsRes] = await Promise.all([
-                axios.get(`${API}/referral/my-code`, { headers: { Authorization: `Bearer ${token}` } }),
-                axios.get(`${API}/referral/my-referrals`, { headers: { Authorization: `Bearer ${token}` } })
-            ]);
-            setReferralData(codeRes.data);
-            setReferrals(referralsRes.data);
-        } catch (error) {
-            console.error('Failed to fetch referral data:', error);
-        } finally {
-            setLoading(false);
-        }
+            const { data } = await axios.post(`${API}/referral/customize`, { code: customCode }, { headers });
+            setReferralData(p => ({ ...p, referral_code: data.referral_code, referral_link: data.referral_link }));
+            setEditingCode(false);
+            toast.success(isRomanian ? 'Cod actualizat!' : 'Code updated!');
+        } catch (e) { toast.error(e.response?.data?.detail || 'Error'); }
+        setSaving(false);
     };
 
-    const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        toast.success(isRomanian ? 'Copiat în clipboard!' : 'Copied to clipboard!');
+    const copyLink = () => {
+        navigator.clipboard.writeText(referralData?.referral_link || `https://zektrix.uk?ref=${user?.referral_code}`);
+        toast.success(isRomanian ? 'Link copiat!' : 'Link copied!');
     };
 
-    const handleApplyCode = async () => {
-        if (!applyCode.trim()) {
-            toast.error(isRomanian ? 'Introdu un cod de referral' : 'Enter a referral code');
-            return;
-        }
-        setApplying(true);
-        try {
-            await axios.post(`${API}/referral/apply`, 
-                { referrer_code: applyCode },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            toast.success(isRomanian ? 'Cod aplicat cu succes!' : 'Code applied successfully!');
-            setApplyCode('');
-            fetchReferralData();
-        } catch (error) {
-            toast.error(error.response?.data?.detail || (isRomanian ? 'Cod invalid' : 'Invalid code'));
-        } finally {
-            setApplying(false);
-        }
-    };
-
-    const shareOnTwitter = () => {
-        const text = isRomanian 
-            ? `🎉 Înscrie-te la Zektrix UK și primești £5 bonus! Folosește codul meu: ${referralData?.referral_code}`
-            : `🎉 Join Zektrix UK and get £5 bonus! Use my code: ${referralData?.referral_code}`;
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(referralData?.referral_link)}`, '_blank');
-    };
-
-    const shareOnFacebook = () => {
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralData?.referral_link)}`, '_blank');
-    };
-
-    const shareOnWhatsApp = () => {
-        const text = isRomanian 
-            ? `🎉 Înscrie-te la Zektrix UK și primești £5 bonus! ${referralData?.referral_link} - Codul meu: ${referralData?.referral_code}`
-            : `🎉 Join Zektrix UK and get £5 bonus! ${referralData?.referral_link} - My code: ${referralData?.referral_code}`;
+    const shareWhatsApp = () => {
+        const text = isRomanian
+            ? `Hai pe Zektrix UK! Castiga premii incredibile. Foloseste codul meu ${referralData?.referral_code} si primesti £2 bonus! ${referralData?.referral_link}`
+            : `Join Zektrix UK! Win amazing prizes. Use my code ${referralData?.referral_code} and get £2 bonus! ${referralData?.referral_link}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-background">
-                <Navbar />
-                <main className="pt-24 pb-16 flex items-center justify-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </main>
+            <div className="min-h-screen"><Navbar />
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen" data-testid="referral-page">
             <Navbar />
-            
-            <main className="pt-24 pb-16">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Header */}
-                    <div className="text-center mb-12">
-                        <Badge className="mb-4 bg-secondary/20 text-secondary border-secondary/30">
-                            <Gift className="w-3 h-3 mr-1" /> {isRomanian ? 'Program Referral' : 'Referral Program'}
-                        </Badge>
-                        <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-4">
-                            {isRomanian ? 'Invită ' : 'Invite '} 
-                            <span className="gradient-text">{isRomanian ? 'Prieteni' : 'Friends'}</span>
-                            {isRomanian ? ' & Primește Bonus' : ' & Get Bonus'}
-                        </h1>
-                        <p className="text-muted-foreground max-w-xl mx-auto">
-                            {isRomanian 
-                                ? 'Primește £5 pentru fiecare prieten care se înregistrează și face prima achiziție. Prietenul tău primește și el £5!'
-                                : 'Get £5 for every friend who signs up and makes their first purchase. Your friend gets £5 too!'
-                            }
-                        </p>
+            <div className="max-w-4xl mx-auto px-4 pt-24 pb-20">
+                {/* Hero */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#8B3DFF]/10 border border-[#8B3DFF]/20 mb-4">
+                        <Gift className="w-4 h-4 text-[#A666FF]" />
+                        <span className="text-sm text-[#A666FF] font-medium">{isRomanian ? 'Program Referral' : 'Referral Program'}</span>
                     </div>
+                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4 tracking-tight">
+                        {isRomanian ? 'Invita ' : 'Invite '}
+                        <span className="bg-gradient-to-r from-[#A666FF] via-[#FF5E00] to-[#A666FF] bg-clip-text text-transparent">
+                            {isRomanian ? 'Prieteni' : 'Friends'}
+                        </span>
+                        {isRomanian ? ' & Castiga' : ' & Earn'}
+                    </h1>
+                    <p className="text-[#A39EBD] max-w-lg mx-auto text-base">
+                        {isRomanian
+                            ? 'Tu primesti £3 credit, prietenul tau primeste £2 cand face prima achizitie!'
+                            : 'You get £3 credit, your friend gets £2 when they make their first purchase!'}
+                    </p>
+                </motion.div>
 
-                    {/* Stats Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <Card className="glass border-white/10">
-                            <CardContent className="p-6 text-center">
-                                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
-                                    <Users className="w-6 h-6 text-primary" />
-                                </div>
-                                <p className="text-3xl font-bold">{referralData?.total_referrals || 0}</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {isRomanian ? 'Total Referrals' : 'Total Referrals'}
+                {isAuthenticated ? (
+                    <div className="space-y-6">
+                        {/* Stats */}
+                        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                            className="grid grid-cols-3 gap-4">
+                            {[
+                                { icon: Users, label: isRomanian ? 'Invitati' : 'Invited', value: referralData?.total_invited || 0, color: 'violet' },
+                                { icon: CheckCircle2, label: isRomanian ? 'Finalizati' : 'Completed', value: referralData?.total_completed || 0, color: 'emerald' },
+                                { icon: Sparkles, label: isRomanian ? 'Castigat' : 'Earned', value: `£${(referralData?.total_earnings || 0).toFixed(2)}`, color: 'amber' },
+                            ].map((s, i) => {
+                                const Icon = s.icon;
+                                return (
+                                    <div key={i} className="p-5 rounded-2xl text-center bg-white/[0.03] backdrop-blur-xl border border-white/[0.06] hover:border-white/[0.12] transition-all">
+                                        <Icon className={`w-6 h-6 text-${s.color}-400 mx-auto mb-2`} />
+                                        <p className={`text-2xl font-black ${s.color === 'emerald' ? 'text-emerald-400' : s.color === 'amber' ? 'text-amber-400' : 'text-white'}`}>{s.value}</p>
+                                        <p className="text-xs text-[#6E6987] mt-1">{s.label}</p>
+                                    </div>
+                                );
+                            })}
+                        </motion.div>
+
+                        {/* Referral Code Card */}
+                        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                            className="relative overflow-hidden rounded-3xl p-6" style={{
+                                background: 'linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(249,115,22,0.08) 50%, rgba(139,92,246,0.06) 100%)',
+                                border: '1px solid rgba(139,92,246,0.2)'
+                            }}>
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-violet-500/5 rounded-full blur-3xl" />
+                            <div className="relative">
+                                <p className="text-sm text-[#A39EBD] mb-2 flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-[#A666FF]" />
+                                    {isRomanian ? 'Codul Tau de Referral' : 'Your Referral Code'}
                                 </p>
-                            </CardContent>
-                        </Card>
-                        <Card className="glass border-white/10">
-                            <CardContent className="p-6 text-center">
-                                <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-3">
-                                    <CheckCircle className="w-6 h-6 text-secondary" />
+                                {editingCode ? (
+                                    <div className="flex gap-2 mb-4">
+                                        <Input value={customCode} onChange={e => setCustomCode(e.target.value.toUpperCase())}
+                                            className="bg-white/[0.06] border-white/[0.1] text-white font-mono text-xl h-12 uppercase tracking-widest"
+                                            maxLength={15} placeholder="CODTAU" data-testid="custom-code-input" />
+                                        <Button onClick={handleCustomize} disabled={saving}
+                                            className="bg-[#8B3DFF] hover:bg-[#A666FF] text-white h-12 px-5" data-testid="save-code-btn">
+                                            {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                                        </Button>
+                                        <Button onClick={() => { setEditingCode(false); setCustomCode(referralData?.referral_code || ''); }}
+                                            variant="ghost" className="text-gray-400 h-12">
+                                            {isRomanian ? 'Anuleaza' : 'Cancel'}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="text-3xl sm:text-4xl font-mono font-black text-[#A666FF] tracking-[0.15em]" data-testid="referral-code-display">
+                                            {referralData?.referral_code || 'ZEKTRIX'}
+                                        </span>
+                                        <Button onClick={() => setEditingCode(true)} variant="ghost" className="text-[#6E6987] hover:text-white gap-1.5" data-testid="edit-code-btn">
+                                            <Edit3 className="w-4 h-4" /> {isRomanian ? 'Personalizeaza' : 'Customize'}
+                                        </Button>
+                                    </div>
+                                )}
+
+                                <div className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.06] mb-4">
+                                    <p className="text-xs text-[#6E6987] mb-1">Link</p>
+                                    <p className="text-sm text-white font-mono truncate">{referralData?.referral_link}</p>
                                 </div>
-                                <p className="text-3xl font-bold">{referralData?.completed_referrals || 0}</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {isRomanian ? 'Completate' : 'Completed'}
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card className="glass border-secondary/30">
-                            <CardContent className="p-6 text-center">
-                                <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-3">
-                                    <Gift className="w-6 h-6 text-secondary" />
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button onClick={copyLink} className="bg-[#8B3DFF] hover:bg-[#A666FF] text-white rounded-xl gap-2 h-12 text-base" data-testid="copy-ref-link">
+                                        <Copy className="w-5 h-5" /> {isRomanian ? 'Copiaza Link' : 'Copy Link'}
+                                    </Button>
+                                    <Button onClick={shareWhatsApp} className="bg-[#25D366] hover:bg-[#22c55e] text-white rounded-xl gap-2 h-12 text-base" data-testid="share-whatsapp">
+                                        <Share2 className="w-5 h-5" /> WhatsApp
+                                    </Button>
                                 </div>
-                                <p className="text-3xl font-bold text-secondary">£{referralData?.total_earned || 0}</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {isRomanian ? 'Total Primit' : 'Total Earned'}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Referral Code Card */}
-                    <Card className="glass border-primary/30 mb-8">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Share2 className="w-5 h-5 text-primary" />
-                                {isRomanian ? 'Codul Tău de Referral' : 'Your Referral Code'}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-4 items-center">
-                                <div className="flex-1 bg-muted/50 rounded-xl p-4 text-center">
-                                    <p className="text-3xl font-mono font-bold tracking-widest text-primary">
-                                        {referralData?.referral_code}
-                                    </p>
-                                </div>
-                                <Button 
-                                    variant="outline" 
-                                    className="border-primary/30 hover:bg-primary/20"
-                                    onClick={() => copyToClipboard(referralData?.referral_code)}
-                                >
-                                    <Copy className="w-4 h-4 mr-2" />
-                                    {isRomanian ? 'Copiază' : 'Copy'}
-                                </Button>
                             </div>
-                            
-                            <div className="flex gap-4 items-center">
-                                <Input 
-                                    value={referralData?.referral_link || ''} 
-                                    readOnly 
-                                    className="input-modern text-sm"
-                                />
-                                <Button 
-                                    variant="outline" 
-                                    className="border-primary/30 hover:bg-primary/20"
-                                    onClick={() => copyToClipboard(referralData?.referral_link)}
-                                >
-                                    <Copy className="w-4 h-4" />
-                                </Button>
-                            </div>
+                        </motion.div>
 
-                            {/* Social Share Buttons */}
-                            <div className="flex gap-3 justify-center pt-4">
-                                <Button onClick={shareOnTwitter} className="bg-[#1DA1F2] hover:bg-[#1DA1F2]/80">
-                                    <Twitter className="w-4 h-4 mr-2" />
-                                    Twitter
-                                </Button>
-                                <Button onClick={shareOnFacebook} className="bg-[#4267B2] hover:bg-[#4267B2]/80">
-                                    <Facebook className="w-4 h-4 mr-2" />
-                                    Facebook
-                                </Button>
-                                <Button onClick={shareOnWhatsApp} className="bg-[#25D366] hover:bg-[#25D366]/80">
-                                    <MessageCircle className="w-4 h-4 mr-2" />
-                                    WhatsApp
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Apply Code Card */}
-                    <Card className="glass border-white/10 mb-8">
-                        <CardHeader>
-                            <CardTitle>{isRomanian ? 'Ai un Cod de Referral?' : 'Have a Referral Code?'}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex gap-4">
-                                <Input 
-                                    placeholder={isRomanian ? 'Introdu codul...' : 'Enter code...'}
-                                    value={applyCode}
-                                    onChange={(e) => setApplyCode(e.target.value.toUpperCase())}
-                                    className="input-modern"
-                                />
-                                <Button 
-                                    onClick={handleApplyCode}
-                                    disabled={applying}
-                                    className="btn-secondary"
-                                >
-                                    {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : (isRomanian ? 'Aplică' : 'Apply')}
-                                </Button>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-2">
-                                {isRomanian 
-                                    ? 'Aplică un cod înainte de prima ta achiziție pentru a primi £5 bonus!'
-                                    : 'Apply a code before your first purchase to get £5 bonus!'
-                                }
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    {/* Referrals List */}
-                    {referrals.length > 0 && (
-                        <Card className="glass border-white/10">
-                            <CardHeader>
-                                <CardTitle>{isRomanian ? 'Referralurile Tale' : 'Your Referrals'}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {referrals.map((ref) => (
-                                        <div 
-                                            key={ref.referral_id} 
-                                            className="flex items-center justify-between p-4 bg-muted/30 rounded-xl"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                                    ref.status === 'completed' ? 'bg-secondary/20' : 'bg-muted'
-                                                }`}>
-                                                    {ref.status === 'completed' 
-                                                        ? <CheckCircle className="w-5 h-5 text-secondary" />
-                                                        : <Clock className="w-5 h-5 text-muted-foreground" />
-                                                    }
+                        {/* How it Works */}
+                        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                            className="rounded-2xl p-6" style={{
+                                background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))',
+                                border: '1px solid rgba(139,92,246,0.1)'
+                            }}>
+                            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-[#A666FF]" /> {isRomanian ? 'Cum Functioneaza?' : 'How It Works?'}
+                            </h3>
+                            <div className="grid sm:grid-cols-3 gap-4">
+                                {[
+                                    { icon: Share2, step: '1', title: isRomanian ? 'Trimite Link-ul' : 'Share Your Link', desc: isRomanian ? 'Trimite link-ul tau prietenilor pe WhatsApp, TikTok sau orice retea sociala' : 'Share with friends via WhatsApp, TikTok or any social network' },
+                                    { icon: User, step: '2', title: isRomanian ? 'Prietenul se Inscrie' : 'Friend Signs Up', desc: isRomanian ? 'Prietenul se inregistreaza pe Zektrix cu link-ul tau de referral' : 'Your friend registers on Zektrix with your referral link' },
+                                    { icon: Gift, step: '3', title: isRomanian ? 'Ambii Castigati!' : 'Both Win!', desc: isRomanian ? 'Cand prietenul cumpara primul bilet: tu primesti £3, el £2 in wallet!' : 'When friend buys first ticket: you get £3, they get £2 in wallet!' },
+                                ].map((s, i) => {
+                                    const Icon = s.icon;
+                                    return (
+                                        <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="w-8 h-8 rounded-lg bg-[#8B3DFF]/15 flex items-center justify-center">
+                                                    <Icon className="w-4 h-4 text-[#A666FF]" />
                                                 </div>
-                                                <div>
-                                                    <p className="font-medium">{ref.referred_username}</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {new Date(ref.created_at).toLocaleDateString()}
-                                                    </p>
-                                                </div>
+                                                <span className="text-xs font-bold text-[#8B3DFF]">{isRomanian ? 'PASUL' : 'STEP'} {s.step}</span>
                                             </div>
-                                            <Badge className={ref.status === 'completed' ? 'badge-secondary' : 'badge-muted'}>
-                                                {ref.status === 'completed' 
-                                                    ? (isRomanian ? 'Completat' : 'Completed')
-                                                    : (isRomanian ? 'În așteptare' : 'Pending')
-                                                }
-                                            </Badge>
+                                            <h4 className="text-sm font-bold text-white mb-1">{s.title}</h4>
+                                            <p className="text-xs text-[#6E6987] leading-relaxed">{s.desc}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+
+                        {/* Invited Friends */}
+                        {referralData?.invited_list?.length > 0 && (
+                            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                                className="rounded-2xl overflow-hidden" style={{
+                                    background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))',
+                                    border: '1px solid rgba(139,92,246,0.1)'
+                                }}>
+                                <div className="p-5 border-b border-white/[0.06] flex items-center justify-between">
+                                    <h3 className="text-white font-bold flex items-center gap-2"><Users className="w-5 h-5 text-[#A666FF]" /> {isRomanian ? 'Prieteni Invitati' : 'Invited Friends'}</h3>
+                                    <span className="text-xs text-[#6E6987]">{referralData.invited_list.length} total</span>
+                                </div>
+                                <div className="divide-y divide-white/[0.04]">
+                                    {referralData.invited_list.map((f, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors">
+                                            <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center">
+                                                <User className="w-5 h-5 text-gray-400" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm text-white font-medium">{f.username}</p>
+                                                <p className="text-xs text-[#6E6987]">{new Date(f.created_at).toLocaleDateString('ro-RO', {day:'2-digit', month:'short', year:'numeric'})}</p>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                {f.status === 'completed' ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Clock className="w-4 h-4 text-amber-400" />}
+                                                <span className={`text-xs font-medium ${f.status === 'completed' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                    {f.status === 'completed' ? (isRomanian ? 'Finalizat (+£3)' : 'Completed (+£3)') : (isRomanian ? 'In asteptare' : 'Pending')}
+                                                </span>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
-                            </CardContent>
-                        </Card>
-                    )}
+                            </motion.div>
+                        )}
 
-                    {/* How it Works */}
-                    <Card className="glass border-white/10 mt-8">
-                        <CardHeader>
-                            <CardTitle>{isRomanian ? 'Cum Funcționează' : 'How It Works'}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="text-center">
-                                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
-                                        <span className="text-xl font-bold text-primary">1</span>
-                                    </div>
-                                    <h4 className="font-bold mb-2">{isRomanian ? 'Distribuie Codul' : 'Share Your Code'}</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                        {isRomanian 
-                                            ? 'Trimite codul tău de referral prietenilor'
-                                            : 'Send your referral code to friends'
-                                        }
-                                    </p>
+                        {/* Leaderboard */}
+                        {leaderboard.length > 0 && (
+                            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                                className="rounded-2xl overflow-hidden" style={{
+                                    background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))',
+                                    border: '1px solid rgba(139,92,246,0.1)'
+                                }}>
+                                <div className="p-5 border-b border-white/[0.06]">
+                                    <h3 className="text-white font-bold flex items-center gap-2"><Crown className="w-5 h-5 text-amber-400" /> {isRomanian ? 'Top Invitatii' : 'Referral Leaderboard'}</h3>
                                 </div>
-                                <div className="text-center">
-                                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3">
-                                        <span className="text-xl font-bold text-primary">2</span>
-                                    </div>
-                                    <h4 className="font-bold mb-2">{isRomanian ? 'Se Înscriu' : 'They Sign Up'}</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                        {isRomanian 
-                                            ? 'Prietenii se înregistrează și fac prima achiziție'
-                                            : 'Friends register and make first purchase'
-                                        }
-                                    </p>
+                                <div className="divide-y divide-white/[0.04]">
+                                    {leaderboard.map((entry, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors">
+                                            <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black ${
+                                                i === 0 ? 'bg-gradient-to-br from-amber-500 to-amber-600 text-black' :
+                                                i === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-black' :
+                                                i === 2 ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-black' :
+                                                'bg-white/[0.06] text-[#6E6987]'
+                                            }`}>{entry.rank}</span>
+                                            <div className="flex-1">
+                                                <p className="text-sm text-white font-semibold">{entry.username}</p>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Trophy className="w-4 h-4 text-[#A666FF]" />
+                                                <span className="text-sm font-bold text-[#A666FF]">{entry.referrals}</span>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="text-center">
-                                    <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-3">
-                                        <span className="text-xl font-bold text-secondary">3</span>
-                                    </div>
-                                    <h4 className="font-bold mb-2">{isRomanian ? 'Primiți Amândoi' : 'Both Earn'}</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                        {isRomanian 
-                                            ? 'Tu și prietenul primești £5 bonus!'
-                                            : 'You and friend each get £5 bonus!'
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </main>
-
+                            </motion.div>
+                        )}
+                    </div>
+                ) : (
+                    /* Not logged in */
+                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-center p-10 rounded-3xl" style={{
+                            background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))',
+                            border: '1px solid rgba(139,92,246,0.15)'
+                        }}>
+                        <div className="w-20 h-20 rounded-3xl mx-auto mb-6 flex items-center justify-center bg-gradient-to-br from-[#8B3DFF] to-[#FF5E00] shadow-[0_0_30px_rgba(139,61,255,0.3)]">
+                            <Gift className="w-10 h-10 text-white" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white mb-3">{isRomanian ? 'Inregistreaza-te pentru a primi codul tau' : 'Sign up to get your code'}</h2>
+                        <p className="text-[#A39EBD] mb-6 max-w-md mx-auto">
+                            {isRomanian ? 'Creaza un cont gratuit si incepe sa castigi bani invitand prieteni!' : 'Create a free account and start earning by inviting friends!'}
+                        </p>
+                        <a href="/login">
+                            <Button className="bg-[#8B3DFF] hover:bg-[#A666FF] text-white rounded-xl gap-2 h-12 px-8 text-base">
+                                <ArrowRight className="w-5 h-5" /> {isRomanian ? 'Inregistreaza-te' : 'Sign Up'}
+                            </Button>
+                        </a>
+                    </motion.div>
+                )}
+            </div>
             <Footer />
         </div>
     );
-};
-
-export default ReferralPage;
+}
