@@ -209,6 +209,8 @@ const AdminPage = () => {
     const [walletWithdrawals, setWalletWithdrawals] = useState([]);
     const [walletStats, setWalletStats] = useState({});
     const [bonusSettings, setBonusSettings] = useState({ active: false, bonus_percent: 10, bonus_max: 20 });
+    const [subscriptionStats, setSubscriptionStats] = useState({});
+    const [allSubscriptions, setAllSubscriptions] = useState([]);
 
     // Modals
     const [showCompModal, setShowCompModal] = useState(false);
@@ -259,6 +261,8 @@ const AdminPage = () => {
         axios.get(`${API}/admin/wallet/withdrawals`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setWalletWithdrawals(r.data || [])).catch(() => {});
         axios.get(`${API}/admin/wallet/stats`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setWalletStats(r.data || {})).catch(() => {});
         axios.get(`${API}/admin/wallet/bonus-settings`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setBonusSettings(r.data || {})).catch(() => {});
+        axios.get(`${API}/admin/subscriptions/stats`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setSubscriptionStats(r.data || {})).catch(() => {});
+        axios.get(`${API}/admin/subscriptions`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAllSubscriptions(r.data || [])).catch(() => {});
         
         // Admin WebSocket for live chat
         let ws = null;
@@ -1262,6 +1266,52 @@ const AdminPage = () => {
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+
+                            {/* Subscription Stats */}
+                            <div className="rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-14 h-14 rounded-2xl bg-violet-500/20 flex items-center justify-center">
+                                        <Crown className="w-7 h-7 text-violet-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white">Abonamente</h3>
+                                        <p className="text-sm text-gray-500">{subscriptionStats.active_subscriptions || 0} active din {subscriptionStats.total_subscriptions || 0} total</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                                    <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                                        <p className="text-xs text-gray-400">Active</p>
+                                        <p className="text-lg font-bold text-emerald-400">{subscriptionStats.active_subscriptions || 0}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-violet-500/5 border border-violet-500/10">
+                                        <p className="text-xs text-gray-400">Total</p>
+                                        <p className="text-lg font-bold text-violet-400">{subscriptionStats.total_subscriptions || 0}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
+                                        <p className="text-xs text-gray-400">Venituri</p>
+                                        <p className="text-lg font-bold text-orange-400">£{(subscriptionStats.total_revenue || 0).toFixed(0)}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                                        <p className="text-xs text-gray-400">Bilete Distribuite</p>
+                                        <p className="text-lg font-bold text-blue-400">{subscriptionStats.total_tickets_distributed || 0}</p>
+                                    </div>
+                                </div>
+                                {allSubscriptions.length > 0 && (
+                                    <div className="divide-y divide-white/[0.04] max-h-48 overflow-y-auto rounded-xl border border-white/[0.06]">
+                                        {allSubscriptions.slice(0, 10).map((s, i) => (
+                                            <div key={i} className="flex items-center justify-between p-3 hover:bg-white/[0.02]">
+                                                <div>
+                                                    <p className="text-sm text-white">{s.username || s.email}</p>
+                                                    <p className="text-xs text-gray-500">{s.plan_name} | {s.entries_per_competition} bilete/comp</p>
+                                                </div>
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${s.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-400'}`}>
+                                                    {s.status}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

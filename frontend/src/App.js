@@ -26,6 +26,7 @@ const PaymentSuccessPage = lazy(() => import("./pages/PaymentSuccessPage"));
 const PaymentFailedPage = lazy(() => import("./pages/PaymentFailedPage"));
 const PaymentCancelPage = lazy(() => import("./pages/PaymentCancelPage"));
 const WalletPage = lazy(() => import("./pages/WalletPage"));
+const SubscriptionsPage = lazy(() => import("./pages/SubscriptionsPage"));
 // Lucky Wheel removed
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
@@ -107,6 +108,7 @@ const AppRouter = () => {
                         </ProtectedRoute>
                     }
                 />
+                <Route path="/subscriptions" element={<SubscriptionsPage />} />
                 {/* Lucky Wheel removed */}
                 <Route path="/unsubscribe/:userId" element={<UnsubscribePage />} />
 

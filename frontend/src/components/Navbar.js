@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext';
 import { Button } from '../components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '../components/ui/sheet';
-import { Menu, User, LogOut, LayoutDashboard, Ticket, Shield, ShoppingCart, ChevronDown, X, Trophy, Search, HelpCircle, Crosshair, Wallet } from 'lucide-react';
+import { Menu, User, LogOut, LayoutDashboard, Ticket, Shield, ShoppingCart, ChevronDown, X, Trophy, Search, HelpCircle, Crosshair, Wallet, Crown } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
 import axios from 'axios';
 
@@ -35,8 +35,8 @@ const Navbar = () => {
 
     const navLinks = [
         { href: '/competitions', label: isRomanian ? 'Competitii' : 'Competitions', icon: Crosshair },
+        { href: '/subscriptions', label: isRomanian ? 'Abonamente' : 'Subscriptions', icon: Crown },
         { href: '/winners', label: isRomanian ? 'Premianti' : 'Winners', icon: Trophy },
-        { href: '/search', label: isRomanian ? 'Cauta' : 'Search', icon: Search },
         { href: '/faq', label: 'FAQ', icon: HelpCircle },
     ];
 
