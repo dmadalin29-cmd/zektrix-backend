@@ -2102,6 +2102,31 @@ async def set_tiktok_live_status(is_live: bool, tiktok_url: Optional[str] = None
     
     return {"success": True, "is_live": is_live, "message": f"TikTok LIVE {'activat' if is_live else 'dezactivat'}"}
 
+@api_router.get("/settings/featured-competition")
+async def get_featured_competition():
+    """Get the featured/recommended competition for homepage"""
+    setting = await db.site_settings.find_one({"setting_id": "featured_competition"})
+    comp_id = setting.get("competition_id") if setting else None
+    if comp_id:
+        comp = await db.competitions.find_one({"competition_id": comp_id, "status": "active"}, {"_id": 0})
+        if comp:
+            return {"competition": comp}
+    return {"competition": None}
+
+@api_router.post("/admin/settings/featured-competition")
+async def set_featured_competition(competition_id: str, admin: dict = Depends(get_admin_user)):
+    """Set the featured/recommended competition (admin only)"""
+    comp = await db.competitions.find_one({"competition_id": competition_id})
+    if not comp:
+        raise HTTPException(404, "Competition not found")
+    await db.site_settings.update_one(
+        {"setting_id": "featured_competition"},
+        {"$set": {"competition_id": competition_id, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {"success": True, "competition_id": competition_id, "title": comp.get("title")}
+
+
 @api_router.get("/admin/analytics")
 async def get_analytics(admin: dict = Depends(get_admin_user)):
     """Get comprehensive analytics for admin dashboard - optimized"""

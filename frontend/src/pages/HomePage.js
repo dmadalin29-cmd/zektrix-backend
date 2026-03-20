@@ -184,7 +184,7 @@ const FeaturedCard = ({ c }) => {
                     <img src={c.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80'} alt={c.title} className="w-full h-full object-cover" loading="lazy" />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0a0614] via-transparent to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-2">
-                        <span className="px-2 py-1 bg-violet-600 text-white text-xs font-bold rounded">FEATURED</span>
+                        <span className="px-2 py-1 bg-violet-600 text-white text-xs font-bold rounded">OFERTA RECOMANDATĂ</span>
                         {c.competition_type === 'instant_win' && (
                             <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded border border-emerald-500/30">AUTODRAW</span>
                         )}
@@ -281,18 +281,20 @@ const HomePage = () => {
     const [tiktokLive, setTiktokLive] = useState({ is_live: false, tiktok_url: 'https://www.tiktok.com/@zektrix.uk' });
     const [stats, setStats] = useState({ winners: 0, users: 0, tickets: 0 });
     const [activities, setActivities] = useState([]);
+    const [featuredComp, setFeaturedComp] = useState(null);
 
     useEffect(() => {
         axios.get(`${API}/competitions?status=active`).then(r => setComps(r.data)).catch(() => {});
         axios.get(`${API}/settings/tiktok-live`).then(r => setTiktokLive(r.data)).catch(() => {});
         axios.get(`${API}/stats`).then(r => setStats(r.data)).catch(() => {});
         axios.get(`${API}/activity/recent`).then(r => setActivities(r.data)).catch(() => {});
+        axios.get(`${API}/settings/featured-competition`).then(r => setFeaturedComp(r.data.competition)).catch(() => {});
     }, []);
 
     // Find permanent/special competition and featured car competition
     const specialComp = comps.find(c => c.is_permanent || c.title?.includes('Specială'));
-    const carComp = comps.find(c => (c.category === 'cars' || c.category === 'auto') && c.competition_id !== specialComp?.competition_id) || comps.find(c => c.competition_id !== specialComp?.competition_id);
-    const otherComps = comps.filter(c => c.competition_id !== specialComp?.competition_id && c.competition_id !== carComp?.competition_id);
+    const displayFeatured = featuredComp || comps.find(c => (c.category === 'cars' || c.category === 'auto') && c.competition_id !== specialComp?.competition_id) || comps.find(c => c.competition_id !== specialComp?.competition_id);
+    const otherComps = comps.filter(c => c.competition_id !== specialComp?.competition_id && c.competition_id !== displayFeatured?.competition_id);
 
     return (
         <div className="min-h-screen bg-[#0a0614]">
@@ -311,8 +313,8 @@ const HomePage = () => {
                             {/* LEFT - Competiția Specială */}
                             <SpecialCompCard c={specialComp} />
                             
-                            {/* RIGHT - Car Competition */}
-                            <FeaturedCard c={carComp} />
+                            {/* RIGHT - Oferta Recomandată */}
+                            <FeaturedCard c={displayFeatured} />
                         </div>
                     </div>
                 </section>

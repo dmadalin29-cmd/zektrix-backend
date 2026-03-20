@@ -203,6 +203,7 @@ const AdminPage = () => {
     const [chatMsgs, setChatMsgs] = useState([]);
     const [chatFilter, setChatFilter] = useState('all');
     const [liveStatus, setLiveStatus] = useState({ isLive: false, message: '' });
+    const [featuredCompId, setFeaturedCompId] = useState('');
     const [analyticsData, setAnalyticsData] = useState(null);
 
     // Modals
@@ -250,6 +251,7 @@ const AdminPage = () => {
         fetchAll();
         axios.get(`${API}/settings/tiktok-live`).then(r => setLiveStatus({ isLive: r.data.is_live, message: '', tiktok_url: r.data.tiktok_url })).catch(() => {});
         axios.get(`${API}/admin/chat/messages`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setChatMsgs(r.data)).catch(() => {});
+        axios.get(`${API}/settings/featured-competition`).then(r => { if (r.data.competition) setFeaturedCompId(r.data.competition.competition_id); }).catch(() => {});
         
         // Admin WebSocket for live chat
         let ws = null;
@@ -1162,6 +1164,55 @@ const AdminPage = () => {
                                         <Button variant="outline" onClick={() => axios.put(`${API}/admin/live-status`, liveStatus, { headers: { Authorization: `Bearer ${token}` }}).then(() => toast.success('Salvat!'))}>Salvează</Button>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Ofertă Recomandată */}
+                            <div className="rounded-2xl p-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
+                                    border: '1px solid rgba(139, 92, 246, 0.15)'
+                                }}>
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center">
+                                        <Star className="w-7 h-7 text-amber-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white">Ofertă Recomandată (Homepage)</h3>
+                                        <p className="text-sm text-gray-500">Alege competiția afișată ca recomandare pe prima pagină</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 items-end">
+                                    <div className="flex-1">
+                                        <Label className="text-gray-400 mb-2 block">Competiție</Label>
+                                        <select
+                                            value={featuredCompId || ''}
+                                            onChange={e => setFeaturedCompId(e.target.value)}
+                                            className="w-full h-10 rounded-lg bg-white/5 border border-white/10 text-white px-3 text-sm focus:border-violet-500 focus:outline-none"
+                                            data-testid="featured-comp-select"
+                                        >
+                                            <option value="" className="bg-gray-900">-- Selectează --</option>
+                                            {competitions.filter(c => c.status === 'active').map(c => (
+                                                <option key={c.competition_id} value={c.competition_id} className="bg-gray-900">{c.title}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <Button
+                                        onClick={async () => {
+                                            if (!featuredCompId) return toast.error('Selectează o competiție');
+                                            try {
+                                                await axios.post(`${API}/admin/settings/featured-competition?competition_id=${featuredCompId}`, {}, { headers: { Authorization: `Bearer ${token}` }});
+                                                toast.success('Ofertă recomandată salvată!');
+                                            } catch { toast.error('Eroare la salvare'); }
+                                        }}
+                                        className="bg-amber-600 hover:bg-amber-500 text-white"
+                                        data-testid="save-featured-btn"
+                                    >
+                                        Salvează
+                                    </Button>
+                                </div>
+                                {featuredCompId && (
+                                    <p className="text-xs text-gray-500 mt-2">Competiția selectată va apărea ca "Ofertă Recomandată" pe prima pagină.</p>
+                                )}
                             </div>
 
                             {/* Email Bot */}
