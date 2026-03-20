@@ -13,13 +13,13 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - **Auth:** JWT + Google Auth (Emergent-managed)
 - **Email:** Resend API
 
-## Architecture (After Refactoring)
+## Architecture
 ```
 /app/backend/
-├── server.py          # Main FastAPI app + routes (~4600 lines, down from 5150)
-├── models.py          # All Pydantic models (extracted)
-├── email_service.py   # Email functions (extracted)
-├── push_service.py    # Push notification helpers (extracted)
+├── server.py          # Main FastAPI app + routes (~5600+ lines)
+├── models.py          # All Pydantic models
+├── email_service.py   # Email functions
+├── push_service.py    # Push notification helpers
 ├── uploads/           # Uploaded competition images
 ├── vapid_private.pem  # Auto-generated from env at startup
 └── .env               # All credentials
@@ -48,49 +48,28 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
   - Withdrawal requests with admin approval flow
   - Transaction history with icons and status
   - Admin Wallet Management: stats, bonus config, approve/reject withdrawals, manual fund adjustment
-- **Subscription System (NEW)**: 3 fixed plans with auto ticket distribution
-  - Abonament 25 (£25/luna, 2 bilete/competitie)
-  - Abonament 50 (£50/luna, 5 bilete/competitie) — Cel Mai Popular
-  - Abonament 100 (£100/luna, 12 bilete/competitie)
-  - Plata din wallet sau cu cardul (Viva Payments)
-  - Auto-distribuire bilete la toate competitiile active (pret ≤ £3.99)
-  - Auto-distribuire la competitii noi lansate
-  - Auto-reinnoire din wallet (sau expira daca fonduri insuficiente)
-  - Anulare reinoire oricand
-  - Push notifications la distribuire bilete si reinnoire
+- **Subscription System**: 3 fixed plans with auto ticket distribution
+  - Abonament 25/50/100 (£25/£50/£100 luna)
+  - Auto-distribuire bilete la competitii active
+  - Auto-reinnoire din wallet
+  - Push notifications la distribuire si reinnoire
   - Admin: statistici abonamente, lista abonati, venituri
+- **Premium Referral System** (COMPLETED March 20, 2026)
+  - £3 credit for referrer, £2 for referred on first purchase
+  - Custom referral code (3-15 chars, alphanumeric)
+  - Share via WhatsApp + Copy Link
+  - Referral leaderboard (top referrers)
+  - Invited friends list with status (pending/completed)
+  - How it Works 3-step guide
+  - Guest-accessible /referral page with sign-up CTA
+  - Admin referral stats endpoint
+  - Backend: /api/referral/my, /api/referral/customize, /api/referral/leaderboard, /api/admin/referral/stats
 - Featured Competition (Ofertă Recomandată) customizable from Admin Settings
-
-## Completed This Session (March 20, 2026)
-- **FIXED: Push Notifications (P0)** - Synced VAPID keys, pywebpush library, auto-derive public key
-- **FIXED: Frontend .env** - Preview URL → production URL
-- **FIXED: DB_NAME** - zektrix_db → ektrix_db
-- **VERIFIED: Live Chat E2E** - All working
-- **NEW: Push notifications for all users** - Chat replies, winner draws, competition alerts
-- **NEW: Image upload for competitions** - Admin can upload images directly (not just URLs)
-- **NEW: Multi-image gallery** - Multiple images per competition with thumbnail gallery
-- **NEW: Personalized milestone emails** - Automated at 70%/80%/90% for participants
-- **NEW: Featured Competition (Ofertă Recomandată)** - Admin can select which competition appears as featured on homepage
-- **NEW: Wallet System** - Complete wallet with deposit (Viva), withdrawals, history, bonus, admin management
-- **NEW: Subscription System** - 3 plans (£25/£50/£100), auto ticket distribution, auto-renewal, Viva + wallet payment
-- **REDESIGN: Complete visual modernization**
-  - Apple-style mesh gradient backgrounds (animated, subtle)
-  - Glassmorphism cards (backdrop-blur, transparent backgrounds)
-  - Outfit font for headings, Inter for body
-  - Framer Motion animations on cards and sections
-  - Removed all hardcoded dark backgrounds → mesh gradient shows through
-  - Updated: Navbar, Footer, CompetitionCard, HomePage, CompetitionsPage, WalletPage, SubscriptionsPage, DashboardPage, LoginPage, WinnersPage, FAQPage, PrivacyPage, TermsPage, SearchPage
-  - React.memo on CompetitionCard for performance
-  - Lazy loading on all images
-- **MODERNIZED: Daily digest emails** - Premium design, realistic prize calculation (price×tickets), competition images
-- **REFACTORED: server.py** - Extracted models.py, email_service.py, push_service.py (-540 lines)
-- **FIXED: Admin Settings crash (March 20)** - `competitions` → `comps` variable reference in Settings tab
-- Social sharing already existed (WhatsApp, Facebook, Twitter, Copy Link)
-- Terms & Conditions page already complete
+- **Global UI Redesign**: Apple-style mesh gradients, glassmorphism, Outfit font, Framer Motion animations
 
 ## Upcoming Tasks
-- **P1:** Facebook Pixel integration
-- **P2:** Bundle Deals
+- **P1:** TikTok Pixel Integration (when user starts running ads)
+- **P2:** Countdown Timer on competitions
+- **P2:** Bundle Deals (ticket packages with discounts)
 - **P2:** SMS Marketing
-- **P2:** Leaderboard
-- **P2:** Referral System improvements
+- **P2:** Refactor `server.py` (~5600+ lines → modular routes)
