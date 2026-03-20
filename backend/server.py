@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, Query, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -2828,39 +2829,118 @@ async def get_notification_status(current_user: dict = Depends(get_current_user)
 
 # Helper function to send notifications when competition reaches threshold
 async def check_and_send_competition_alerts(competition_id: str, sold_tickets: int, max_tickets: int):
-    """Send push notifications when competition reaches 80% sold"""
+    """Send push + email notifications when competition reaches milestones"""
     percentage = (sold_tickets / max_tickets) * 100 if max_tickets > 0 else 0
     
-    # Check if we should send alert (at 80%)
-    if percentage >= 80 and percentage < 85:
-        # Get competition details
-        comp = await db.competitions.find_one({"competition_id": competition_id})
-        if not comp:
-            return
-        
-        # Check if alert was already sent
-        alert_key = f"alert_80_{competition_id}"
-        existing_alert = await db.settings.find_one({"key": alert_key})
-        if existing_alert:
-            return
-        
-        # Mark alert as sent
-        await db.settings.update_one(
-            {"key": alert_key},
-            {"$set": {"sent_at": datetime.now(timezone.utc).isoformat()}},
-            upsert=True
-        )
-        
-        # Send push notifications to all participants of this competition
-        remaining = 100 - int(percentage)
-        await notify_competition_participants_push(
-            competition_id,
-            f"{comp.get('title', 'Competiție')} - Aproape sold out!",
-            f"Doar {remaining}% locuri rămase! Grăbește-te!",
-            f"https://zektrix.uk/competitions/{competition_id}"
-        )
-        
-        logger.info(f"Competition {competition_id} reached 80% - push alerts sent to participants")
+    milestones = [
+        (70, 75, "70"),
+        (80, 85, "80"),
+        (90, 95, "90"),
+    ]
+    
+    for low, high, label in milestones:
+        if low <= percentage < high:
+            comp = await db.competitions.find_one({"competition_id": competition_id})
+            if not comp:
+                return
+            
+            alert_key = f"alert_{label}_{competition_id}"
+            if await db.settings.find_one({"key": alert_key}):
+                return
+            
+            await db.settings.update_one(
+                {"key": alert_key},
+                {"$set": {"sent_at": datetime.now(timezone.utc).isoformat()}},
+                upsert=True
+            )
+            
+            remaining = max_tickets - sold_tickets
+            title = comp.get("title", "Competiție")
+            
+            # Push notifications to participants
+            await notify_competition_participants_push(
+                competition_id,
+                f"{title} - {int(percentage)}% ocupat!",
+                f"Doar {remaining} locuri rămase! Grăbește-te!",
+                f"https://zektrix.uk/competitions/{competition_id}"
+            )
+            
+            # Personalized emails to participants
+            tickets = await db.tickets.find(
+                {"competition_id": competition_id},
+                {"_id": 0, "user_id": 1}
+            ).to_list(10000)
+            user_ids = list(set(t["user_id"] for t in tickets))
+            
+            if user_ids:
+                users = await db.users.find(
+                    {"user_id": {"$in": user_ids}, "email_unsubscribed": {"$ne": True}},
+                    {"_id": 0, "user_id": 1, "email": 1, "first_name": 1, "username": 1}
+                ).to_list(10000)
+                
+                for user in users:
+                    try:
+                        name = user.get("first_name") or user.get("username", "Utilizator")
+                        comp_link = f"https://zektrix.uk/competitions/{competition_id}"
+                        image_url = comp.get("image_url", "")
+                        prize = comp.get("prize_description") or title
+                        
+                        img_html = f'<img src="{image_url}" alt="{title}" style="width:100%;height:180px;object-fit:cover;display:block;border-radius:12px 12px 0 0;" />' if image_url else ""
+                        
+                        email_html = f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#030014;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+<table cellpadding="0" cellspacing="0" style="width:100%;background:#030014;"><tr><td style="padding:30px 16px;">
+<table cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;width:100%;">
+<tr><td style="text-align:center;padding-bottom:20px;">
+    <h1 style="margin:0;font-size:28px;font-weight:900;"><span style="color:#8b5cf6;">ZEKTRIX</span><span style="color:#fff;">.UK</span></h1>
+</td></tr>
+<tr><td style="padding-bottom:16px;">
+    <table cellpadding="0" cellspacing="0" style="width:100%;background:#0d0b1a;border:1px solid #ef444440;border-radius:12px;overflow:hidden;">
+        <tr><td style="background:linear-gradient(135deg,#ef4444,#dc2626);padding:14px 20px;text-align:center;">
+            <p style="color:#fff;margin:0;font-size:14px;font-weight:700;">&#128293; COMPETITIA TA SE APROPIE DE EXTRAGERE!</p>
+        </td></tr>
+        <tr><td style="padding:20px;">
+            <p style="color:#9ca3af;margin:0 0 8px 0;font-size:14px;">Salut <strong style="color:#fff;">{name}</strong>,</p>
+            <p style="color:#9ca3af;margin:0;font-size:13px;line-height:1.5;">Competitia la care participi este <strong style="color:#ef4444;">{int(percentage)}% ocupata</strong>! Mai sunt doar <strong style="color:#fbbf24;">{remaining} locuri</strong> ramase.</p>
+        </td></tr>
+    </table>
+</td></tr>
+<tr><td style="padding-bottom:16px;">
+    <a href="{comp_link}" style="text-decoration:none;display:block;">
+    <table cellpadding="0" cellspacing="0" style="width:100%;background:#0d0b1a;border:1px solid #1e1b3a;border-radius:12px;overflow:hidden;">
+        <tr><td>{img_html}</td></tr>
+        <tr><td style="padding:16px;">
+            <p style="color:#fff;margin:0 0 6px 0;font-size:17px;font-weight:700;">{title}</p>
+            <p style="color:#fbbf24;margin:0;font-size:13px;">Premiu: {prize}</p>
+            <table cellpadding="0" cellspacing="0" style="width:100%;margin-top:12px;"><tr>
+                <td style="background:#1a1730;border-radius:6px;height:8px;overflow:hidden;">
+                    <div style="background:linear-gradient(90deg,#ef4444,#f97316);height:8px;width:{int(percentage)}%;border-radius:6px;"></div>
+                </td>
+            </tr></table>
+            <p style="color:#6b7280;margin:8px 0 0 0;font-size:11px;"><span style="color:#ef4444;font-weight:700;">{int(percentage)}%</span> ocupat &bull; <span style="color:#10b981;">{remaining} locuri ramase</span></p>
+        </td></tr>
+    </table>
+    </a>
+</td></tr>
+<tr><td style="text-align:center;padding:10px 0 20px 0;">
+    <a href="{comp_link}" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;text-decoration:none;padding:14px 40px;border-radius:50px;font-weight:700;font-size:14px;">VEZI COMPETITIA &#8594;</a>
+</td></tr>
+<tr><td style="text-align:center;padding-top:20px;border-top:1px solid #1e1b3a;">
+    <p style="color:#4b5563;font-size:9px;margin:0;">&#169; 2026 Zektrix UK Ltd &bull; <a href="https://zektrix.uk/unsubscribe/{user.get('user_id','')}" style="color:#6b7280;">Dezabonare</a></p>
+</td></tr>
+</table></td></tr></table></body></html>'''
+                        
+                        resend.Emails.send({
+                            "from": SENDER_EMAIL,
+                            "to": [user["email"]],
+                            "subject": f"[ZEKTRIX] {title} - Doar {remaining} locuri ramase! &#128293;",
+                            "html": email_html
+                        })
+                        await asyncio.sleep(0.2)
+                    except Exception as e:
+                        logger.error(f"Failed to send milestone email to {user.get('email')}: {e}")
+            
+            logger.info(f"Competition {competition_id} reached {label}% - alerts sent")
 
 # Lucky Wheel removed
 
@@ -4989,7 +5069,45 @@ async def get_email_subscription_status(user_id: str):
         "email": user.get("email", "")[:3] + "***"
     }
 
+@api_router.post("/upload/image")
+async def upload_image(file: UploadFile = File(...), current_user: dict = Depends(get_admin_user)):
+    """Upload image for competitions (admin only)"""
+    allowed = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+    if file.content_type not in allowed:
+        raise HTTPException(400, "Only JPEG, PNG, WebP and GIF images allowed")
+    
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(400, "Image too large (max 10MB)")
+    
+    ext = file.filename.split(".")[-1].lower() if "." in file.filename else "jpg"
+    if ext not in ("jpg", "jpeg", "png", "webp", "gif"):
+        ext = "jpg"
+    
+    import uuid
+    filename = f"{uuid.uuid4().hex[:12]}.{ext}"
+    upload_dir = os.path.join(os.path.dirname(__file__), "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    filepath = os.path.join(upload_dir, filename)
+    
+    with open(filepath, "wb") as f:
+        f.write(content)
+    
+    # Return the public URL
+    backend_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
+    if backend_url:
+        image_url = f"https://{backend_url}/api/uploads/{filename}"
+    else:
+        image_url = f"/api/uploads/{filename}"
+    
+    return {"url": image_url, "filename": filename}
+
 app.include_router(api_router)
+
+# Serve uploaded files
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

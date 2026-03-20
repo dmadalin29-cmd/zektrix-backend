@@ -23,7 +23,7 @@ import {
     Wand2, MessageCircle, Mail, TrendingUp, Menu, X, ChevronRight,
     ArrowUpRight, ArrowDownRight, Eye, Calendar, Target, Sparkles,
     Activity, CreditCard, ShoppingCart, Bell, Moon, Sun, ChevronDown,
-    PieChart as PieIcon, Layers, Hash, Gift, Crown, Flame, Star
+    PieChart as PieIcon, Layers, Hash, Gift, Crown, Flame, Star, Upload
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -1510,8 +1510,40 @@ const AdminPage = () => {
                             <Label htmlFor="is_free" className="text-emerald-400 font-medium cursor-pointer">Intrare Gratuită (doar pentru utilizatori înregistrați)</Label>
                         </div>
                         <div>
-                            <Label className="text-gray-400">URL Imagine</Label>
-                            <Input value={compForm.image_url} onChange={e => setCompForm(p => ({ ...p, image_url: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="https://..." />
+                            <Label className="text-gray-400">Imagine Competiție</Label>
+                            <div className="space-y-2">
+                                {/* Image Preview */}
+                                {compForm.image_url && (
+                                    <div className="relative w-full h-40 rounded-xl overflow-hidden border border-white/10">
+                                        <img src={compForm.image_url} alt="Preview" className="w-full h-full object-cover" onError={e => e.target.style.display='none'} />
+                                        <button onClick={() => setCompForm(p => ({...p, image_url: ''}))} className="absolute top-2 right-2 w-6 h-6 bg-red-500/80 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-500">✕</button>
+                                    </div>
+                                )}
+                                {/* Upload Button */}
+                                <label className="flex items-center justify-center gap-2 w-full p-3 rounded-xl border-2 border-dashed border-white/10 hover:border-violet-500/50 cursor-pointer transition-colors bg-white/5">
+                                    <Upload className="w-4 h-4 text-violet-400" />
+                                    <span className="text-sm text-gray-400">Click pentru upload imagine</span>
+                                    <input type="file" accept="image/*" className="hidden" data-testid="image-upload-input" onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (!file) return;
+                                        if (file.size > 10 * 1024 * 1024) { toast.error('Imaginea e prea mare (max 10MB)'); return; }
+                                        const fd = new FormData();
+                                        fd.append('file', file);
+                                        try {
+                                            toast.loading('Se încarcă imaginea...', { id: 'img-upload' });
+                                            const res = await api.post('/upload/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                            setCompForm(p => ({...p, image_url: res.data.url}));
+                                            toast.success('Imagine încărcată!', { id: 'img-upload' });
+                                        } catch(err) { toast.error('Eroare la upload: ' + (err.response?.data?.detail || err.message), { id: 'img-upload' }); }
+                                        e.target.value = '';
+                                    }} />
+                                </label>
+                                {/* Or URL input */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">sau</span>
+                                    <Input value={compForm.image_url} onChange={e => setCompForm(p => ({ ...p, image_url: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500 text-sm" placeholder="URL imagine (https://...)" data-testid="image-url-input" />
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <Label className="text-gray-400">Descriere Premiu</Label>
