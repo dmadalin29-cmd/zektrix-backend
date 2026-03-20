@@ -2,6 +2,31 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, Query, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
+
+# Import models from separate module
+from models import (
+    UserCreate, UserLogin, UserResponse, QualificationQuestion, PostalEntry,
+    CompetitionCreate, CompetitionUpdate, CompetitionResponse,
+    TicketPurchase, CartItem, CartPurchase, TicketResponse,
+    WalletDeposit, TransactionResponse, WinnerCreate, WinnerResponse,
+    AdminUserUpdate, TicketSearchResult, ReferralCreate, ReferralResponse,
+    AnalyticsResponse, PushSubscription, NotificationPreferences,
+    SpinResult, FlashSaleCreate, ChatMessage, PasswordResetRequest,
+    PasswordResetConfirm, ProfileUpdate, ChatReplyModel
+)
+
+# Import email service
+from email_service import (
+    send_winner_notification_email, send_welcome_email,
+    send_password_reset_email, send_competition_75_percent_email
+)
+
+# Import push service
+from push_service import (
+    send_web_push, notify_user_push as _notify_user_push,
+    notify_competition_participants_push as _notify_comp_push,
+    notify_admins_push as _notify_admins_push
+)
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -147,505 +172,18 @@ security = HTTPBearer(auto_error=False)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ==================== MODELS ====================
+# ==================== MODELS (imported from models.py) ====================
+# ==================== EMAIL HELPERS (imported from email_service.py) ====================
+# ==================== PUSH HELPERS ====================
 
-class UserCreate(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-    first_name: str
-    last_name: str
-    phone: str
+# Wrap push functions to auto-pass db
+async def notify_user_push(user_id, title, body, url="https://zektrix.uk"):
+    await _notify_user_push(db, user_id, title, body, url)
 
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+async def notify_competition_participants_push(competition_id, title, body, url=None):
+    await _notify_comp_push(db, competition_id, title, body, url)
 
-class UserResponse(BaseModel):
-    user_id: str
-    username: str
-    email: str
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    phone: Optional[str] = None
-    balance: float
-    role: str
-    picture: Optional[str] = None
-    created_at: datetime
-
-class QualificationQuestion(BaseModel):
-    question: str
-    options: List[str]
-    correct_answer: int  # Index of correct answer (0, 1, or 2)
-
-class PostalEntry(BaseModel):
-    company_name: str = "Zektrix UK Ltd"
-    address_line1: str = "c/o Bartle House"
-    address_line2: str = "Oxford Court, Manchester"
-    postcode: str = "M23 WQ"
-    country: str = "United Kingdom"
-    instructions: List[str] = [
-        "Nume complet",
-        "Adresă poștală",
-        "Email + Telefon",
-        "Numele competiției"
-    ]
-
-class CompetitionCreate(BaseModel):
-    title: str
-    description: str
-    ticket_price: float
-    max_tickets: int
-    competition_type: str  # "instant_win" or "classic"
-    category: Optional[str] = "other"  # "instant_wins", "tech", "cash", "cars", "other"
-    image_url: Optional[str] = None
-    prize_description: Optional[str] = None
-    draw_date: Optional[str] = None  # ISO date string for countdown
-    qualification_question: Optional[QualificationQuestion] = None
-    is_free: Optional[bool] = False
-    instant_prizes: Optional[List[dict]] = None  # [{percentage: 39, prize_name: "£50 Cash", prize_description: "..."}, ...]
-
-class CompetitionUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    ticket_price: Optional[float] = None
-    max_tickets: Optional[int] = None
-    competition_type: Optional[str] = None
-    category: Optional[str] = None
-    status: Optional[str] = None
-    image_url: Optional[str] = None
-    prize_description: Optional[str] = None
-    draw_date: Optional[str] = None
-    qualification_question: Optional[QualificationQuestion] = None
-    postal_entry: Optional[PostalEntry] = None
-    is_free: Optional[bool] = None
-    instant_prizes: Optional[List[dict]] = None
-
-class CompetitionResponse(BaseModel):
-    competition_id: str
-    title: str
-    description: str
-    ticket_price: float
-    max_tickets: int
-    sold_tickets: int
-    competition_type: str
-    category: Optional[str] = "other"
-    status: str
-    image_url: Optional[str] = None
-    prize_description: Optional[str] = None
-    draw_date: Optional[str] = None
-    created_at: datetime
-    winner_id: Optional[str] = None
-    winner_ticket: Optional[int] = None
-    qualification_question: Optional[QualificationQuestion] = None
-    postal_entry: Optional[PostalEntry] = None
-    is_free: Optional[bool] = False
-    instant_prizes: Optional[List[dict]] = None
-
-class TicketPurchase(BaseModel):
-    competition_id: str
-    quantity: int
-    qualification_answer: Optional[int] = None  # Index of selected answer
-
-# Cart models
-class CartItem(BaseModel):
-    competition_id: str
-    quantity: int
-    qualification_answer: Optional[int] = None
-
-class CartPurchase(BaseModel):
-    items: List[CartItem]
-    payment_method: str = "wallet"  # "wallet" or "viva"
-
-class TicketResponse(BaseModel):
-    ticket_id: str
-    user_id: str
-    competition_id: str
-    ticket_number: int
-    purchased_at: datetime
-    competition_title: Optional[str] = None
-    competition_image: Optional[str] = None
-    username: Optional[str] = None
-    email: Optional[str] = None
-    full_name: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    phone: Optional[str] = None
-    
-    class Config:
-        extra = "allow"
-
-class WalletDeposit(BaseModel):
-    amount: float
-
-class TransactionResponse(BaseModel):
-    transaction_id: str
-    user_id: str
-    transaction_type: str
-    amount: float
-    status: str
-    description: Optional[str] = None
-    created_at: datetime
-
-class WinnerCreate(BaseModel):
-    competition_id: str
-    user_id: str
-    ticket_number: int
-    prize_description: Optional[str] = None
-
-class WinnerResponse(BaseModel):
-    winner_id: str
-    competition_id: str
-    competition_title: str
-    user_id: str
-    username: str
-    ticket_number: int
-    prize_description: Optional[str] = None
-    announced_at: datetime
-    is_automatic: bool
-
-class AdminUserUpdate(BaseModel):
-    balance_change: Optional[float] = None
-    role: Optional[str] = None
-    new_password: Optional[str] = None
-
-class TicketSearchResult(BaseModel):
-    username: str
-    tickets: List[TicketResponse]
-
-# Referral models
-class ReferralCreate(BaseModel):
-    referrer_code: str
-
-class ReferralResponse(BaseModel):
-    referral_id: str
-    referrer_id: str
-    referred_id: str
-    status: str
-    bonus_amount: float
-    created_at: datetime
-
-# Analytics models
-class AnalyticsResponse(BaseModel):
-    total_revenue: float
-    total_users: int
-    total_tickets: int
-    total_competitions: int
-    active_competitions: int
-    completed_competitions: int
-    total_winners: int
-    avg_tickets_per_user: float
-    revenue_by_day: List[dict]
-    top_competitions: List[dict]
-
-# Push Notification models
-class PushSubscription(BaseModel):
-    endpoint: str
-    keys: dict  # Contains p256dh and auth keys
-
-class NotificationPreferences(BaseModel):
-    push_enabled: bool = True
-    competition_alerts: bool = True  # Alert when competition reaches 80%
-    winner_alerts: bool = True  # Alert when you win
-
-# Lucky Wheel Models
-class SpinResult(BaseModel):
-    prize_type: str  # 'cash', 'ticket', 'nothing', 'bonus_percent'
-    prize_value: float
-    message: str
-
-# Flash Sale Competition
-class FlashSaleCreate(BaseModel):
-    competition_id: str
-    discount_percent: int = 20
-    duration_hours: int = 2
-
-# Chat Message
-class ChatMessage(BaseModel):
-    message: str
-    is_faq: bool = False
-
-# Password Reset
-class PasswordResetRequest(BaseModel):
-    email: EmailStr
-
-class PasswordResetConfirm(BaseModel):
-    token: str
-    new_password: str
-
-# Admin User Management
-class AdminUserUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[EmailStr] = None
-    balance: Optional[float] = None
-    is_blocked: Optional[bool] = None
-    new_password: Optional[str] = None
-
-# Email helper functions
-async def send_winner_notification_email(winner_email: str, winner_name: str, competition_title: str, prize_description: str, ticket_number: int):
-    """Send email notification to winner"""
-    if not RESEND_API_KEY:
-        logger.warning("RESEND_API_KEY not configured, skipping email")
-        return None
-    
-    html_content = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a2e; color: white; padding: 40px; border-radius: 16px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #d946ef; margin: 0;">FELICITARI!</h1>
-            <h2 style="color: white; margin-top: 10px;">Ai câștigat!</h2>
-        </div>
-        
-        <div style="background: linear-gradient(135deg, #d946ef33, #8b5cf633); padding: 30px; border-radius: 12px; margin-bottom: 20px;">
-            <p style="margin: 0; font-size: 18px;">Dragă <strong>{winner_name}</strong>,</p>
-            <p style="margin-top: 15px;">Suntem încântați să te anunțăm că ești câștigătorul competiției:</p>
-            <h3 style="color: #d946ef; font-size: 24px; margin: 20px 0;">{competition_title}</h3>
-            <p><strong>Premiu:</strong> {prize_description or 'Vezi detalii pe site'}</p>
-            <p><strong>Număr loc câștigător:</strong> #{ticket_number}</p>
-        </div>
-        
-        <div style="background: #2a2a4e; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-            <h4 style="color: #8b5cf6; margin-top: 0;">Următorii pași:</h4>
-            <ol style="padding-left: 20px;">
-                <li style="margin-bottom: 10px;">Te vom contacta în 24-48 ore cu instrucțiuni detaliate</li>
-                <li style="margin-bottom: 10px;">Pregătește-ți documentele de identitate pentru verificare</li>
-                <li>Verifică folderul spam pentru a nu rata comunicările noastre</li>
-            </ol>
-        </div>
-        
-        <p style="text-align: center; color: #888; font-size: 14px;">
-            Cu drag,<br/>
-            <strong style="color: white;">Echipa Zektrix UK</strong>
-        </p>
-        
-        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #333;">
-            <a href="https://zektrix.uk" style="color: #d946ef; text-decoration: none;">zektrix.uk</a>
-        </div>
-    </div>
-    """
-    
-    try:
-        params = {
-            "from": SENDER_EMAIL,
-            "to": [winner_email],
-            "subject": f"[CASTIGATOR] Felicitari! Ai castigat la {competition_title}!",
-            "html": html_content
-        }
-        email = await asyncio.to_thread(resend.Emails.send, params)
-        logger.info(f"Winner notification email sent to {winner_email}")
-        return email.get("id")
-    except Exception as e:
-        logger.error(f"Failed to send winner email: {str(e)}")
-        return None
-
-async def send_welcome_email(user_email: str, username: str, referral_code: str):
-    """Send welcome email to new user"""
-    if not RESEND_API_KEY:
-        return None
-    
-    html_content = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a2e; color: white; padding: 40px; border-radius: 16px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #d946ef; margin: 0;">Bine ai venit!</h1>
-            <h2 style="color: white; margin-top: 10px;">la Zektrix UK</h2>
-        </div>
-        
-        <p>Salut <strong>{username}</strong>,</p>
-        <p>Îți mulțumim că te-ai alăturat platformei noastre de competiții!</p>
-        
-        <div style="background: linear-gradient(135deg, #d946ef33, #8b5cf633); padding: 20px; border-radius: 12px; margin: 20px 0;">
-            <h4 style="color: #d946ef; margin-top: 0;">Codul tău de referral:</h4>
-            <p style="font-size: 24px; text-align: center; background: #2a2a4e; padding: 15px; border-radius: 8px; font-family: monospace; letter-spacing: 2px;">
-                {referral_code}
-            </p>
-            <p style="font-size: 14px; text-align: center; margin-bottom: 0;">Invită prieteni și câștigi £5 pentru fiecare!</p>
-        </div>
-        
-        <p style="text-align: center;">
-            <a href="https://zektrix.uk/competitions" style="display: inline-block; background: linear-gradient(135deg, #d946ef, #8b5cf6); color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                Vezi Competițiile
-            </a>
-        </p>
-        
-        <p style="text-align: center; color: #888; font-size: 14px; margin-top: 30px;">
-            Cu drag,<br/>
-            <strong style="color: white;">Echipa Zektrix UK</strong>
-        </p>
-    </div>
-    """
-    
-    try:
-        params = {
-            "from": SENDER_EMAIL,
-            "to": [user_email],
-            "subject": "[ZEKTRIX] Bine ai venit la Zektrix UK!",
-            "html": html_content
-        }
-        await asyncio.to_thread(resend.Emails.send, params)
-        logger.info(f"Welcome email sent to {user_email}")
-    except Exception as e:
-        logger.error(f"Failed to send welcome email: {str(e)}")
-
-async def send_password_reset_email(user_email: str, username: str, reset_token: str):
-    """Send password reset email"""
-    if not RESEND_API_KEY:
-        logger.warning("RESEND_API_KEY not configured, skipping email")
-        return None
-    
-    reset_link = f"https://zektrix.uk/reset-password?token={reset_token}"
-    
-    html_content = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a2e; color: white; padding: 40px; border-radius: 16px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #d946ef; margin: 0;">Resetare Parolă</h1>
-        </div>
-        
-        <p>Salut <strong>{username}</strong>,</p>
-        <p>Am primit o cerere de resetare a parolei pentru contul tău Zektrix UK.</p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{reset_link}" style="display: inline-block; background: linear-gradient(135deg, #d946ef, #8b5cf6); color: white; padding: 15px 40px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 16px;">
-                Resetează Parola
-            </a>
-        </div>
-        
-        <p style="color: #888; font-size: 14px;">Acest link este valid pentru 1 oră.</p>
-        <p style="color: #888; font-size: 14px;">Dacă nu ai cerut această resetare, ignoră acest email.</p>
-        
-        <div style="border-top: 1px solid #333; margin-top: 30px; padding-top: 20px; text-align: center;">
-            <p style="color: #888; font-size: 12px;">Cu drag, Echipa Zektrix UK</p>
-        </div>
-    </div>
-    """
-    
-    try:
-        params = {
-            "from": SENDER_EMAIL,
-            "to": [user_email],
-            "subject": "[ZEKTRIX] Resetare Parola - Zektrix UK",
-            "html": html_content
-        }
-        email = await asyncio.to_thread(resend.Emails.send, params)
-        logger.info(f"Password reset email sent to {user_email}")
-        return email.get("id")
-    except Exception as e:
-        logger.error(f"Failed to send password reset email: {str(e)}")
-        return None
-
-async def send_competition_75_percent_email(user_email: str, username: str, competition_title: str, sold_percent: int):
-    """Send email when competition reaches 75%+ sold"""
-    if not RESEND_API_KEY:
-        return None
-    
-    html_content = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a2e; color: white; padding: 40px; border-radius: 16px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #f97316; margin: 0;">Aproape Sold Out!</h1>
-        </div>
-        
-        <p>Salut <strong>{username}</strong>,</p>
-        <p>Competiția <strong style="color: #d946ef;">{competition_title}</strong> este aproape terminată!</p>
-        
-        <div style="background: linear-gradient(135deg, #f9731633, #d946ef33); padding: 20px; border-radius: 12px; margin: 20px 0; text-align: center;">
-            <p style="font-size: 48px; margin: 0; font-weight: bold; color: #f97316;">{sold_percent}%</p>
-            <p style="margin: 10px 0 0 0; color: #888;">din locuri vândute</p>
-        </div>
-        
-        <p style="text-align: center;">
-            <a href="https://zektrix.uk/competitions" style="display: inline-block; background: linear-gradient(135deg, #f97316, #d946ef); color: white; padding: 15px 40px; border-radius: 12px; text-decoration: none; font-weight: bold;">
-                Rezervă-ți Locul Acum!
-            </a>
-        </p>
-        
-        <div style="border-top: 1px solid #333; margin-top: 30px; padding-top: 20px; text-align: center;">
-            <p style="color: #888; font-size: 12px;">Cu drag, Echipa Zektrix UK</p>
-        </div>
-    </div>
-    """
-    
-    try:
-        params = {
-            "from": SENDER_EMAIL,
-            "to": [user_email],
-            "subject": f"[HOT] {sold_percent}% Vandut! {competition_title} - Zektrix UK",
-            "html": html_content
-        }
-        await asyncio.to_thread(resend.Emails.send, params)
-        logger.info(f"75% alert email sent to {user_email}")
-    except Exception as e:
-        logger.error(f"Failed to send 75% alert email: {str(e)}")
-
-async def send_daily_digest_email(user_email: str, username: str, new_competitions: list, ending_soon: list):
-    """Send daily digest email with new competitions and ending soon"""
-    if not RESEND_API_KEY or (not new_competitions and not ending_soon):
-        return None
-    
-    new_comps_html = ""
-    if new_competitions:
-        new_comps_html = """
-        <div style="margin-bottom: 30px;">
-            <h3 style="color: #d946ef; margin-bottom: 15px;">🆕 Competiții Noi</h3>
-        """
-        for comp in new_competitions[:5]:
-            new_comps_html += f"""
-            <div style="background: #2a2a4e; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
-                <p style="margin: 0; font-weight: bold;">{comp.get('title', 'N/A')}</p>
-                <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;">Preț loc: £{comp.get('ticket_price', 0):.2f}</p>
-            </div>
-            """
-        new_comps_html += "</div>"
-    
-    ending_html = ""
-    if ending_soon:
-        ending_html = """
-        <div style="margin-bottom: 30px;">
-            <h3 style="color: #f97316; margin-bottom: 15px;">⏰ Se Termină Curând</h3>
-        """
-        for comp in ending_soon[:5]:
-            sold_percent = int((comp.get('sold_tickets', 0) / max(comp.get('max_tickets', 1), 1)) * 100)
-            ending_html += f"""
-            <div style="background: linear-gradient(135deg, #f9731620, #d946ef20); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #f9731640;">
-                <p style="margin: 0; font-weight: bold;">{comp.get('title', 'N/A')}</p>
-                <p style="margin: 5px 0 0 0; color: #f97316; font-size: 14px;">{sold_percent}% vândut - Grăbește-te!</p>
-            </div>
-            """
-        ending_html += "</div>"
-    
-    html_content = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a2e; color: white; padding: 40px; border-radius: 16px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #d946ef; margin: 0;">Update Zilnic Zektrix</h1>
-            <p style="color: #888; margin-top: 10px;">Salut {username}, iată ce e nou!</p>
-        </div>
-        
-        {new_comps_html}
-        {ending_html}
-        
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="https://zektrix.uk/competitions" style="display: inline-block; background: linear-gradient(135deg, #d946ef, #8b5cf6); color: white; padding: 15px 40px; border-radius: 12px; text-decoration: none; font-weight: bold;">
-                Vezi Toate Competițiile
-            </a>
-        </div>
-        
-        <div style="border-top: 1px solid #333; margin-top: 30px; padding-top: 20px; text-align: center;">
-            <p style="color: #888; font-size: 12px;">Cu drag, Echipa Zektrix UK</p>
-            <p style="color: #666; font-size: 11px;">Pentru a dezactiva emailurile zilnice, accesează setările contului tău.</p>
-        </div>
-    </div>
-    """
-    
-    try:
-        params = {
-            "from": SENDER_EMAIL,
-            "to": [user_email],
-            "subject": "[ZEKTRIX] Update Zilnic - Competitii Noi si Aproape Terminate | Zektrix UK",
-            "html": html_content
-        }
-        await asyncio.to_thread(resend.Emails.send, params)
-        logger.info(f"Daily digest sent to {user_email}")
-    except Exception as e:
-        logger.error(f"Failed to send daily digest: {str(e)}")
+# ==================== AUTH HELPERS ====================
 
 # ==================== AUTH HELPERS ====================
 
@@ -832,12 +370,6 @@ async def process_session(session_id: str, response: Response):
 @api_router.get("/auth/me")
 async def get_me(current_user: dict = Depends(get_current_user)):
     return {k: v for k, v in current_user.items() if k != "password_hash"}
-
-class ProfileUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    phone: Optional[str] = None
-    username: Optional[str] = None
 
 @api_router.put("/auth/profile")
 async def update_profile(update: ProfileUpdate, current_user: dict = Depends(get_current_user)):
@@ -3232,10 +2764,6 @@ class AIChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
 
-class PushSubscription(BaseModel):
-    endpoint: str
-    keys: dict
-
 @api_router.post("/chat/ai")
 async def ai_chat(req: AIChatRequest, current_user: dict = Depends(get_current_user)):
     """AI chatbot endpoint - answers questions about Zektrix"""
@@ -3336,75 +2864,10 @@ async def test_push_notification(current_user: dict = Depends(get_admin_user)):
         raise HTTPException(status_code=400, detail=f"Nu s-a putut trimite: {'; '.join(errors)}")
 
 
-async def send_web_push(subscription: dict, data: dict) -> bool:
-    """Send web push notification using pywebpush"""
-    from pywebpush import webpush, WebPushException
-    
-    vapid_pem_path = os.path.join(os.path.dirname(__file__), "vapid_private.pem")
-    
-    try:
-        webpush(
-            subscription_info={
-                "endpoint": subscription["endpoint"],
-                "keys": subscription["keys"]
-            },
-            data=json.dumps(data),
-            vapid_private_key=vapid_pem_path,
-            vapid_claims={"sub": VAPID_MAILTO}
-        )
-        return True
-    except WebPushException as e:
-        status_code = e.response.status_code if e.response is not None else 0
-        if status_code in (404, 410):
-            raise Exception(f"{status_code} push subscription expired")
-        raise Exception(f"Push failed: {status_code} {str(e)[:200]}")
-
-
-async def notify_user_push(user_id: str, title: str, body: str, url: str = "https://zektrix.uk"):
-    """Send push notification to a specific user"""
-    subs = await db.push_subscriptions.find({"user_id": user_id}, {"_id": 0}).to_list(5)
-    for sub in subs:
-        try:
-            await send_web_push(sub, {"title": title, "body": body, "url": url})
-        except Exception as e:
-            logger.error(f"Push to user {user_id} failed: {e}")
-            if "410" in str(e) or "404" in str(e):
-                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
-
-
-async def notify_competition_participants_push(competition_id: str, title: str, body: str, url: str = None):
-    """Send push notification to all participants of a competition"""
-    tickets = await db.tickets.find({"competition_id": competition_id}, {"_id": 0, "user_id": 1}).to_list(10000)
-    user_ids = list(set(t["user_id"] for t in tickets))
-    if not url:
-        url = f"https://zektrix.uk/competitions/{competition_id}"
-    subs = await db.push_subscriptions.find({"user_id": {"$in": user_ids}}, {"_id": 0}).to_list(1000)
-    for sub in subs:
-        try:
-            await send_web_push(sub, {"title": title, "body": body, "url": url})
-        except Exception as e:
-            if "410" in str(e) or "404" in str(e):
-                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
-
-
 async def notify_admins_live_chat(user_name: str, user_email: str, message: str):
     """Send push notification + email to all admins when user requests live chat"""
     # 1. Push notifications to admins
-    subscriptions = await db.push_subscriptions.find({"role": "admin"}, {"_id": 0}).to_list(50)
-    if not subscriptions:
-        subscriptions = await db.push_subscriptions.find({}, {"_id": 0}).to_list(50)
-    for sub in subscriptions:
-        try:
-            await send_web_push(sub, {
-                "title": "Asistenta Live Solicitata",
-                "body": f"{user_name}: {message[:100]}",
-                "url": "https://zektrix.uk/admin"
-            })
-            logger.info(f"Push sent to {sub['endpoint'][:50]}...")
-        except Exception as e:
-            logger.error(f"Push notification failed: {e}")
-            if "410" in str(e) or "404" in str(e):
-                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
+    await _notify_admins_push(db, "Asistenta Live Solicitata", f"{user_name}: {message[:100]}", "https://zektrix.uk/admin")
     
     # 2. Email notification
     if RESEND_API_KEY:
