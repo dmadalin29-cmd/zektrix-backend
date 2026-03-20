@@ -1647,6 +1647,7 @@ async def create_competition(comp: CompetitionCreate, admin: dict = Depends(get_
         "category": comp.category or "other",
         "status": "active",
         "image_url": comp.image_url,
+        "images": comp.images or [],
         "prize_description": comp.prize_description,
         "draw_date": comp.draw_date,
         "qualification_question": qual_question,
