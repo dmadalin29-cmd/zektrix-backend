@@ -99,6 +99,79 @@ async def viva_webhook(request: Request):
                     })
                     
                     logger.info(f"Viva webhook: Created {len(tickets_to_create)} tickets for order {order_code}")
+            
+            # ===== CHECK SUBSCRIPTION PAYMENTS =====
+            if not pending:
+                sub_pending = await db.subscriptions.find_one({
+                    "viva_order_code": str(order_code),
+                    "status": "pending_payment"
+                })
+                
+                if sub_pending:
+                    # Activate the subscription
+                    await db.subscriptions.update_one(
+                        {"subscription_id": sub_pending["subscription_id"]},
+                        {"$set": {
+                            "status": "active",
+                            "viva_transaction_id": transaction_id,
+                            "activated_at": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+                    
+                    # Update transaction status
+                    await db.transactions.update_one(
+                        {"viva_order_code": str(order_code), "status": "pending"},
+                        {"$set": {"status": "completed", "viva_transaction_id": transaction_id}}
+                    )
+                    
+                    # Distribute subscription tickets
+                    try:
+                        from routes.subscriptions import distribute_subscription_tickets
+                    except ImportError:
+                        from subscriptions import distribute_subscription_tickets
+                    asyncio.create_task(distribute_subscription_tickets(
+                        sub_pending["user_id"],
+                        sub_pending["subscription_id"],
+                        sub_pending["entries_per_competition"]
+                    ))
+                    
+                    # Notify user
+                    await notify_user_push(
+                        sub_pending["user_id"],
+                        "Abonament Activat!",
+                        f"Abonamentul {sub_pending['plan_name']} a fost activat. Biletele se distribuie acum!",
+                        "https://zektrix.uk/subscriptions"
+                    )
+                    
+                    logger.info(f"Viva webhook: Activated subscription {sub_pending['subscription_id']} for order {order_code}")
+            
+            # ===== CHECK WALLET DEPOSIT PAYMENTS =====
+            if not pending:
+                wallet_txn = await db.transactions.find_one({
+                    "viva_order_code": str(order_code),
+                    "transaction_type": "deposit",
+                    "status": "pending"
+                })
+                
+                if wallet_txn:
+                    deposit_amount = abs(wallet_txn.get("amount", amount))
+                    await db.users.update_one(
+                        {"user_id": wallet_txn["user_id"]},
+                        {"$inc": {"balance": deposit_amount}}
+                    )
+                    await db.transactions.update_one(
+                        {"_id": wallet_txn["_id"]},
+                        {"$set": {"status": "completed", "viva_transaction_id": transaction_id}}
+                    )
+                    
+                    await notify_user_push(
+                        wallet_txn["user_id"],
+                        "Depozit Confirmat!",
+                        f"£{deposit_amount:.2f} a fost adaugat in portofelul tau.",
+                        "https://zektrix.uk/wallet"
+                    )
+                    
+                    logger.info(f"Viva webhook: Wallet deposit £{deposit_amount} for order {order_code}")
         
         return {"status": "ok"}
     
