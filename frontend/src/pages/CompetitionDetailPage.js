@@ -19,7 +19,7 @@ import axios from 'axios';
 import { 
     Zap, Clock, Ticket, Minus, Plus, Loader2, Trophy, ArrowLeft, 
     PartyPopper, CreditCard, Mail, HelpCircle, CheckCircle, XCircle, 
-    ShoppingCart, Users, Calendar, Gift, ChevronLeft, ChevronRight
+    ShoppingCart, Users, Calendar, Gift, ChevronLeft, ChevronRight, Wallet
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -37,24 +37,20 @@ const CompetitionDetailPage = () => {
     const [purchasing, setPurchasing] = useState(false);
     const [purchaseSuccess, setPurchaseSuccess] = useState(false);
     const [purchasedLocuri, setPurchasedLocuri] = useState([]);
-    
-    // Qualification question state
     const [selectedAnswer, setSelectedAnswer] = useState(null);
     const [answerError, setAnswerError] = useState(false);
     const [answerVerified, setAnswerVerified] = useState(false);
     const [enteringFree, setEnteringFree] = useState(false);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [paymentMethod, setPaymentMethod] = useState('viva');
 
-    useEffect(() => {
-        fetchCompetition();
-    }, [id]);
+    useEffect(() => { fetchCompetition(); }, [id]);
 
     const fetchCompetition = async () => {
         try {
             const response = await axios.get(`${API}/competitions/${id}`);
             setCompetition(response.data);
         } catch (error) {
-            console.error('Failed to fetch competition:', error);
             toast.error('Competition not found');
             navigate('/competitions');
         } finally {
@@ -63,97 +59,54 @@ const CompetitionDetailPage = () => {
     };
 
     const verifyAnswer = () => {
-        if (selectedAnswer === null) {
-            toast.error(isRomanian ? 'Selectează un răspuns' : 'Select an answer');
-            return;
-        }
-        
+        if (selectedAnswer === null) { toast.error(isRomanian ? 'Selectează un răspuns' : 'Select an answer'); return; }
         const isCorrect = selectedAnswer === competition.qualification_question?.correct_answer;
-        if (isCorrect) {
-            setAnswerVerified(true);
-            setAnswerError(false);
-            toast.success(isRomanian ? 'Răspuns corect!' : 'Correct answer!');
-        } else {
-            setAnswerError(true);
-            toast.error(isRomanian ? 'Răspuns incorect. Încearcă din nou!' : 'Incorrect answer. Try again!');
-        }
+        if (isCorrect) { setAnswerVerified(true); setAnswerError(false); toast.success(isRomanian ? 'Răspuns corect!' : 'Correct answer!'); }
+        else { setAnswerError(true); toast.error(isRomanian ? 'Răspuns incorect. Încearcă din nou!' : 'Incorrect answer. Try again!'); }
     };
 
     const handlePurchase = async () => {
-        if (!isAuthenticated) {
-            navigate('/login', { state: { from: { pathname: `/competitions/${id}` } } });
-            return;
-        }
+        if (!isAuthenticated) { navigate('/login', { state: { from: { pathname: `/competitions/${id}` } } }); return; }
+        if (competition.qualification_question && !answerVerified) { toast.error(isRomanian ? 'Răspunde corect la întrebare' : 'Answer the question correctly first'); return; }
 
-        if (competition.qualification_question && !answerVerified) {
-            toast.error(isRomanian ? 'Răspunde corect la întrebare' : 'Answer the question correctly first');
-            return;
-        }
-
-        // All payments go through Viva
         setPurchasing(true);
         try {
-            const response = await axios.post(
-                `${API}/tickets/purchase-viva`,
-                { 
-                    competition_id: id, 
-                    quantity,
-                    qualification_answer: selectedAnswer
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            if (response.data.checkout_url) {
-                window.location.href = response.data.checkout_url;
+            if (paymentMethod === 'wallet') {
+                const response = await axios.post(`${API}/tickets/purchase`,
+                    { competition_id: id, quantity, qualification_answer: selectedAnswer },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                setPurchasedLocuri(response.data);
+                setPurchaseSuccess(true);
+                toast.success(isRomanian ? 'Locuri cumpărate cu succes!' : 'Tickets purchased successfully!');
+                fetchCompetition();
+                refreshUser();
+            } else {
+                const response = await axios.post(`${API}/tickets/purchase-viva`,
+                    { competition_id: id, quantity, qualification_answer: selectedAnswer },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (response.data.checkout_url) { window.location.href = response.data.checkout_url; }
             }
         } catch (error) {
-            toast.error(error.response?.data?.detail || 'Payment initiation failed');
+            toast.error(error.response?.data?.detail || 'Payment failed');
+        } finally {
             setPurchasing(false);
         }
     };
 
     const handleAddToCart = () => {
-        if (competition.qualification_question && !answerVerified) {
-            toast.error(isRomanian ? 'Răspunde corect la întrebare' : 'Answer the question correctly first');
-            return;
-        }
+        if (competition.qualification_question && !answerVerified) { toast.error(isRomanian ? 'Răspunde corect la întrebare' : 'Answer the question correctly first'); return; }
         addToCart(competition, quantity, selectedAnswer);
         toast.success(isRomanian ? 'Adăugat în coș!' : 'Added to cart!');
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-background">
-                <Navbar />
-                <main className="pt-28 flex items-center justify-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </main>
-            </div>
-        );
-    }
-
-    if (!competition) return null;
-
-    const soldPercentage = (competition.sold_tickets / competition.max_tickets) * 100;
-    const available = competition.max_tickets - competition.sold_tickets;
-    const totalCost = competition.ticket_price * quantity;
-    const isFree = competition.is_free || competition.ticket_price === 0;
-
     const handleFreeEntry = async () => {
-        if (!isAuthenticated) {
-            navigate('/login', { state: { from: { pathname: `/competitions/${id}` } } });
-            return;
-        }
-        if (competition.qualification_question && !answerVerified) {
-            toast.error(isRomanian ? 'Răspunde corect la întrebare' : 'Answer the question correctly first');
-            return;
-        }
+        if (!isAuthenticated) { navigate('/login', { state: { from: { pathname: `/competitions/${id}` } } }); return; }
+        if (competition.qualification_question && !answerVerified) { toast.error(isRomanian ? 'Răspunde corect la întrebare' : 'Answer the question correctly first'); return; }
         setEnteringFree(true);
         try {
-            const response = await axios.post(
-                `${API}/tickets/enter-free`,
-                { competition_id: id, qualification_answer: selectedAnswer },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const response = await axios.post(`${API}/tickets/enter-free`, { competition_id: id, qualification_answer: selectedAnswer }, { headers: { Authorization: `Bearer ${token}` } });
             setPurchasedLocuri([response.data.ticket]);
             setPurchaseSuccess(true);
             toast.success(response.data.message);
@@ -164,32 +117,29 @@ const CompetitionDetailPage = () => {
             setEnteringFree(false);
         }
     };
+
+    if (loading) {
+        return (<div className="min-h-screen bg-background"><Navbar /><main className="pt-28 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></main></div>);
+    }
+    if (!competition) return null;
+
+    const soldPercentage = (competition.sold_tickets / competition.max_tickets) * 100;
+    const available = competition.max_tickets - competition.sold_tickets;
+    const totalCost = competition.ticket_price * quantity;
+    const isFree = competition.is_free || competition.ticket_price === 0;
     const qualQuestion = competition.qualification_question;
     const postalEntry = competition.postal_entry;
-
-    // Get urgency class
-    const getUrgencyClass = () => {
-        if (soldPercentage >= 80) return 'progress-urgency-high';
-        if (soldPercentage >= 50) return 'progress-urgency-medium';
-        return 'progress-urgency-low';
-    };
+    const getUrgencyClass = () => { if (soldPercentage >= 80) return 'progress-urgency-high'; if (soldPercentage >= 50) return 'progress-urgency-medium'; return 'progress-urgency-low'; };
 
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
-            
-            {/* Background effects */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <div className="orb orb-1" />
-                <div className="orb orb-2" />
-            </div>
+            <div className="fixed inset-0 pointer-events-none overflow-hidden"><div className="orb orb-1" /><div className="orb orb-2" /></div>
 
             <main className="relative pt-28 pb-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Back Button */}
                     <Link to="/competitions" className="inline-flex items-center gap-2 text-muted-foreground hover:text-white transition-colors mb-8">
-                        <ArrowLeft className="w-4 h-4" />
-                        {isRomanian ? 'Înapoi la Competiții' : 'Back to Competitions'}
+                        <ArrowLeft className="w-4 h-4" /> {isRomanian ? 'Înapoi la Competiții' : 'Back to Competitions'}
                     </Link>
 
                     {/* Success Dialog */}
@@ -202,35 +152,155 @@ const CompetitionDetailPage = () => {
                                 <DialogTitle className="text-center text-xl font-bold">{t('congratulations')}</DialogTitle>
                             </DialogHeader>
                             <div id="success-description" className="text-center space-y-3 py-2">
-                                <p className="text-sm text-muted-foreground">
-                                    {t('you_purchased')} {purchasedLocuri.length} {purchasedLocuri.length === 1 ? 'loc' : t('locuri')}!
-                                </p>
+                                <p className="text-sm text-muted-foreground">{t('you_purchased')} {purchasedLocuri.length} {purchasedLocuri.length === 1 ? 'loc' : t('locuri')}!</p>
                                 <div className="flex flex-wrap gap-2 justify-center">
-                                    {purchasedLocuri.map((ticket) => (
-                                        <span key={ticket.ticket_id} className="ticket-badge text-sm">
-                                            #{ticket.ticket_number}
-                                        </span>
-                                    ))}
+                                    {purchasedLocuri.map((ticket) => (<span key={ticket.ticket_id} className="ticket-badge text-sm">#{ticket.ticket_number}</span>))}
                                 </div>
                             </div>
                             <div className="flex flex-col gap-3 pt-2">
-                                <Button className="w-full btn-secondary text-black font-semibold h-11" onClick={() => navigate('/dashboard/locuri')}>
-                                    {t('view_my_locs')}
-                                </Button>
-                                <Button variant="outline" className="w-full font-semibold h-11" onClick={() => { setPurchaseSuccess(false); fetchCompetition(); }}>
-                                    {t('buy_more')}
-                                </Button>
+                                <Button className="w-full btn-secondary text-black font-semibold h-11" onClick={() => navigate('/dashboard/locuri')}>{t('view_my_locs')}</Button>
+                                <Button variant="outline" className="w-full font-semibold h-11" onClick={() => { setPurchaseSuccess(false); fetchCompetition(); }}>{t('buy_more')}</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left Column - Main Content */}
+                        {/* ===== PURCHASE CARD (first on mobile, sticky right on desktop) ===== */}
+                        <div className="lg:col-start-3 lg:row-start-1 lg:row-span-10">
+                            <div className="lg:sticky lg:top-24">
+                            <Card className="glass border-primary/30">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="flex items-center justify-between">
+                                        <span>{isFree ? (isRomanian ? 'Intrare Gratuită' : 'Free Entry') : (isRomanian ? 'Cumpără Locuri' : 'Buy Spots')}</span>
+                                        {isFree ? (
+                                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-lg px-3 py-1" data-testid="free-badge"><Gift className="w-4 h-4 mr-1" /> GRATUIT</Badge>
+                                        ) : (
+                                            <span className="price-display">£{competition.ticket_price.toFixed(2)}</span>
+                                        )}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {competition.status === 'completed' ? (
+                                        <div className="text-center py-6"><Trophy className="w-10 h-10 mx-auto text-secondary mb-3" /><p className="font-bold text-lg">{isRomanian ? 'Competiție Încheiată' : 'Competition Ended'}</p></div>
+                                    ) : available === 0 ? (
+                                        <div className="text-center py-6"><Ticket className="w-10 h-10 mx-auto text-muted-foreground mb-3" /><p className="font-bold text-lg">Sold Out</p></div>
+                                    ) : (
+                                        <>
+                                            {/* Qualification Question (always first) */}
+                                            {qualQuestion && (
+                                                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <HelpCircle className="w-4 h-4 text-yellow-500" />
+                                                        <span className="text-xs font-medium">{isRomanian ? 'Întrebare de Calificare' : 'Qualification Question'}</span>
+                                                        {answerVerified && <Badge className="badge-secondary ml-auto text-[10px]"><CheckCircle className="w-3 h-3 mr-0.5" /> OK</Badge>}
+                                                    </div>
+                                                    <p className="text-sm font-medium mb-2">{qualQuestion.question}</p>
+                                                    <RadioGroup value={selectedAnswer?.toString()} onValueChange={(v) => { setSelectedAnswer(parseInt(v)); setAnswerError(false); setAnswerVerified(false); }} disabled={answerVerified} className="space-y-1.5">
+                                                        {qualQuestion.options.map((option, idx) => (
+                                                            <div key={idx} className={`flex items-center space-x-2 p-2.5 rounded-lg border cursor-pointer transition-all text-sm ${selectedAnswer === idx ? answerError ? 'border-destructive bg-destructive/10' : answerVerified ? 'border-secondary bg-secondary/10' : 'border-yellow-500 bg-yellow-500/10' : 'border-white/10 hover:border-white/20'} ${answerVerified ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                                                                <RadioGroupItem value={idx.toString()} id={`answer-${idx}`} data-testid={`answer-${idx}`} />
+                                                                <Label htmlFor={`answer-${idx}`} className="cursor-pointer flex-1 flex items-center justify-between text-sm">
+                                                                    <span>{option}</span>
+                                                                    {selectedAnswer === idx && answerError && <XCircle className="w-4 h-4 text-destructive" />}
+                                                                    {selectedAnswer === idx && answerVerified && <CheckCircle className="w-4 h-4 text-secondary" />}
+                                                                </Label>
+                                                            </div>
+                                                        ))}
+                                                    </RadioGroup>
+                                                    {!answerVerified && (
+                                                        <Button className="w-full mt-2 btn-outline text-sm py-2" onClick={verifyAnswer} disabled={selectedAnswer === null} size="sm">
+                                                            {isRomanian ? 'Verifică' : 'Verify'}
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {isFree ? (
+                                                <>
+                                                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center">
+                                                        <Gift className="w-8 h-8 mx-auto mb-2 text-emerald-400" />
+                                                        <p className="font-bold text-emerald-400">{isRomanian ? 'Competiție Gratuită!' : 'Free Competition!'}</p>
+                                                        <p className="text-xs text-muted-foreground mt-1">{isRomanian ? 'Primești 1 loc automat.' : 'You get 1 spot automatically.'}</p>
+                                                    </div>
+                                                    <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-5 text-base font-bold" onClick={handleFreeEntry} disabled={enteringFree || (qualQuestion && !answerVerified)} data-testid="enter-free-btn">
+                                                        {enteringFree ? <Loader2 className="w-5 h-5 animate-spin" /> : !isAuthenticated ? (isRomanian ? 'Autentifică-te' : 'Log In') : <><Gift className="w-5 h-5 mr-2" /> {isRomanian ? 'Participă Gratuit' : 'Enter for Free'}</>}
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {/* Quantity */}
+                                                    <div>
+                                                        <p className="text-xs text-muted-foreground mb-2">{isRomanian ? 'Cantitate' : 'Quantity'}</p>
+                                                        <div className="flex items-center gap-3">
+                                                            <Button variant="outline" size="icon" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} className="h-10 w-10" data-testid="qty-minus-btn"><Minus className="w-4 h-4" /></Button>
+                                                            <Input type="number" value={quantity} onChange={(e) => setQuantity(Math.min(available, Math.max(1, parseInt(e.target.value) || 1)))} className="w-16 text-center input-modern h-10 text-lg font-mono font-bold" min={1} max={available} data-testid="qty-input" />
+                                                            <Button variant="outline" size="icon" onClick={() => setQuantity(Math.min(available, quantity + 1))} disabled={quantity >= available} className="h-10 w-10" data-testid="qty-plus-btn"><Plus className="w-4 h-4" /></Button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Total */}
+                                                    <div className="flex justify-between items-center py-3 border-y border-white/10">
+                                                        <span className="text-muted-foreground text-sm">Total</span>
+                                                        <span className="text-2xl font-black gradient-text font-mono">£{totalCost.toFixed(2)}</span>
+                                                    </div>
+
+                                                    {/* Payment Method */}
+                                                    {isAuthenticated && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-xs text-muted-foreground">{isRomanian ? 'Metoda de Plată' : 'Payment Method'}</p>
+                                                            <button onClick={() => setPaymentMethod('wallet')} className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${paymentMethod === 'wallet' ? 'border-violet-500 bg-violet-500/10' : 'border-white/10 hover:border-white/20'}`} data-testid="payment-wallet-btn">
+                                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === 'wallet' ? 'border-violet-500' : 'border-gray-500'}`}>
+                                                                    {paymentMethod === 'wallet' && <div className="w-2 h-2 rounded-full bg-violet-500" />}
+                                                                </div>
+                                                                <Wallet className="w-4 h-4 text-violet-400 shrink-0" />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium">{isRomanian ? 'Portofel' : 'Wallet'}</p>
+                                                                    <p className="text-[10px] text-muted-foreground">{isRomanian ? 'Sold' : 'Balance'}: £{(user?.balance || 0).toFixed(2)}</p>
+                                                                </div>
+                                                                {(user?.balance || 0) < totalCost && (
+                                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 shrink-0">{isRomanian ? 'Fonduri insuficiente' : 'Insufficient'}</span>
+                                                                )}
+                                                            </button>
+                                                            <button onClick={() => setPaymentMethod('viva')} className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${paymentMethod === 'viva' ? 'border-violet-500 bg-violet-500/10' : 'border-white/10 hover:border-white/20'}`} data-testid="payment-viva-btn">
+                                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === 'viva' ? 'border-violet-500' : 'border-gray-500'}`}>
+                                                                    {paymentMethod === 'viva' && <div className="w-2 h-2 rounded-full bg-violet-500" />}
+                                                                </div>
+                                                                <CreditCard className="w-4 h-4 text-amber-400 shrink-0" />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium">Card / Apple Pay / Google Pay</p>
+                                                                    <p className="text-[10px] text-muted-foreground">Visa, Mastercard, Apple Pay, Google Pay</p>
+                                                                </div>
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Buy Buttons */}
+                                                    <div className="space-y-2">
+                                                        <Button className="w-full btn-secondary text-black py-5 text-base font-bold" onClick={handlePurchase} disabled={purchasing || (qualQuestion && !answerVerified) || (paymentMethod === 'wallet' && isAuthenticated && (user?.balance || 0) < totalCost)} data-testid="buy-now-btn">
+                                                            {purchasing ? <Loader2 className="w-5 h-5 animate-spin" /> : !isAuthenticated ? (isRomanian ? 'Autentifică-te pentru a Cumpăra' : 'Log In to Purchase') : paymentMethod === 'wallet' ? <><Wallet className="w-4 h-4 mr-2" /> {isRomanian ? 'Plătește din Portofel' : 'Pay with Wallet'} — £{totalCost.toFixed(2)}</> : <><CreditCard className="w-4 h-4 mr-2" /> {isRomanian ? 'Plătește cu Cardul' : 'Pay with Card'} — £{totalCost.toFixed(2)}</>}
+                                                        </Button>
+                                                        <Button variant="outline" className="w-full btn-outline py-4 text-sm" onClick={handleAddToCart} disabled={qualQuestion && !answerVerified} data-testid="add-to-cart-btn">
+                                                            <ShoppingCart className="w-4 h-4 mr-2" /> {isRomanian ? 'Adaugă în Coș' : 'Add to Cart'}
+                                                        </Button>
+                                                    </div>
+
+                                                    {qualQuestion && !answerVerified && (
+                                                        <p className="text-xs text-center text-muted-foreground">{isRomanian ? 'Răspunde la întrebarea de calificare' : 'Answer the qualification question'}</p>
+                                                    )}
+                                                </>
+                                            )}
+                                        </>
+                                    )}
+                                </CardContent>
+                            </Card>
+                            </div>
+                        </div>
+
+                        {/* ===== LEFT COLUMN - Main Content ===== */}
                         <div className="lg:col-span-2 space-y-6">
-                            {/* Image Card - Gallery */}
+                            {/* Image Gallery */}
                             <Card className="glass border-white/10 overflow-hidden">
                                 <div className="relative">
-                                    {/* Main Image */}
                                     <div className="relative aspect-video">
                                         <img 
                                             src={(competition.images && competition.images.length > 0 ? competition.images[activeImageIndex || 0] : competition.image_url) || 'https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?w=1200'} 
@@ -239,7 +309,6 @@ const CompetitionDetailPage = () => {
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
                                         
-                                        {/* Gallery Navigation Arrows */}
                                         {competition.images && competition.images.length > 1 && (
                                             <>
                                                 <button onClick={() => setActiveImageIndex(i => (i || 0) > 0 ? (i || 0) - 1 : competition.images.length - 1)} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10">
@@ -250,35 +319,27 @@ const CompetitionDetailPage = () => {
                                                 </button>
                                             </>
                                         )}
-                                    
-                                        {/* Badges */}
+
                                         <div className="absolute top-4 left-4 flex gap-2">
                                             {competition.competition_type === 'instant_win' ? (
-                                                <Badge className="badge-instant">
-                                                    <Zap className="w-3 h-3 mr-1" /> Autodraw
-                                                </Badge>
+                                                <Badge className="badge-instant"><Zap className="w-3 h-3 mr-1" /> Autodraw</Badge>
                                             ) : (
-                                                <Badge className="badge-classic">
-                                                    <Clock className="w-3 h-3 mr-1" /> Draw
-                                                </Badge>
+                                                <Badge className="badge-classic"><Clock className="w-3 h-3 mr-1" /> Draw</Badge>
                                             )}
                                         </div>
-                                    
                                         <div className="absolute top-4 right-4">
                                             <ShareButton competitionId={competition.competition_id} competitionTitle={competition.title} />
                                         </div>
 
-                                        {/* Sold Percentage */}
                                         {soldPercentage >= 50 && (
                                             <div className="absolute bottom-4 right-4">
                                                 <Badge className={soldPercentage >= 80 ? 'status-ending' : 'badge-secondary'}>
                                                     {Math.round(soldPercentage)}% {isRomanian ? 'Vândut' : 'Sold'}
-                                            </Badge>
-                                        </div>
-                                    )}
-                                </div>
+                                                </Badge>
+                                            </div>
+                                        )}
+                                    </div>
 
-                                    {/* Image Thumbnails */}
                                     {competition.images && competition.images.length > 1 && (
                                         <div className="flex gap-2 p-3 bg-black/20 overflow-x-auto">
                                             {competition.images.map((img, idx) => (
@@ -290,7 +351,6 @@ const CompetitionDetailPage = () => {
                                     )}
                                 </div>
 
-                                {/* Progress Bar */}
                                 <div className={`h-2 ${getUrgencyClass()}`}>
                                     <div className="progress-bar h-full">
                                         <div className="progress-fill" style={{ width: `${soldPercentage}%` }} />
@@ -298,12 +358,8 @@ const CompetitionDetailPage = () => {
                                 </div>
 
                                 <CardContent className="p-6">
-                                    <h1 className="text-3xl md:text-4xl font-black mb-4" data-testid="comp-title">
-                                        {competition.title}
-                                    </h1>
+                                    <h1 className="text-3xl md:text-4xl font-black mb-4" data-testid="comp-title">{competition.title}</h1>
                                     <p className="text-muted-foreground text-lg mb-6">{competition.description}</p>
-
-                                    {/* Stats Grid */}
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div className="bg-white/5 rounded-xl p-4 text-center">
                                             <Ticket className="w-5 h-5 mx-auto mb-2 text-primary" />
@@ -318,7 +374,7 @@ const CompetitionDetailPage = () => {
                                         <div className="bg-white/5 rounded-xl p-4 text-center">
                                             <Trophy className="w-5 h-5 mx-auto mb-2 text-accent" />
                                             <p className="text-2xl font-black font-mono">{competition.max_tickets}</p>
-                                            <p className="text-xs text-muted-foreground">{isRomanian ? 'Total' : 'Total'}</p>
+                                            <p className="text-xs text-muted-foreground">Total</p>
                                         </div>
                                         <div className="bg-white/5 rounded-xl p-4 text-center">
                                             <Calendar className="w-5 h-5 mx-auto mb-2 text-primary" />
@@ -337,14 +393,7 @@ const CompetitionDetailPage = () => {
                                             <div>
                                                 <h3 className="font-bold text-lg">{isRomanian ? 'Extragerea În' : 'Draw In'}</h3>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {new Date(competition.draw_date).toLocaleDateString('ro-RO', {
-                                                        weekday: 'long',
-                                                        year: 'numeric',
-                                                        month: 'long',
-                                                        day: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
+                                                    {new Date(competition.draw_date).toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
                                             <Clock className="w-8 h-8 text-primary" />
@@ -354,89 +403,42 @@ const CompetitionDetailPage = () => {
                                 </Card>
                             )}
 
-                            {/* Instant Prizes Section */}
+                            {/* Instant Prizes */}
                             {competition.instant_prizes && competition.instant_prizes.length > 0 && (
                                 <Card className="glass border-amber-500/30 overflow-hidden" data-testid="instant-prizes-section">
                                     <CardContent className="p-6">
                                         <div className="flex items-center gap-3 mb-5">
-                                            <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                                                <Gift className="w-5 h-5 text-amber-400" />
-                                            </div>
+                                            <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center"><Gift className="w-5 h-5 text-amber-400" /></div>
                                             <div>
                                                 <h3 className="font-bold text-lg">{isRomanian ? 'Premii Instant' : 'Instant Prizes'}</h3>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {isRomanian ? 'Câștigă automat când pragul este atins!' : 'Win automatically when threshold is reached!'}
-                                                </p>
+                                                <p className="text-sm text-muted-foreground">{isRomanian ? 'Câștigă automat când pragul este atins!' : 'Win automatically when threshold is reached!'}</p>
                                             </div>
                                         </div>
                                         <div className="space-y-3">
-                                            {competition.instant_prizes
-                                                .sort((a, b) => a.percentage - b.percentage)
-                                                .map((prize, idx) => {
-                                                    const isAwarded = prize.awarded;
-                                                    const isReached = soldPercentage >= prize.percentage;
-                                                    return (
-                                                        <div 
-                                                            key={idx} 
-                                                            className={`relative rounded-xl p-4 border transition-all ${
-                                                                isAwarded 
-                                                                    ? 'bg-green-500/10 border-green-500/30' 
-                                                                    : isReached 
-                                                                        ? 'bg-amber-500/10 border-amber-500/30 animate-pulse' 
-                                                                        : 'bg-white/5 border-white/10'
-                                                            }`}
-                                                            data-testid={`instant-prize-${idx}`}
-                                                        >
-                                                            <div className="flex items-center justify-between gap-3">
-                                                                <div className="flex items-center gap-3 min-w-0">
-                                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${
-                                                                        isAwarded 
-                                                                            ? 'bg-green-500/20 text-green-400' 
-                                                                            : 'bg-amber-500/20 text-amber-400'
-                                                                    }`}>
-                                                                        {prize.percentage}%
-                                                                    </div>
-                                                                    <div className="min-w-0">
-                                                                        <p className="font-bold truncate">{prize.prize_name}</p>
-                                                                        {prize.prize_description && (
-                                                                            <p className="text-xs text-muted-foreground truncate">{prize.prize_description}</p>
-                                                                        )}
-                                                                        {isAwarded && prize.winner_username && (
-                                                                            <p className="text-xs text-green-400 mt-1">
-                                                                                <CheckCircle className="w-3 h-3 inline mr-1" />
-                                                                                {isRomanian ? 'Câștigat de' : 'Won by'} {prize.winner_username}
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
+                                            {competition.instant_prizes.sort((a, b) => a.percentage - b.percentage).map((prize, idx) => {
+                                                const isAwarded = prize.awarded;
+                                                const isReached = soldPercentage >= prize.percentage;
+                                                return (
+                                                    <div key={idx} className={`relative rounded-xl p-4 border transition-all ${isAwarded ? 'bg-green-500/10 border-green-500/30' : isReached ? 'bg-amber-500/10 border-amber-500/30 animate-pulse' : 'bg-white/5 border-white/10'}`} data-testid={`instant-prize-${idx}`}>
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${isAwarded ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'}`}>{prize.percentage}%</div>
+                                                                <div className="min-w-0">
+                                                                    <p className="font-bold truncate">{prize.prize_name}</p>
+                                                                    {prize.prize_description && <p className="text-xs text-muted-foreground truncate">{prize.prize_description}</p>}
+                                                                    {isAwarded && prize.winner_username && <p className="text-xs text-green-400 mt-1"><CheckCircle className="w-3 h-3 inline mr-1" />{isRomanian ? 'Câștigat de' : 'Won by'} {prize.winner_username}</p>}
                                                                 </div>
-                                                                <Badge className={`flex-shrink-0 ${
-                                                                    isAwarded 
-                                                                        ? 'bg-green-500/20 text-green-400 border-green-500/30' 
-                                                                        : isReached 
-                                                                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
-                                                                            : 'bg-white/10 text-muted-foreground border-white/10'
-                                                                }`}>
-                                                                    {isAwarded 
-                                                                        ? (isRomanian ? 'Acordat' : 'Awarded')
-                                                                        : isReached 
-                                                                            ? (isRomanian ? 'Se extrage!' : 'Drawing!')
-                                                                            : (isRomanian ? 'La ' + prize.percentage + '%' : 'At ' + prize.percentage + '%')
-                                                                    }
-                                                                </Badge>
                                                             </div>
-                                                            {/* Progress bar for this prize */}
-                                                            <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                                                <div 
-                                                                    className={`h-full rounded-full transition-all duration-500 ${
-                                                                        isAwarded ? 'bg-green-500' : isReached ? 'bg-amber-500' : 'bg-primary/50'
-                                                                    }`}
-                                                                    style={{ width: `${Math.min(100, (soldPercentage / prize.percentage) * 100)}%` }}
-                                                                />
-                                                            </div>
+                                                            <Badge className={`flex-shrink-0 ${isAwarded ? 'bg-green-500/20 text-green-400 border-green-500/30' : isReached ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-white/10 text-muted-foreground border-white/10'}`}>
+                                                                {isAwarded ? (isRomanian ? 'Acordat' : 'Awarded') : isReached ? (isRomanian ? 'Se extrage!' : 'Drawing!') : (isRomanian ? 'La ' + prize.percentage + '%' : 'At ' + prize.percentage + '%')}
+                                                            </Badge>
                                                         </div>
-                                                    );
-                                                })
-                                            }
+                                                        <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                            <div className={`h-full rounded-full transition-all duration-500 ${isAwarded ? 'bg-green-500' : isReached ? 'bg-amber-500' : 'bg-primary/50'}`} style={{ width: `${Math.min(100, (soldPercentage / prize.percentage) * 100)}%` }} />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -447,35 +449,21 @@ const CompetitionDetailPage = () => {
                                 <Card className="postal-entry-section">
                                     <CardContent className="p-6">
                                         <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                                                <Mail className="w-5 h-5 text-cyan-500" />
-                                            </div>
+                                            <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center"><Mail className="w-5 h-5 text-cyan-500" /></div>
                                             <div>
                                                 <h3 className="font-bold">{isRomanian ? 'Intrare Poștală Gratuită' : 'Free Postal Entry'}</h3>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {isRomanian ? 'Alternativă fără cost' : 'No purchase necessary'}
-                                                </p>
+                                                <p className="text-sm text-muted-foreground">{isRomanian ? 'Alternativă fără cost' : 'No purchase necessary'}</p>
                                             </div>
                                         </div>
-                                        
                                         <div className="space-y-4">
                                             <p className="text-sm text-muted-foreground">
-                                                {isRomanian 
-                                                    ? 'Pentru a participa gratuit, trimiteți o carte poștală sau scrisoare la adresa de mai jos. Fiecare scrisoare = 1 loc. Limită: 5 intrări per persoană.'
-                                                    : 'To enter for free, send a postcard or letter to the address below. Each letter = 1 ticket. Limit: 5 entries per person.'
-                                                }
+                                                {isRomanian ? 'Pentru a participa gratuit, trimiteți o carte poștală sau scrisoare la adresa de mai jos. Fiecare scrisoare = 1 loc. Limită: 5 intrări per persoană.' : 'To enter for free, send a postcard or letter to the address below. Each letter = 1 ticket. Limit: 5 entries per person.'}
                                             </p>
-                                            
                                             <div className="bg-black/20 rounded-xl p-4">
                                                 <p className="text-sm font-bold mb-2">{isRomanian ? 'Includeți:' : 'Include:'}</p>
                                                 <ul className="text-sm text-muted-foreground space-y-1">
                                                     {Array.isArray(postalEntry.instructions) ? (
-                                                        postalEntry.instructions.map((inst, idx) => (
-                                                            <li key={idx} className="flex items-center gap-2">
-                                                                <CheckCircle className="w-4 h-4 text-cyan-500" />
-                                                                {inst}
-                                                            </li>
-                                                        ))
+                                                        postalEntry.instructions.map((inst, idx) => (<li key={idx} className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-cyan-500" />{inst}</li>))
                                                     ) : (
                                                         <>
                                                             <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-cyan-500" /> {isRomanian ? 'Nume complet' : 'Full name'}</li>
@@ -486,7 +474,6 @@ const CompetitionDetailPage = () => {
                                                     )}
                                                 </ul>
                                             </div>
-                                            
                                             <div className="bg-black/30 rounded-xl p-4 border border-cyan-500/20">
                                                 <p className="text-xs text-muted-foreground mb-2">{isRomanian ? 'Trimiteți la:' : 'Send to:'}</p>
                                                 <p className="font-mono text-sm">
@@ -501,340 +488,6 @@ const CompetitionDetailPage = () => {
                                     </CardContent>
                                 </Card>
                             )}
-                        </div>
-
-                        {/* Right Column - Purchase Card */}
-                        <div className="space-y-6">
-                            <Card className="glass border-primary/30 sticky top-24">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center justify-between">
-                                        <span>{isFree ? (isRomanian ? 'Intrare Gratuită' : 'Free Entry') : (isRomanian ? 'Cumpără Locuri' : 'Buy Spots')}</span>
-                                        {isFree ? (
-                                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-lg px-3 py-1" data-testid="free-badge">
-                                                <Gift className="w-4 h-4 mr-1" /> GRATUIT
-                                            </Badge>
-                                        ) : (
-                                            <span className="price-display">£{competition.ticket_price.toFixed(2)}</span>
-                                        )}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    {competition.status === 'completed' ? (
-                                        <div className="text-center py-8">
-                                            <Trophy className="w-12 h-12 mx-auto text-secondary mb-4" />
-                                            <p className="font-bold text-lg">{isRomanian ? 'Competiție Încheiată' : 'Competition Ended'}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {isRomanian ? 'Această competiție și-a găsit premiantul!' : 'This competition has found its winner!'}
-                                            </p>
-                                        </div>
-                                    ) : available === 0 ? (
-                                        <div className="text-center py-8">
-                                            <Ticket className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                                            <p className="font-bold text-lg">{isRomanian ? 'Sold Out' : 'Sold Out'}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {isRomanian ? 'Toate locurile au fost vândute' : 'All locuri have been sold'}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {isFree ? (
-                                                <>
-                                                    {/* Free Entry Section */}
-                                                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-center">
-                                                        <Gift className="w-10 h-10 mx-auto mb-3 text-emerald-400" />
-                                                        <p className="font-bold text-lg text-emerald-400 mb-2">
-                                                            {isRomanian ? 'Competiție Gratuită!' : 'Free Competition!'}
-                                                        </p>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {isRomanian 
-                                                                ? 'Participă gratuit! Primești 1 loc automat.' 
-                                                                : 'Enter for free! You get 1 spot automatically.'}
-                                                        </p>
-                                                    </div>
-
-                                                    {/* Inline Qualification Question for Free */}
-                                                    {qualQuestion && (
-                                                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-                                                            <div className="flex items-center gap-2 mb-3">
-                                                                <HelpCircle className="w-4 h-4 text-yellow-500" />
-                                                                <span className="text-sm font-medium">{isRomanian ? 'Întrebare de Calificare' : 'Qualification Question'}</span>
-                                                                {answerVerified && (
-                                                                    <Badge className="badge-secondary ml-auto text-xs">
-                                                                        <CheckCircle className="w-3 h-3 mr-1" /> OK
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
-                                                            <p className="text-sm font-medium mb-3">{qualQuestion.question}</p>
-                                                            <RadioGroup 
-                                                                value={selectedAnswer?.toString()} 
-                                                                onValueChange={(v) => { 
-                                                                    setSelectedAnswer(parseInt(v)); 
-                                                                    setAnswerError(false);
-                                                                    setAnswerVerified(false);
-                                                                }}
-                                                                disabled={answerVerified}
-                                                                className="space-y-2"
-                                                            >
-                                                                {qualQuestion.options.map((option, idx) => (
-                                                                    <div 
-                                                                        key={idx} 
-                                                                        className={`flex items-center space-x-2 p-3 rounded-lg border cursor-pointer transition-all text-sm ${
-                                                                            selectedAnswer === idx 
-                                                                                ? answerError 
-                                                                                    ? 'border-destructive bg-destructive/10' 
-                                                                                    : answerVerified
-                                                                                        ? 'border-secondary bg-secondary/10'
-                                                                                        : 'border-yellow-500 bg-yellow-500/10' 
-                                                                                : 'border-white/10 hover:border-white/20'
-                                                                        } ${answerVerified ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                                                    >
-                                                                        <RadioGroupItem value={idx.toString()} id={`answer-free-${idx}`} data-testid={`answer-free-${idx}`} />
-                                                                        <Label htmlFor={`answer-free-${idx}`} className="cursor-pointer flex-1 flex items-center justify-between text-sm">
-                                                                            <span>{option}</span>
-                                                                            {selectedAnswer === idx && answerError && <XCircle className="w-4 h-4 text-destructive" />}
-                                                                            {selectedAnswer === idx && answerVerified && <CheckCircle className="w-4 h-4 text-secondary" />}
-                                                                        </Label>
-                                                                    </div>
-                                                                ))}
-                                                            </RadioGroup>
-                                                            {!answerVerified && (
-                                                                <Button 
-                                                                    className="w-full mt-3 btn-outline text-sm py-2"
-                                                                    onClick={verifyAnswer}
-                                                                    disabled={selectedAnswer === null}
-                                                                    size="sm"
-                                                                >
-                                                                    {isRomanian ? 'Verifică' : 'Verify'}
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Free Entry Button */}
-                                                    <Button
-                                                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-6 text-lg font-bold"
-                                                        onClick={handleFreeEntry}
-                                                        disabled={enteringFree || (qualQuestion && !answerVerified)}
-                                                        data-testid="enter-free-btn"
-                                                    >
-                                                        {enteringFree ? (
-                                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                                        ) : !isAuthenticated ? (
-                                                            <>{isRomanian ? 'Autentifică-te pentru a Participa' : 'Log In to Enter'}</>
-                                                        ) : (
-                                                            <><Gift className="w-5 h-5 mr-2" /> {isRomanian ? 'Participă Gratuit' : 'Enter for Free'}</>
-                                                        )}
-                                                    </Button>
-
-                                                    {qualQuestion && !answerVerified && (
-                                                        <p className="text-sm text-center text-muted-foreground">
-                                                            {isRomanian 
-                                                                ? 'Răspunde la întrebarea de calificare pentru a continua'
-                                                                : 'Answer the qualification question to continue'
-                                                            }
-                                                        </p>
-                                                    )}
-                                                </>
-                                            ) : (
-                                            <>
-                                            <div className="bg-white/5 rounded-xl p-4">
-                                                <p className="text-xs text-muted-foreground text-center mb-3">
-                                                    {isRomanian ? 'Metode de plată acceptate' : 'Accepted payment methods'}
-                                                </p>
-                                                <div className="flex items-center justify-center gap-3 flex-wrap">
-                                                    {/* Visa */}
-                                                    <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center">
-                                                        <span className="text-[#1A1F71] font-bold text-sm italic tracking-tight">VISA</span>
-                                                    </div>
-                                                    {/* Mastercard */}
-                                                    <div className="bg-white rounded-lg px-2 py-1.5 flex items-center justify-center">
-                                                        <div className="flex items-center">
-                                                            <div className="w-5 h-5 rounded-full bg-[#EB001B]"></div>
-                                                            <div className="w-5 h-5 rounded-full bg-[#F79E1B] -ml-2"></div>
-                                                        </div>
-                                                    </div>
-                                                    {/* Apple Pay */}
-                                                    <div className="bg-black rounded-lg px-3 py-2 flex items-center justify-center">
-                                                        <span className="text-white text-xs font-medium"> Pay</span>
-                                                    </div>
-                                                    {/* Google Pay */}
-                                                    <div className="bg-white rounded-lg px-2 py-1.5 flex items-center justify-center">
-                                                        <span className="text-xs font-medium">
-                                                            <span className="text-[#4285F4]">G</span>
-                                                            <span className="text-[#EA4335]">o</span>
-                                                            <span className="text-[#FBBC05]">o</span>
-                                                            <span className="text-[#4285F4]">g</span>
-                                                            <span className="text-[#34A853]">l</span>
-                                                            <span className="text-[#EA4335]">e</span>
-                                                            <span className="text-gray-600 ml-1">Pay</span>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Inline Qualification Question */}
-                                            {qualQuestion && (
-                                                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-                                                    <div className="flex items-center gap-2 mb-3">
-                                                        <HelpCircle className="w-4 h-4 text-yellow-500" />
-                                                        <span className="text-sm font-medium">{isRomanian ? 'Întrebare de Calificare' : 'Qualification Question'}</span>
-                                                        {answerVerified && (
-                                                            <Badge className="badge-secondary ml-auto text-xs">
-                                                                <CheckCircle className="w-3 h-3 mr-1" /> {isRomanian ? 'OK' : 'OK'}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    
-                                                    <p className="text-sm font-medium mb-3">{qualQuestion.question}</p>
-                                                    
-                                                    <RadioGroup 
-                                                        value={selectedAnswer?.toString()} 
-                                                        onValueChange={(v) => { 
-                                                            setSelectedAnswer(parseInt(v)); 
-                                                            setAnswerError(false);
-                                                            setAnswerVerified(false);
-                                                        }}
-                                                        disabled={answerVerified}
-                                                        className="space-y-2"
-                                                    >
-                                                        {qualQuestion.options.map((option, idx) => (
-                                                            <div 
-                                                                key={idx} 
-                                                                className={`flex items-center space-x-2 p-3 rounded-lg border cursor-pointer transition-all text-sm ${
-                                                                    selectedAnswer === idx 
-                                                                        ? answerError 
-                                                                            ? 'border-destructive bg-destructive/10' 
-                                                                            : answerVerified
-                                                                                ? 'border-secondary bg-secondary/10'
-                                                                                : 'border-yellow-500 bg-yellow-500/10' 
-                                                                        : 'border-white/10 hover:border-white/20'
-                                                                } ${answerVerified ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                                            >
-                                                                <RadioGroupItem value={idx.toString()} id={`answer-inline-${idx}`} data-testid={`answer-inline-${idx}`} />
-                                                                <Label htmlFor={`answer-inline-${idx}`} className="cursor-pointer flex-1 flex items-center justify-between text-sm">
-                                                                    <span>{option}</span>
-                                                                    {selectedAnswer === idx && answerError && (
-                                                                        <XCircle className="w-4 h-4 text-destructive" />
-                                                                    )}
-                                                                    {selectedAnswer === idx && answerVerified && (
-                                                                        <CheckCircle className="w-4 h-4 text-secondary" />
-                                                                    )}
-                                                                </Label>
-                                                            </div>
-                                                        ))}
-                                                    </RadioGroup>
-
-                                                    {!answerVerified && (
-                                                        <Button 
-                                                            className="w-full mt-3 btn-outline text-sm py-2"
-                                                            onClick={verifyAnswer}
-                                                            disabled={selectedAnswer === null}
-                                                            size="sm"
-                                                        >
-                                                            {isRomanian ? 'Verifică' : 'Verify'}
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Quantity Selector */}
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-3">
-                                                    {isRomanian ? 'Selectează Cantitatea' : 'Select Quantity'}
-                                                </p>
-                                                <div className="flex items-center gap-4">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                                        disabled={quantity <= 1}
-                                                        className="h-12 w-12"
-                                                        data-testid="qty-minus-btn"
-                                                    >
-                                                        <Minus className="w-5 h-5" />
-                                                    </Button>
-                                                    <Input
-                                                        type="number"
-                                                        value={quantity}
-                                                        onChange={(e) => setQuantity(Math.min(available, Math.max(1, parseInt(e.target.value) || 1)))}
-                                                        className="w-20 text-center input-modern h-12 text-xl font-mono font-bold"
-                                                        min={1}
-                                                        max={available}
-                                                        data-testid="qty-input"
-                                                    />
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => setQuantity(Math.min(available, quantity + 1))}
-                                                        disabled={quantity >= available}
-                                                        className="h-12 w-12"
-                                                        data-testid="qty-plus-btn"
-                                                    >
-                                                        <Plus className="w-5 h-5" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            {/* Total */}
-                                            <div className="flex justify-between items-center py-4 border-y border-white/10">
-                                                <span className="text-muted-foreground">{isRomanian ? 'Total' : 'Total'}</span>
-                                                <span className="text-3xl font-black gradient-text font-mono">£{totalCost.toFixed(2)}</span>
-                                            </div>
-
-                                            {/* Payment Info */}
-                                            {isAuthenticated && (
-                                                <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
-                                                    <CreditCard className="w-5 h-5 text-primary" />
-                                                    <div className="flex-1 text-left">
-                                                        <p className="font-medium">{isRomanian ? 'Plată Securizată' : 'Secure Payment'}</p>
-                                                        <p className="text-xs text-muted-foreground">Visa, Mastercard, Apple Pay, Google Pay</p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Action Buttons */}
-                                            <div className="space-y-3">
-                                                <Button
-                                                    className="w-full btn-secondary text-black py-6 text-lg"
-                                                    onClick={handlePurchase}
-                                                    disabled={purchasing || (qualQuestion && !answerVerified)}
-                                                    data-testid="buy-now-btn"
-                                                >
-                                                    {purchasing ? (
-                                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                                    ) : !isAuthenticated ? (
-                                                        <>{isRomanian ? 'Autentifică-te pentru a Cumpăra' : 'Log In to Purchase'}</>
-                                                    ) : (
-                                                        <>{isRomanian ? 'Cumpără Acum' : 'Buy Now'}</>
-                                                    )}
-                                                </Button>
-
-                                                <Button
-                                                    variant="outline"
-                                                    className="w-full btn-outline py-5"
-                                                    onClick={handleAddToCart}
-                                                    disabled={qualQuestion && !answerVerified}
-                                                    data-testid="add-to-cart-btn"
-                                                >
-                                                    <ShoppingCart className="w-4 h-4 mr-2" />
-                                                    {isRomanian ? 'Adaugă în Coș' : 'Add to Cart'}
-                                                </Button>
-                                            </div>
-
-                                            {qualQuestion && !answerVerified && (
-                                                <p className="text-sm text-center text-muted-foreground">
-                                                    {isRomanian 
-                                                        ? '⚠️ Răspunde la întrebarea de calificare pentru a continua'
-                                                        : '⚠️ Answer the qualification question to continue'
-                                                    }
-                                                </p>
-                                            )}
-                                            </>
-                                            )}
-                                        </>
-                                    )}
-                                </CardContent>
-                            </Card>
                         </div>
                     </div>
                 </div>
