@@ -17,6 +17,10 @@ logger = logging.getLogger("server")
 
 from helpers import generate_random_ticket_number, notify_user_push, notify_competition_participants_push
 try:
+    from routes.wallet import get_viva_access_token
+except ImportError:
+    from wallet import get_viva_access_token
+try:
     from models import TicketResponse, TicketSearchResult
 except ImportError:
     from backend.models import TicketResponse, TicketSearchResult
