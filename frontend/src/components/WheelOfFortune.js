@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Dialog, DialogContent } from './ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { X, Sparkles, Gift, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -192,6 +192,7 @@ const WheelOfFortune = ({ open, onClose }) => {
                     border: '1px solid rgba(139, 92, 246, 0.25)',
                     boxShadow: '0 0 60px rgba(139, 92, 246, 0.15), 0 25px 50px rgba(0,0,0,0.5)'
                 }} data-testid="wheel-of-fortune-modal">
+                    <DialogTitle className="sr-only">Roata Norocului</DialogTitle>
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
                         <div className="flex items-center gap-2">

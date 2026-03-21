@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Dialog, DialogContent } from './ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { X, Percent, ArrowRight, Loader2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -69,6 +69,7 @@ const ExitIntentPopup = () => {
                     border: '1px solid rgba(255, 94, 0, 0.25)',
                     boxShadow: '0 0 60px rgba(255, 94, 0, 0.1), 0 25px 50px rgba(0,0,0,0.5)'
                 }} data-testid="exit-intent-popup">
+                    <DialogTitle className="sr-only">Exit Discount</DialogTitle>
                     {/* Close */}
                     <button onClick={() => setShow(false)}
                         className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] flex items-center justify-center z-10 transition-colors"
