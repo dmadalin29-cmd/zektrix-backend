@@ -16,6 +16,12 @@ import uuid, random, json, os, asyncio, httpx, logging
 logger = logging.getLogger("server")
 
 from helpers import notify_user_push
+try:
+    from routes.wallet import get_viva_access_token
+    from routes.competitions import check_instant_prizes
+except ImportError:
+    from wallet import get_viva_access_token
+    from competitions import check_instant_prizes
 
 router = APIRouter(prefix="/api")
 
