@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from typing import Dict, List
 import asyncio
@@ -124,6 +125,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip compression for faster responses
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # ==================== STARTUP / SHUTDOWN ====================
 @app.on_event("startup")

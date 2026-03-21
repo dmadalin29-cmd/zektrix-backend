@@ -26,7 +26,8 @@ router = APIRouter(prefix="/api")
 # ==================== COMPETITION ROUTES ====================
 
 @router.get("/competitions")
-async def get_competitions(status: Optional[str] = None, competition_type: Optional[str] = None):
+async def get_competitions(response: Response, status: Optional[str] = None, competition_type: Optional[str] = None):
+    response.headers["Cache-Control"] = "public, max-age=15"
     query = {}
     if status:
         query["status"] = status
@@ -39,7 +40,8 @@ async def get_competitions(status: Optional[str] = None, competition_type: Optio
     return competitions
 
 @router.get("/competitions/{competition_id}")
-async def get_competition(competition_id: str):
+async def get_competition(competition_id: str, response: Response):
+    response.headers["Cache-Control"] = "public, max-age=10"
     comp = await db.competitions.find_one({"competition_id": competition_id}, {"_id": 0})
     if not comp:
         raise HTTPException(status_code=404, detail="Competition not found")

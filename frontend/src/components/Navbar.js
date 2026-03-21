@@ -31,7 +31,7 @@ const Navbar = () => {
                 .then(r => setWalletBalance(r.data.balance || 0))
                 .catch(() => {});
         }
-    }, [token, location.pathname]);
+    }, [token]);
 
     const navLinks = [
         { href: '/competitions', label: isRomanian ? 'Competitii' : 'Competitions', icon: Crosshair },

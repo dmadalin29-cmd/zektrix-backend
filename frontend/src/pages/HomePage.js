@@ -6,7 +6,7 @@ import Footer from '../components/Footer';
 import InstallPrompt from '../components/InstallPrompt';
 import CookieConsent from '../components/CookieConsent';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+
 import { ArrowRight, Zap, ChevronRight, MessageCircle, Radio, Users, Trophy, Ticket, Sparkles, Star, Crown, Clock, Flame } from 'lucide-react';
 import CountdownTimer from '../components/CountdownTimer';
 
@@ -74,10 +74,10 @@ const SpecialCompCard = ({ c }) => {
     const isAlmostGone = progress >= 90;
 
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative group">
+        <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/30 via-orange-500/30 to-red-500/30 rounded-3xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
             <Link to={`/competitions/${c.competition_id}`}
-                className="relative block bg-white/[0.04] backdrop-blur-2xl rounded-3xl overflow-hidden border border-amber-500/20 hover:border-amber-400/40 transition-all duration-300 hover:-translate-y-1"
+                className="relative block bg-white/[0.04] backdrop-blur-sm rounded-3xl overflow-hidden border border-amber-500/20 hover:border-amber-400/40 transition-all duration-300 hover:-translate-y-1"
                 data-testid="special-comp-card"
             >
                 <div className="relative p-6">
@@ -149,7 +149,7 @@ const SpecialCompCard = ({ c }) => {
                     </button>
                 </div>
             </Link>
-        </motion.div>
+        </div>
     );
 };
 
@@ -161,9 +161,9 @@ const FeaturedCard = ({ c }) => {
     const isAlmostGone = progress >= 90;
 
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+        <div>
             <Link to={`/competitions/${c.competition_id}`}
-                className="block relative bg-white/[0.04] backdrop-blur-2xl rounded-3xl overflow-hidden border border-violet-500/15 hover:border-violet-400/30 transition-all duration-300 group h-full hover:-translate-y-1"
+                className="block relative bg-white/[0.04] backdrop-blur-sm rounded-3xl overflow-hidden border border-violet-500/15 hover:border-violet-400/30 transition-all duration-300 group h-full hover:-translate-y-1"
                 data-testid="featured-comp-card"
             >
                 <div className="relative h-full flex flex-col">
@@ -218,7 +218,7 @@ const FeaturedCard = ({ c }) => {
                     </div>
                 </div>
             </Link>
-        </motion.div>
+        </div>
     );
 };
 
@@ -229,7 +229,7 @@ const CompCard = ({ c, index }) => {
     const isAlmostGone = progress >= 90;
 
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 * (index || 0) }}>
+        <div>
             <Link to={`/competitions/${c.competition_id}`}
                 className="group block bg-white/[0.03] backdrop-blur-xl rounded-2xl overflow-hidden border border-white/[0.06] hover:border-violet-500/25 transition-all duration-300 hover:-translate-y-1"
                 data-testid={`comp-card-${c.competition_id}`}
@@ -278,7 +278,7 @@ const CompCard = ({ c, index }) => {
                     </div>
                 </div>
             </Link>
-        </motion.div>
+        </div>
     );
 };
 
@@ -303,11 +303,19 @@ const HomePage = () => {
     const [featuredComp, setFeaturedComp] = useState(null);
 
     useEffect(() => {
-        axios.get(`${API}/competitions?status=active`).then(r => setComps(r.data)).catch(() => {});
-        axios.get(`${API}/settings/tiktok-live`).then(r => setTiktokLive(r.data)).catch(() => {});
-        axios.get(`${API}/stats`).then(r => setStats(r.data)).catch(() => {});
-        axios.get(`${API}/activity/recent`).then(r => setActivities(r.data)).catch(() => {});
-        axios.get(`${API}/settings/featured-competition`).then(r => setFeaturedComp(r.data.competition)).catch(() => {});
+        Promise.all([
+            axios.get(`${API}/competitions?status=active`).catch(() => ({ data: [] })),
+            axios.get(`${API}/settings/tiktok-live`).catch(() => ({ data: { is_live: false, tiktok_url: 'https://www.tiktok.com/@zektrix.uk' } })),
+            axios.get(`${API}/stats`).catch(() => ({ data: { winners: 0, users: 0, tickets: 0 } })),
+            axios.get(`${API}/activity/recent`).catch(() => ({ data: [] })),
+            axios.get(`${API}/settings/featured-competition`).catch(() => ({ data: {} })),
+        ]).then(([compsRes, tiktokRes, statsRes, actRes, featRes]) => {
+            setComps(compsRes.data);
+            setTiktokLive(tiktokRes.data);
+            setStats(statsRes.data);
+            setActivities(actRes.data);
+            setFeaturedComp(featRes.data?.competition || null);
+        });
     }, []);
 
     const specialComp = comps.find(c => c.is_permanent || c.title?.includes('Speciala'));
@@ -337,7 +345,7 @@ const HomePage = () => {
                 <section className="py-4">
                     <div className="max-w-7xl mx-auto px-4">
                         <Link to="/subscriptions" className="block" data-testid="home-sub-cta">
-                            <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                            <div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                                 className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-r from-[#8B3DFF]/10 via-[#FF5E00]/5 to-[#8B3DFF]/10 border border-[#8B3DFF]/20 hover:border-[#8B3DFF]/40 transition-all duration-300 group"
                             >
                                 <div className="flex items-center justify-between">
@@ -356,7 +364,7 @@ const HomePage = () => {
                                     </div>
                                     <ArrowRight className="w-5 h-5 text-[#A666FF] group-hover:translate-x-1 transition-transform duration-300" />
                                 </div>
-                            </motion.div>
+                            </div>
                         </Link>
                     </div>
                 </section>

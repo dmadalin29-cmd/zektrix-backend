@@ -624,8 +624,9 @@ async def get_admin_stats(admin: dict = Depends(get_admin_user)):
 # ==================== ANALYTICS ====================
 
 @router.get("/stats")
-async def get_public_stats():
+async def get_public_stats(response: Response):
     """Get public statistics for homepage"""
+    response.headers["Cache-Control"] = "public, max-age=30"
     winners_count = await db.winners.count_documents({})
     users_count = await db.users.count_documents({})
     tickets_count = await db.tickets.count_documents({})
@@ -636,48 +637,55 @@ async def get_public_stats():
         "tickets": tickets_count
     }
 
+# In-memory cache for recent activity (expensive query)
+_activity_cache = {"data": None, "expires": 0}
+
 @router.get("/activity/recent")
-async def get_recent_activity():
+async def get_recent_activity(response: Response):
     """Get recent activity for live ticker (purchases, winners)"""
+    import time
+    now = time.time()
+    if _activity_cache["data"] and now < _activity_cache["expires"]:
+        response.headers["Cache-Control"] = "public, max-age=30"
+        return _activity_cache["data"]
+    
     activities = []
     
-    # Get recent ticket purchases (last 10)
-    recent_tickets = await db.tickets.find(
-        {}, 
-        {"_id": 0, "user_id": 1, "competition_id": 1, "purchased_at": 1}
-    ).sort("purchased_at", -1).limit(10).to_list(10)
+    # Use aggregation pipeline with $lookup instead of N+1 queries
+    ticket_pipeline = [
+        {"$sort": {"purchased_at": -1}},
+        {"$limit": 10},
+        {"$lookup": {"from": "users", "localField": "user_id", "foreignField": "user_id", "as": "user_info"}},
+        {"$lookup": {"from": "competitions", "localField": "competition_id", "foreignField": "competition_id", "as": "comp_info"}},
+        {"$project": {"_id": 0, "purchased_at": 1, "user_info.username": 1, "comp_info.title": 1}}
+    ]
+    recent_tickets = await db.tickets.aggregate(ticket_pipeline).to_list(10)
+    for t in recent_tickets:
+        username = t.get("user_info", [{}])[0].get("username", "Anonim")[:15] if t.get("user_info") else "Anonim"
+        title = t.get("comp_info", [{}])[0].get("title", "competitie")[:25] if t.get("comp_info") else "competitie"
+        activities.append({"type": "purchase", "username": username, "message": f"a rezervat loc la {title}", "time": t.get("purchased_at", "")})
     
-    for ticket in recent_tickets:
-        user = await db.users.find_one({"user_id": ticket["user_id"]}, {"_id": 0, "username": 1})
-        comp = await db.competitions.find_one({"competition_id": ticket["competition_id"]}, {"_id": 0, "title": 1})
-        if user and comp:
-            activities.append({
-                "type": "purchase",
-                "username": user.get("username", "Anonim")[:15],
-                "message": f"a rezervat loc la {comp.get('title', 'competiție')[:25]}",
-                "time": ticket.get("purchased_at", "")
-            })
+    winner_pipeline = [
+        {"$sort": {"created_at": -1}},
+        {"$limit": 5},
+        {"$lookup": {"from": "users", "localField": "user_id", "foreignField": "user_id", "as": "user_info"}},
+        {"$lookup": {"from": "competitions", "localField": "competition_id", "foreignField": "competition_id", "as": "comp_info"}},
+        {"$project": {"_id": 0, "created_at": 1, "user_info.username": 1, "comp_info.title": 1, "comp_info.prize_description": 1}}
+    ]
+    recent_winners = await db.winners.aggregate(winner_pipeline).to_list(5)
+    for w in recent_winners:
+        username = w.get("user_info", [{}])[0].get("username", "Anonim")[:15] if w.get("user_info") else "Anonim"
+        comp_info = w.get("comp_info", [{}])[0] if w.get("comp_info") else {}
+        title = comp_info.get("title", "competitie")[:25]
+        activities.append({"type": "winner", "username": username, "message": f"a castigat {title}!", "time": w.get("created_at", "")})
     
-    # Get recent winners (last 5)
-    recent_winners = await db.winners.find(
-        {},
-        {"_id": 0, "user_id": 1, "competition_id": 1, "created_at": 1}
-    ).sort("created_at", -1).limit(5).to_list(5)
-    
-    for winner in recent_winners:
-        user = await db.users.find_one({"user_id": winner["user_id"]}, {"_id": 0, "username": 1})
-        comp = await db.competitions.find_one({"competition_id": winner["competition_id"]}, {"_id": 0, "title": 1, "prize_description": 1})
-        if user and comp:
-            activities.append({
-                "type": "winner",
-                "username": user.get("username", "Câștigător")[:15],
-                "message": f"a câștigat {comp.get('prize_description', comp.get('title', '')[:25])}!",
-                "time": winner.get("created_at", "")
-            })
-    
-    # Sort by time and return
     activities.sort(key=lambda x: x.get("time", ""), reverse=True)
-    return activities[:15]
+    result = activities[:15]
+    
+    _activity_cache["data"] = result
+    _activity_cache["expires"] = now + 30  # Cache 30 seconds
+    response.headers["Cache-Control"] = "public, max-age=30"
+    return result
 
 # ==================== SITE SETTINGS (TikTok LIVE, etc.) ====================
 
