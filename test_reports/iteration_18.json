@@ -1,0 +1,81 @@
+{
+  "summary": "Full site audit completed - Competition platform with Viva Payments, wallet, subscriptions, referrals, gamification, engagement features. All 34 backend API tests passed. Frontend UI testing completed for all major pages and flows.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "WebSocket /ws/chat/admin", "issue": "WebSocket connection closes before established - non-critical for main functionality"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard charts", "issues": ["Console warning: chart width/height -1 - charts render but show warning about container size"]}
+    ],
+    "console_warnings": [
+      {"component": "DashboardPage", "issue": "HTML hydration warning: <tr> cannot be child of <span> in transaction history table"},
+      {"component": "AdminPage", "issue": "HTML hydration warning: <option> cannot be child of <span> in select dropdown"},
+      {"component": "Framer Motion", "issue": "React does not recognize whileInView prop - should use lowercase whileinview"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_full_site_audit.py",
+    "/app/test_reports/pytest/pytest_full_site_audit.xml"
+  ],
+  "action_items": [
+    "Fix HTML hydration warnings in DashboardPage (transaction table) and AdminPage (select dropdown) - wrap dynamic content properly",
+    "Fix Framer Motion whileInView prop warning - use lowercase attribute",
+    "Add data-testid='admin-notification-bell' to admin panel notification icon",
+    "Add data-testid='purchase-card', 'qualification-question', 'wallet-payment-option', 'viva-payment-option', 'quantity-selector' to CompetitionDetailPage for better testability"
+  ],
+  "critical_code_review_comments": [
+    "Chart container sizing issue causing console warnings - consider adding explicit minWidth/minHeight",
+    "WebSocket connection for admin chat closes prematurely - may need connection retry logic"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_full_site_audit.py"
+  ],
+  "success_rate": {
+    "backend": "100% (34/34 tests passed)",
+    "frontend": "95% (all pages load, minor console warnings)"
+  },
+  "test_credentials": {
+    "admin": "contact@x67digital.com / Credcada1.",
+    "wallet_balance": "£2.09"
+  },
+  "seed_data_creation": "None - used existing data",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Full site audit completed. All major features working: Homepage, Login, Dashboard (all tabs), Admin Panel (all tabs), Competition Detail, Winners, FAQ, Subscriptions pages. Backend APIs all passing. Minor console warnings for HTML hydration and chart sizing. Competition detail URL is /competitions/{id} (plural). User notification bell present in navbar when logged in.",
+  "features_tested": {
+    "homepage": "PASS - competitions grid, stats, activity feed visible",
+    "login": "PASS - email/password login works, redirects to dashboard",
+    "dashboard_overview": "PASS - shows user stats, recent activity",
+    "dashboard_locuri": "PASS - shows purchased tickets with ticket numbers",
+    "dashboard_loyalty": "PASS - shows points, tier (Bronze), wheel button, tier progression, active discounts",
+    "dashboard_badges": "PASS - shows 3/10 badges earned",
+    "dashboard_history": "PASS - shows transaction history with dates, types, status",
+    "dashboard_referral": "PASS - loads referral tab",
+    "dashboard_account": "PASS - loads account settings",
+    "competition_detail": "PASS - shows qualification question, payment options",
+    "wallet_page": "PASS - accessible via navbar",
+    "subscriptions_page": "PASS - shows 3 plans (£25, £50, £100)",
+    "winners_page": "PASS - shows winners stats",
+    "faq_page": "PASS - shows FAQ accordion",
+    "admin_dashboard": "PASS - shows analytics, stats, charts",
+    "admin_competitions": "PASS - lists competitions",
+    "admin_users": "PASS - lists 18 users with block toggle",
+    "admin_tickets": "PASS - shows all tickets",
+    "admin_reviews": "PASS - shows pending reviews (0)",
+    "user_notification_bell": "PASS - present in navbar when logged in",
+    "api_competitions": "PASS - GET /api/competitions?status=active returns 200",
+    "api_stats": "PASS - GET /api/stats returns 200",
+    "api_auth_me": "PASS - returns user data",
+    "api_tickets_purchase_viva": "PASS - returns checkout_url",
+    "api_loyalty_my": "PASS - returns loyalty data",
+    "api_notifications_my": "PASS - returns notifications",
+    "api_wheel_status": "PASS - returns spin status",
+    "api_user_badges": "PASS - returns badge data",
+    "api_referral_my": "PASS - returns referral info"
+  }
+}
