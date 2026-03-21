@@ -16,7 +16,7 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 ## Backend Architecture (Refactored March 21, 2026)
 ```
 /app/backend/
-├── server.py          # App orchestrator (165 lines)
+├── server.py          # App orchestrator (~175 lines)
 ├── config.py          # Environment vars + configuration
 ├── database.py        # MongoDB connection
 ├── dependencies.py    # Auth helpers (JWT, get_current_user)
@@ -25,18 +25,19 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 ├── email_service.py   # Email functions
 ├── push_service.py    # Push notification helpers
 ├── routes/
-│   ├── auth.py         # Auth + password reset (241 lines)
-│   ├── competitions.py # Competitions + tickets (754 lines)
-│   ├── wallet.py       # Wallet + admin wallet (588 lines)
-│   ├── subscriptions.py# Subscriptions (416 lines)
-│   ├── referral.py     # Referral system (230 lines)
-│   ├── admin.py        # Admin CRUD + stats + settings (1002 lines)
-│   ├── chat.py         # Chat AI + push + WebSockets (904 lines)
-│   ├── webhooks.py     # Viva webhooks + payments (314 lines)
-│   ├── public.py       # Public routes + uploads + email mgmt (191 lines)
-│   └── gamification.py # Badge system (108 lines)
+│   ├── auth.py         # Auth + password reset
+│   ├── competitions.py # Competitions + tickets
+│   ├── wallet.py       # Wallet + admin wallet
+│   ├── subscriptions.py# Subscriptions
+│   ├── referral.py     # Referral system
+│   ├── admin.py        # Admin CRUD + stats + settings
+│   ├── chat.py         # Chat AI + push + WebSockets
+│   ├── webhooks.py     # Viva webhooks + payments
+│   ├── public.py       # Public routes + uploads + email mgmt
+│   ├── gamification.py # Badge system
+│   └── engagement.py   # Loyalty, Notifications, Reviews, Wheel, Exit Intent
 ├── services/
-│   └── bots.py         # Background tasks: auto-bot, email, subs, re-engagement (1110 lines)
+│   └── bots.py         # Background tasks: auto-bot, email, subs, re-engagement
 ```
 
 ## Core Features (All Implemented)
@@ -46,7 +47,14 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - Admin panel with real-time notifications (mark-as-read)
 - Countdown Timer, Gamification Badges, Re-engagement Emails
 - Enhanced Progress Bar with urgency indicators
-- Global UI: mesh gradients, glassmorphism, Outfit font, Framer Motion
+- Global UI: mesh gradients, glassmorphism, Outfit font
+
+### Engagement Features (Implemented March 21, 2026)
+- **Loyalty Points System**: 10pts/£1, tier-based multipliers (Bronze/Silver/Gold/Diamond), redeem for wallet credit
+- **User In-App Notifications**: Bell icon in navbar, real-time unread badges, dropdown with notification list
+- **Reviews/Testimonials**: Winners can review, admin approval system, public display on homepage
+- **Wheel of Fortune**: One spin per user, 8 prizes (discounts, credits, points), Canvas-based animation
+- **Exit Intent Popup**: 15% discount on exit, 24h validity, one-time per user
 
 ## Upcoming Tasks
 - **P1:** TikTok Pixel Integration
