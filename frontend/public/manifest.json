@@ -1,7 +1,7 @@
 {
-  "name": "Zektrix UK - Competiții cu Premii",
+  "name": "Zektrix UK - Competitii cu Premii",
   "short_name": "Zektrix",
-  "description": "Platformă de competiții cu premii extraordinare. Câștigă mașini, bani cash și gadgeturi!",
+  "description": "Platforma de competitii cu premii extraordinare. Castiga masini, bani cash si gadgeturi!",
   "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#030014",
@@ -28,5 +28,9 @@
   "lang": "ro",
   "dir": "ltr",
   "prefer_related_applications": false,
-  "display_override": ["standalone", "minimal-ui"]
+  "display_override": ["standalone", "minimal-ui"],
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }

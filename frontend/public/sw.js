@@ -1,9 +1,8 @@
-const CACHE_VERSION = 'v7-20260317b';
+const CACHE_VERSION = 'v8-20260321';
 const CACHE_NAME = `zektrix-${CACHE_VERSION}`;
 const STATIC_CACHE = `zektrix-static-${CACHE_VERSION}`;
 const IMG_CACHE = `zektrix-img-${CACHE_VERSION}`;
 
-// Static assets to pre-cache
 const PRECACHE_URLS = [
     '/',
     '/manifest.json',
@@ -11,21 +10,21 @@ const PRECACHE_URLS = [
     '/icon-192.png'
 ];
 
-// Install - pre-cache essential assets
+// Install
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(STATIC_CACHE).then((cache) => {
-            return cache.addAll(PRECACHE_URLS);
-        }).then(() => self.skipWaiting())
+        caches.open(STATIC_CACHE)
+            .then((cache) => cache.addAll(PRECACHE_URLS))
+            .then(() => self.skipWaiting())
     );
 });
 
-// Activate - clean old caches
+// Activate - clean old caches aggressively
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
-                keys.filter((key) => key !== CACHE_NAME && key !== STATIC_CACHE && key !== IMG_CACHE)
+                keys.filter((key) => !key.includes(CACHE_VERSION))
                     .map((key) => caches.delete(key))
             );
         }).then(() => self.clients.claim())
@@ -35,13 +34,11 @@ self.addEventListener('activate', (event) => {
 // Fetch strategy
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
-    
-    // Skip non-GET requests and API calls
     if (event.request.method !== 'GET') return;
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ws/')) return;
     if (url.hostname !== self.location.hostname) return;
-    
-    // Images: cache-first with long TTL
+
+    // Images: cache-first
     if (event.request.destination === 'image' || url.pathname.match(/\.(png|jpg|jpeg|webp|svg|gif|ico)$/)) {
         event.respondWith(
             caches.open(IMG_CACHE).then((cache) => {
@@ -50,14 +47,14 @@ self.addEventListener('fetch', (event) => {
                     return fetch(event.request).then((response) => {
                         if (response.ok) cache.put(event.request, response.clone());
                         return response;
-                    });
+                    }).catch(() => cached);
                 });
             })
         );
         return;
     }
-    
-    // JS/CSS: network-first (always get fresh code, fallback to cache)
+
+    // JS/CSS: network-first
     if (url.pathname.match(/\.(js|css)$/) && url.pathname.includes('/static/')) {
         event.respondWith(
             fetch(event.request).then((response) => {
@@ -66,14 +63,12 @@ self.addEventListener('fetch', (event) => {
                     caches.open(STATIC_CACHE).then((cache) => cache.put(event.request, clone));
                 }
                 return response;
-            }).catch(() => {
-                return caches.open(STATIC_CACHE).then((cache) => cache.match(event.request));
-            })
+            }).catch(() => caches.open(STATIC_CACHE).then((cache) => cache.match(event.request)))
         );
         return;
     }
-    
-    // HTML pages: network-first (always try fresh, fallback to cache)
+
+    // HTML: network-first
     event.respondWith(
         fetch(event.request).then((response) => {
             if (response.ok) {
@@ -81,30 +76,86 @@ self.addEventListener('fetch', (event) => {
                 caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
             }
             return response;
-        }).catch(() => {
-            return caches.match(event.request).then((cached) => {
-                return cached || caches.match('/');
-            });
-        })
+        }).catch(() => caches.match(event.request).then((cached) => cached || caches.match('/')))
     );
 });
 
-// Push notifications
+// ====== PUSH NOTIFICATIONS ======
 self.addEventListener('push', (event) => {
-    const data = event.data ? event.data.json() : { title: 'Zektrix UK', body: 'Ai o notificare nouă!' };
+    let data = { title: 'Zektrix UK', body: 'Ai o notificare noua!' };
+    
+    try {
+        if (event.data) {
+            const parsed = event.data.json();
+            data = { ...data, ...parsed };
+        }
+    } catch (e) {
+        // If JSON parsing fails, try text
+        if (event.data) {
+            data.body = event.data.text();
+        }
+    }
+
+    const options = {
+        body: data.body || '',
+        icon: data.icon || '/icon-192.png',
+        badge: '/icon-96.png',
+        image: data.image || undefined,
+        vibrate: [200, 100, 200, 100, 200],
+        tag: data.tag || 'zektrix-notification',
+        renotify: true,
+        requireInteraction: data.requireInteraction !== false,
+        silent: false,
+        data: {
+            url: data.url || 'https://zektrix.uk',
+            dateOfArrival: Date.now()
+        },
+        actions: data.actions || [
+            { action: 'open', title: data.actionTitle || 'Deschide' }
+        ]
+    };
+
     event.waitUntil(
-        self.registration.showNotification(data.title || 'Zektrix UK', {
-            body: data.body || '',
-            icon: '/icon-192.png',
-            badge: '/icon-96.png',
-            vibrate: [100, 50, 100],
-            data: { url: data.url || '/' },
-            actions: data.actions || []
-        })
+        self.registration.showNotification(data.title || 'Zektrix UK', options)
     );
 });
 
+// Notification click - open the app
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    event.waitUntil(clients.openWindow(event.notification.data.url || '/'));
+    
+    const urlToOpen = event.notification.data?.url || 'https://zektrix.uk';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            // Try to focus an existing window
+            for (const client of windowClients) {
+                if (client.url.includes('zektrix') && 'focus' in client) {
+                    client.navigate(urlToOpen);
+                    return client.focus();
+                }
+            }
+            // Otherwise open a new window
+            return clients.openWindow(urlToOpen);
+        })
+    );
+});
+
+// Notification close tracking
+self.addEventListener('notificationclose', (event) => {
+    // Could track dismissed notifications
+});
+
+// Background sync (for offline actions)
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'sync-notifications') {
+        event.waitUntil(Promise.resolve());
+    }
+});
+
+// Listen for skip waiting messages
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });

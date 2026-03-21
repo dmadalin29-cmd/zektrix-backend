@@ -16,6 +16,10 @@ import uuid, random, json, os, asyncio, httpx, logging
 logger = logging.getLogger("server")
 
 from helpers import notify_user_push
+try:
+    from push_service import send_web_push, notify_admins_push as _notify_admins_push
+except ImportError:
+    from backend.push_service import send_web_push, notify_admins_push as _notify_admins_push
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 router = APIRouter(prefix="/api")
@@ -520,9 +524,9 @@ async def get_vapid_key():
 
 @router.post("/push/subscribe")
 async def push_subscribe(subscription: PushSubscription, current_user: dict = Depends(get_current_user)):
-    """Subscribe any user to push notifications"""
+    """Subscribe user to push notifications - supports multiple devices per user"""
     await db.push_subscriptions.update_one(
-        {"user_id": current_user["user_id"]},
+        {"endpoint": subscription.endpoint},
         {"$set": {
             "user_id": current_user["user_id"],
             "role": current_user.get("role", "user"),
@@ -537,8 +541,8 @@ async def push_subscribe(subscription: PushSubscription, current_user: dict = De
 @router.get("/push/status")
 async def push_status(current_user: dict = Depends(get_current_user)):
     """Check if user has an active push subscription"""
-    sub = await db.push_subscriptions.find_one({"user_id": current_user["user_id"]}, {"_id": 0, "endpoint": 1})
-    return {"subscribed": bool(sub)}
+    count = await db.push_subscriptions.count_documents({"user_id": current_user["user_id"]})
+    return {"subscribed": count > 0, "device_count": count}
 
 @router.post("/push/unsubscribe")
 async def push_unsubscribe(current_user: dict = Depends(get_current_user)):

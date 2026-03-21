@@ -39,6 +39,7 @@ import CookieConsent from "./components/CookieConsent";
 import ScrollToTop from "./components/ScrollToTop";
 import LiveChat from "./components/LiveChat";
 import ExitIntentPopup from "./components/ExitIntentPopup";
+import PushManager from "./components/PushManager";
 
 // Loading fallback component
 const PageLoader = () => (
@@ -215,6 +216,7 @@ function App() {
                         <InstallPrompt />
                         <CookieConsent />
                         <ExitIntentPopup />
+                        <PushManager />
                     </div>
                 </CartProvider>
             </AuthProvider>
