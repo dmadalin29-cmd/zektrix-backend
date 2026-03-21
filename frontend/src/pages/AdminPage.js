@@ -1024,7 +1024,7 @@ const AdminPage = () => {
                                                     {u.is_blocked ? <><XCircle className="w-3 h-3 mr-1" />Blocat</> : <><CheckCircle className="w-3 h-3 mr-1" />Activ</>}
                                                 </Badge>
                                             </div>
-                                            <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                            <div className="flex gap-1">
                                                 <Button variant="ghost" size="sm" onClick={() => editUser(u)} className="hover:bg-violet-500/20"><Edit className="w-4 h-4 text-violet-400" /></Button>
                                                 {u.role !== 'admin' && (
                                                     <>
