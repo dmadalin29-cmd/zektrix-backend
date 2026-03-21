@@ -14,9 +14,11 @@ import {
     Ticket, History, ArrowRight, Loader2, Trophy, 
     ArrowUpRight, Gift, 
     ChevronRight, Activity, User, Save, Edit3, Bell,
-    Copy, Share2, Users, Crown, CheckCircle2, Clock, Sparkles, RefreshCw
+    Copy, Share2, Users, Crown, CheckCircle2, Clock, Sparkles, RefreshCw,
+    Star, Diamond, Medal, Coins
 } from 'lucide-react';
 import { Input } from '../components/ui/input';
+import WheelOfFortune from '../components/WheelOfFortune';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -208,6 +210,7 @@ const DashboardPage = () => {
         if (location.pathname.includes('/locs')) return 'locs';
         if (location.pathname.includes('/history')) return 'history';
         if (location.pathname.includes('/referral')) return 'referral';
+        if (location.pathname.includes('/loyalty')) return 'loyalty';
         return 'overview';
     };
 
@@ -217,6 +220,7 @@ const DashboardPage = () => {
     const [loading, setLoading] = useState(true);
     const [pushSubscribed, setPushSubscribed] = useState(null);
     const [badges, setBadges] = useState({ badges: [], total_earned: 0, total_available: 0 });
+    const [wheelOpen, setWheelOpen] = useState(false);
 
     // Check push status
     useEffect(() => {
@@ -309,7 +313,7 @@ const DashboardPage = () => {
 
     const handleTabChange = (value) => {
         setActiveTab(value);
-        const routes = { overview: '/dashboard', locs: '/dashboard/locs', badges: '/dashboard/badges', history: '/dashboard/history', referral: '/dashboard/referral', account: '/dashboard/account' };
+        const routes = { overview: '/dashboard', locs: '/dashboard/locs', badges: '/dashboard/badges', history: '/dashboard/history', referral: '/dashboard/referral', loyalty: '/dashboard/loyalty', account: '/dashboard/account' };
         navigate(routes[value] || '/dashboard');
     };
 
@@ -326,6 +330,7 @@ const DashboardPage = () => {
     const navItems = [
         { id: 'overview', icon: Activity, label: isRomanian ? 'Prezentare' : 'Overview' },
         { id: 'locs', icon: Ticket, label: isRomanian ? 'Locurile Mele' : 'My Locs', badge: locs.length },
+        { id: 'loyalty', icon: Star, label: isRomanian ? 'Fidelitate' : 'Loyalty' },
         { id: 'badges', icon: Trophy, label: isRomanian ? 'Realizari' : 'Badges', badge: badges.total_earned },
         { id: 'history', icon: History, label: isRomanian ? 'Istoric' : 'History' },
         { id: 'referral', icon: Gift, label: 'Referral' },
@@ -669,14 +674,232 @@ const DashboardPage = () => {
                         {/* Referral Tab */}
                         {activeTab === 'referral' && <ReferralTab user={user} token={token} isRomanian={isRomanian} />}
 
+                        {/* Loyalty Tab */}
+                        {activeTab === 'loyalty' && <LoyaltyTab token={token} isRomanian={isRomanian} onOpenWheel={() => setWheelOpen(true)} />}
+
                         {/* Account Tab */}
                         {activeTab === 'account' && <AccountTab user={user} token={token} refreshUser={refreshUser} isRomanian={isRomanian} />}
                     </div>
                 </div>
             </main>
+
+            <WheelOfFortune open={wheelOpen} onClose={() => setWheelOpen(false)} />
         </div>
     );
 };
+
+
+const LoyaltyTab = ({ token, isRomanian, onOpenWheel }) => {
+    const [loyaltyData, setLoyaltyData] = React.useState(null);
+    const [discounts, setDiscounts] = React.useState([]);
+    const [redeemAmount, setRedeemAmount] = React.useState(100);
+    const [redeeming, setRedeeming] = React.useState(false);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        if (!token) return;
+        setLoading(true);
+        Promise.all([
+            axios.get(`${API}/loyalty/my`, { headers: { Authorization: `Bearer ${token}` } }),
+            axios.get(`${API}/discounts/my`, { headers: { Authorization: `Bearer ${token}` } })
+        ]).then(([loyaltyRes, discountsRes]) => {
+            setLoyaltyData(loyaltyRes.data);
+            setDiscounts(discountsRes.data || []);
+        }).catch(() => {}).finally(() => setLoading(false));
+    }, [token]);
+
+    const handleRedeem = async () => {
+        if (redeeming) return;
+        setRedeeming(true);
+        try {
+            const { data } = await axios.post(`${API}/loyalty/redeem`, { points: redeemAmount }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success(isRomanian ? `£${data.credited} adaugat in portofel!` : `£${data.credited} added to wallet!`);
+            setLoyaltyData(prev => ({ ...prev, points: data.remaining_points }));
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'Error');
+        } finally {
+            setRedeeming(false);
+        }
+    };
+
+    if (loading) return <div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>;
+
+    const tier = loyaltyData?.tier || { name: 'Bronze', color: '#cd7f32', bonus_multiplier: 1.0 };
+    const tierIcons = { Bronze: Star, Silver: Medal, Gold: Crown, Diamond: Diamond };
+    const TierIcon = tierIcons[tier.name] || Star;
+    const points = loyaltyData?.points || 0;
+    const redeemableValue = Math.floor(points / (loyaltyData?.redeem_rate || 100));
+
+    return (
+        <div className="space-y-5" data-testid="loyalty-tab">
+            {/* Tier Card */}
+            <div className="relative overflow-hidden rounded-3xl p-6" style={{
+                background: `linear-gradient(135deg, ${tier.color}15 0%, rgba(10,6,20,0.95) 50%, ${tier.color}08 100%)`,
+                border: `1px solid ${tier.color}40`
+            }}>
+                <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl" style={{ background: `${tier.color}08` }} />
+                <div className="relative">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg" style={{
+                            background: `linear-gradient(135deg, ${tier.color}, ${tier.color}cc)`,
+                            boxShadow: `0 0 20px ${tier.color}40`
+                        }}>
+                            <TierIcon className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black text-white tracking-tight">
+                                {isRomanian ? 'Programul de Fidelitate' : 'Loyalty Program'}
+                            </h2>
+                            <p className="text-sm font-semibold" style={{ color: tier.color }}>
+                                {tier.name} • {tier.bonus_multiplier}x {isRomanian ? 'multiplicator' : 'multiplier'}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Points Display */}
+                    <div className="grid grid-cols-2 gap-3 mb-5">
+                        <div className="p-4 rounded-xl bg-white/[0.04] border border-white/[0.06] text-center">
+                            <Coins className="w-5 h-5 text-amber-400 mx-auto mb-1" />
+                            <p className="text-2xl font-black text-white">{points.toLocaleString()}</p>
+                            <p className="text-[10px] text-gray-500">{isRomanian ? 'Puncte Disponibile' : 'Available Points'}</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-white/[0.04] border border-white/[0.06] text-center">
+                            <Sparkles className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
+                            <p className="text-2xl font-black text-emerald-400">£{redeemableValue}</p>
+                            <p className="text-[10px] text-gray-500">{isRomanian ? 'Valoare Rascumparabila' : 'Redeemable Value'}</p>
+                        </div>
+                    </div>
+
+                    {/* Redeem Section */}
+                    {points >= 100 && (
+                        <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/[0.06] mb-5">
+                            <p className="text-xs text-gray-400 mb-3">{isRomanian ? 'Rascumpara puncte pentru credit portofel' : 'Redeem points for wallet credit'}</p>
+                            <div className="flex gap-2">
+                                <select
+                                    value={redeemAmount}
+                                    onChange={e => setRedeemAmount(Number(e.target.value))}
+                                    className="flex-1 h-10 bg-white/[0.06] border border-white/[0.1] rounded-xl text-white text-sm px-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                    data-testid="redeem-select"
+                                >
+                                    {[100, 200, 500, 1000, 2000].filter(v => v <= points).map(v => (
+                                        <option key={v} value={v} className="bg-[#0a0614]">{v} {isRomanian ? 'puncte' : 'points'} = £{v / 100}</option>
+                                    ))}
+                                </select>
+                                <Button onClick={handleRedeem} disabled={redeeming}
+                                    className="h-10 px-5 rounded-xl font-bold"
+                                    style={{ background: `linear-gradient(135deg, ${tier.color}, ${tier.color}cc)` }}
+                                    data-testid="redeem-btn">
+                                    {redeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : (isRomanian ? 'Rascumpara' : 'Redeem')}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* How points work */}
+                    <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/[0.06]">
+                        <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4" style={{ color: tier.color }} />
+                            {isRomanian ? 'Cum Functioneaza' : 'How It Works'}
+                        </h3>
+                        <div className="space-y-2 text-xs text-gray-400">
+                            <p>• {isRomanian ? `Castigi ${loyaltyData?.points_per_pound || 10} puncte per £1 cheltuit` : `Earn ${loyaltyData?.points_per_pound || 10} points per £1 spent`}</p>
+                            <p>• {isRomanian ? '100 puncte = £1 credit portofel' : '100 points = £1 wallet credit'}</p>
+                            <p>• {isRomanian ? 'Tier-ul tau creste cu cat cumperi mai mult!' : 'Your tier grows as you purchase more!'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Wheel of Fortune CTA */}
+            <button onClick={onOpenWheel}
+                className="w-full p-4 rounded-2xl flex items-center gap-3 transition-all duration-300 hover:scale-[1.01] group"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(249,115,22,0.05))',
+                    border: '1px solid rgba(245,158,11,0.2)'
+                }}
+                data-testid="open-wheel-btn"
+            >
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <Gift className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-left flex-1">
+                    <p className="text-sm font-bold text-white">{isRomanian ? 'Roata Norocului' : 'Wheel of Fortune'}</p>
+                    <p className="text-[11px] text-gray-500">{isRomanian ? 'Invarte roata si castiga premii instant!' : 'Spin the wheel and win instant prizes!'}</p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
+            </button>
+
+            {/* Active Discounts */}
+            {discounts.length > 0 && (
+                <div className="rounded-2xl overflow-hidden" style={{
+                    background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))',
+                    border: '1px solid rgba(139,92,246,0.1)'
+                }}>
+                    <div className="p-4 border-b border-white/[0.06]">
+                        <h3 className="text-sm font-bold text-white">{isRomanian ? 'Reduceri Active' : 'Active Discounts'}</h3>
+                    </div>
+                    <div className="divide-y divide-white/[0.04]">
+                        {discounts.map((d) => (
+                            <div key={d.discount_id} className="flex items-center gap-3 p-3" data-testid={`discount-${d.discount_id}`}>
+                                <div className="w-10 h-10 rounded-lg bg-orange-500/15 flex items-center justify-center">
+                                    <span className="text-sm font-black text-orange-400">{d.percent}%</span>
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm text-white font-medium">{d.percent}% {isRomanian ? 'Reducere' : 'Discount'}</p>
+                                    <p className="text-[10px] text-gray-500">
+                                        {isRomanian ? 'Expira' : 'Expires'}: {new Date(d.expires_at).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-medium">
+                                    {isRomanian ? 'Activa' : 'Active'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Tier Progression */}
+            <div className="rounded-2xl p-5" style={{
+                background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))',
+                border: '1px solid rgba(139,92,246,0.1)'
+            }}>
+                <h3 className="text-sm font-bold text-white mb-4">{isRomanian ? 'Niveluri de Fidelitate' : 'Loyalty Tiers'}</h3>
+                <div className="space-y-3">
+                    {[
+                        { name: 'Bronze', min: 0, color: '#cd7f32', mult: '1x' },
+                        { name: 'Silver', min: 500, color: '#c0c0c0', mult: '1.2x' },
+                        { name: 'Gold', min: 2000, color: '#fbbf24', mult: '1.5x' },
+                        { name: 'Diamond', min: 5000, color: '#b9f2ff', mult: '2x' },
+                    ].map((t) => {
+                        const isCurrentTier = tier.name === t.name;
+                        const totalEarned = loyaltyData?.total_earned || 0;
+                        const isUnlocked = totalEarned >= t.min;
+                        return (
+                            <div key={t.name} className={`flex items-center gap-3 p-3 rounded-xl ${isCurrentTier ? 'bg-white/[0.06] ring-1' : 'bg-white/[0.02]'}`}
+                                style={isCurrentTier ? { borderColor: `${t.color}40` } : {}}>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isUnlocked ? '' : 'opacity-30'}`}
+                                    style={{ background: `${t.color}25` }}>
+                                    <Star className="w-4 h-4" style={{ color: t.color }} />
+                                </div>
+                                <div className="flex-1">
+                                    <p className={`text-sm font-bold ${isCurrentTier ? 'text-white' : isUnlocked ? 'text-gray-300' : 'text-gray-600'}`}>{t.name}</p>
+                                    <p className="text-[10px] text-gray-600">{t.min.toLocaleString()}+ {isRomanian ? 'puncte' : 'points'}</p>
+                                </div>
+                                <span className={`text-xs font-bold ${isCurrentTier ? '' : 'text-gray-600'}`} style={isCurrentTier ? { color: t.color } : {}}>
+                                    {t.mult}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const ReferralTab = ({ user, token, isRomanian }) => {
     const [referralData, setReferralData] = React.useState(null);

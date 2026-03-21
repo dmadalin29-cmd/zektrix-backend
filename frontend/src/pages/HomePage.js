@@ -301,6 +301,7 @@ const HomePage = () => {
     const [stats, setStats] = useState({ winners: 0, users: 0, tickets: 0 });
     const [activities, setActivities] = useState([]);
     const [featuredComp, setFeaturedComp] = useState(null);
+    const [reviews, setReviews] = useState([]);
 
     useEffect(() => {
         Promise.all([
@@ -309,12 +310,14 @@ const HomePage = () => {
             axios.get(`${API}/stats`).catch(() => ({ data: { winners: 0, users: 0, tickets: 0 } })),
             axios.get(`${API}/activity/recent`).catch(() => ({ data: [] })),
             axios.get(`${API}/settings/featured-competition`).catch(() => ({ data: {} })),
-        ]).then(([compsRes, tiktokRes, statsRes, actRes, featRes]) => {
+            axios.get(`${API}/reviews?limit=6`).catch(() => ({ data: [] })),
+        ]).then(([compsRes, tiktokRes, statsRes, actRes, featRes, reviewsRes]) => {
             setComps(compsRes.data);
             setTiktokLive(tiktokRes.data);
             setStats(statsRes.data);
             setActivities(actRes.data);
             setFeaturedComp(featRes.data?.competition || null);
+            setReviews(reviewsRes.data || []);
         });
     }, []);
 
@@ -434,6 +437,47 @@ const HomePage = () => {
                         </div>
                     </div>
                 </section>
+                {/* Reviews / Testimonials */}
+                {reviews.length > 0 && (
+                    <section className="py-8">
+                        <div className="max-w-7xl mx-auto px-4">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-2">
+                                    <Star className="w-5 h-5 text-amber-400" />
+                                    <h2 className="text-xl font-black text-white tracking-tight">{isRomanian ? 'Ce Spun Castigatorii' : 'What Winners Say'}</h2>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {reviews.map((review) => (
+                                    <div key={review.review_id}
+                                        className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-violet-500/20 transition-all duration-300"
+                                        data-testid={`review-${review.review_id}`}
+                                    >
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/30 to-orange-500/30 border border-white/10 flex items-center justify-center overflow-hidden">
+                                                {review.picture ? (
+                                                    <img src={review.picture} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-xs font-bold text-white">{review.username?.charAt(0)?.toUpperCase() || 'U'}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold text-white truncate">{review.username}</p>
+                                                <p className="text-[10px] text-gray-500 truncate">{review.competition_title || review.prize_description}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-0.5 mb-2">
+                                            {[1, 2, 3, 4, 5].map(s => (
+                                                <Star key={s} className={`w-3.5 h-3.5 ${s <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-700'}`} />
+                                            ))}
+                                        </div>
+                                        <p className="text-sm text-gray-400 leading-relaxed line-clamp-3">{review.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
             </main>
             <Footer />
             <InstallPrompt />

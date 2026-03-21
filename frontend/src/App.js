@@ -38,6 +38,7 @@ import InstallPrompt from "./components/InstallPrompt";
 import CookieConsent from "./components/CookieConsent";
 import ScrollToTop from "./components/ScrollToTop";
 import LiveChat from "./components/LiveChat";
+import ExitIntentPopup from "./components/ExitIntentPopup";
 
 // Loading fallback component
 const PageLoader = () => (
@@ -162,6 +163,14 @@ const AppRouter = () => {
                     }
                 />
                 <Route
+                    path="/dashboard/loyalty"
+                    element={
+                        <ProtectedRoute>
+                            <DashboardPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
                     path="/dashboard/referral"
                     element={
                         <ProtectedRoute>
@@ -205,6 +214,7 @@ function App() {
                         <Toaster position="top-right" richColors closeButton />
                         <InstallPrompt />
                         <CookieConsent />
+                        <ExitIntentPopup />
                     </div>
                 </CartProvider>
             </AuthProvider>

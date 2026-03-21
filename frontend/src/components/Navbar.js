@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '../components/ui/sheet';
 import { Menu, User, LogOut, LayoutDashboard, Ticket, Shield, ShoppingCart, ChevronDown, X, Trophy, Search, HelpCircle, Crosshair, Wallet, Crown } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
+import UserNotificationBell from './UserNotificationBell';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -103,6 +104,9 @@ const Navbar = () => {
                                 </button>
                             </Link>
                         )}
+
+                        {/* User Notifications */}
+                        {isAuthenticated && <UserNotificationBell />}
 
                         {/* Cart */}
                         <Link to="/cart" data-testid="cart-btn">

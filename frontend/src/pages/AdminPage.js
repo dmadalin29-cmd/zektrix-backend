@@ -214,6 +214,7 @@ const AdminPage = () => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+    const [pendingReviews, setPendingReviews] = useState([]);
 
     // Modals
     const [showCompModal, setShowCompModal] = useState(false);
@@ -267,6 +268,7 @@ const AdminPage = () => {
         axios.get(`${API}/admin/subscriptions/stats`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setSubscriptionStats(r.data || {})).catch(() => {});
         axios.get(`${API}/admin/subscriptions`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAllSubscriptions(r.data || [])).catch(() => {});
         axios.get(`${API}/admin/notifications`, { headers: { Authorization: `Bearer ${token}` }}).then(r => { setNotifications(r.data?.notifications || []); setUnreadCount(r.data?.unread_count ?? r.data?.notifications?.length ?? 0); }).catch(() => {});
+        axios.get(`${API}/reviews/pending`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setPendingReviews(r.data || [])).catch(() => {});
         
         // Admin WebSocket for live chat
         let ws = null;
@@ -510,6 +512,7 @@ const AdminPage = () => {
         { id: 'wallet', icon: Wallet, label: 'Wallet', badge: walletWithdrawals.filter(w => w.status === 'pending').length || null },
         { id: 'settings', icon: Settings, label: 'Setări' },
         { id: 'chat', icon: MessageCircle, label: 'Chat', badge: chatMsgs.length },
+        { id: 'reviews', icon: Star, label: 'Recenzii', badge: pendingReviews.length || null },
     ];
 
     return (
@@ -1678,6 +1681,77 @@ const AdminPage = () => {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ============== REVIEWS TAB ============== */}
+                    {tab === 'reviews' && (
+                        <div className="space-y-6" data-testid="admin-reviews-tab">
+                            <div className="rounded-2xl overflow-hidden" style={{
+                                background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9), rgba(10, 6, 20, 0.95))',
+                                border: '1px solid rgba(139, 92, 246, 0.15)'
+                            }}>
+                                <div className="p-5 border-b border-white/10 flex items-center justify-between">
+                                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                        <Star className="w-5 h-5 text-amber-400" />
+                                        Recenzii in Asteptare
+                                    </h2>
+                                    <Badge className="bg-amber-500/20 text-amber-400">{pendingReviews.length}</Badge>
+                                </div>
+                                {pendingReviews.length === 0 ? (
+                                    <div className="p-12 text-center">
+                                        <Star className="w-12 h-12 text-gray-700 mx-auto mb-3" />
+                                        <p className="text-gray-500">Nicio recenzie in asteptare</p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-white/[0.06]">
+                                        {pendingReviews.map(review => (
+                                            <div key={review.review_id} className="p-4 flex items-start gap-4" data-testid={`admin-review-${review.review_id}`}>
+                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/30 to-orange-500/30 flex items-center justify-center shrink-0">
+                                                    <span className="text-xs font-bold text-white">{review.username?.charAt(0)?.toUpperCase() || 'U'}</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <p className="text-sm font-bold text-white">{review.username}</p>
+                                                        <div className="flex gap-0.5">
+                                                            {[1,2,3,4,5].map(s => (
+                                                                <Star key={s} className={`w-3 h-3 ${s <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-700'}`} />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mb-1">{review.competition_title}</p>
+                                                    <p className="text-sm text-gray-300">{review.text}</p>
+                                                    <p className="text-[10px] text-gray-600 mt-1">{new Date(review.created_at).toLocaleDateString('ro-RO')}</p>
+                                                </div>
+                                                <div className="flex gap-2 shrink-0">
+                                                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 h-8"
+                                                        data-testid={`approve-review-${review.review_id}`}
+                                                        onClick={async () => {
+                                                            try {
+                                                                await axios.post(`${API}/reviews/${review.review_id}/approve`, {}, { headers: { Authorization: `Bearer ${token}` }});
+                                                                setPendingReviews(prev => prev.filter(r => r.review_id !== review.review_id));
+                                                                toast.success('Recenzie aprobata!');
+                                                            } catch { toast.error('Eroare'); }
+                                                        }}>
+                                                        <CheckCircle className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="text-red-400 hover:bg-red-500/20 h-8"
+                                                        data-testid={`delete-review-${review.review_id}`}
+                                                        onClick={async () => {
+                                                            try {
+                                                                await axios.delete(`${API}/reviews/${review.review_id}`, { headers: { Authorization: `Bearer ${token}` }});
+                                                                setPendingReviews(prev => prev.filter(r => r.review_id !== review.review_id));
+                                                                toast.success('Recenzie stearsa!');
+                                                            } catch { toast.error('Eroare'); }
+                                                        }}>
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
