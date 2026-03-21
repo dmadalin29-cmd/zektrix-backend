@@ -27,6 +27,7 @@ class UserResponse(BaseModel):
     balance: float
     role: str
     picture: Optional[str] = None
+    is_blocked: Optional[bool] = False
     created_at: datetime
 
 class QualificationQuestion(BaseModel):
