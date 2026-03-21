@@ -154,6 +154,14 @@ const AppRouter = () => {
                     }
                 />
                 <Route
+                    path="/dashboard/badges"
+                    element={
+                        <ProtectedRoute>
+                            <DashboardPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
                     path="/dashboard/referral"
                     element={
                         <ProtectedRoute>

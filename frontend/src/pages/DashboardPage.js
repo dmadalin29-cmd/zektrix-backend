@@ -203,6 +203,7 @@ const DashboardPage = () => {
     const location = useLocation();
 
     const getActiveTab = () => {
+        if (location.pathname.includes('/badges')) return 'badges';
         if (location.pathname.includes('/account')) return 'account';
         if (location.pathname.includes('/locs')) return 'locs';
         if (location.pathname.includes('/history')) return 'history';
@@ -215,6 +216,7 @@ const DashboardPage = () => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pushSubscribed, setPushSubscribed] = useState(null);
+    const [badges, setBadges] = useState({ badges: [], total_earned: 0, total_available: 0 });
 
     // Check push status
     useEffect(() => {
@@ -276,13 +278,15 @@ const DashboardPage = () => {
             }
             const headers = { Authorization: `Bearer ${authToken}` };
             
-            // Fetch locs and transactions
-            const [locsRes, txnRes] = await Promise.all([
+            // Fetch locs, transactions, and badges
+            const [locsRes, txnRes, badgesRes] = await Promise.all([
                 axios.get(`${API}/tickets/my`, { headers }),
-                axios.get(`${API}/wallet/transactions`, { headers }).catch(() => ({ data: [] }))
+                axios.get(`${API}/wallet/transactions`, { headers }).catch(() => ({ data: [] })),
+                axios.get(`${API}/user/badges`, { headers }).catch(() => ({ data: { badges: [], total_earned: 0, total_available: 0 } }))
             ]);
             setLocs(locsRes.data || []);
             setTransactions(txnRes.data || []);
+            setBadges(badgesRes.data || { badges: [], total_earned: 0, total_available: 0 });
         } catch (error) {
             console.error('Fetch error:', error);
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
@@ -305,7 +309,7 @@ const DashboardPage = () => {
 
     const handleTabChange = (value) => {
         setActiveTab(value);
-        const routes = { overview: '/dashboard', locs: '/dashboard/locs', history: '/dashboard/history', referral: '/dashboard/referral', account: '/dashboard/account' };
+        const routes = { overview: '/dashboard', locs: '/dashboard/locs', badges: '/dashboard/badges', history: '/dashboard/history', referral: '/dashboard/referral', account: '/dashboard/account' };
         navigate(routes[value] || '/dashboard');
     };
 
@@ -322,6 +326,7 @@ const DashboardPage = () => {
     const navItems = [
         { id: 'overview', icon: Activity, label: isRomanian ? 'Prezentare' : 'Overview' },
         { id: 'locs', icon: Ticket, label: isRomanian ? 'Locurile Mele' : 'My Locs', badge: locs.length },
+        { id: 'badges', icon: Trophy, label: isRomanian ? 'Realizari' : 'Badges', badge: badges.total_earned },
         { id: 'history', icon: History, label: isRomanian ? 'Istoric' : 'History' },
         { id: 'referral', icon: Gift, label: 'Referral' },
         { id: 'account', icon: User, label: isRomanian ? 'Contul Meu' : 'My Account' },
@@ -538,6 +543,65 @@ const DashboardPage = () => {
                                     actionLabel={isRomanian ? 'Vezi Competițiile' : 'Browse Competitions'}
                                 />
                             )
+                        )}
+
+                        {/* Badges Tab */}
+                        {activeTab === 'badges' && (
+                            <div className="space-y-6" data-testid="badges-tab">
+                                <div className="rounded-2xl p-6"
+                                    style={{ background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9), rgba(10, 6, 20, 0.95))', border: '1px solid rgba(139, 92, 246, 0.15)' }}>
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+                                            style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
+                                            <Trophy className="w-6 h-6 text-white" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-white">{isRomanian ? 'Realizarile Tale' : 'Your Achievements'}</h2>
+                                            <p className="text-sm text-gray-500">{badges.total_earned}/{badges.total_available} {isRomanian ? 'deblocate' : 'unlocked'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="w-full h-2 bg-white/[0.06] rounded-full overflow-hidden mb-6">
+                                        <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all" 
+                                            style={{ width: `${badges.total_available > 0 ? (badges.total_earned / badges.total_available) * 100 : 0}%` }} />
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                                        {(badges.badges || []).map(b => {
+                                            const iconMap = {
+                                                ticket: Ticket, collection: Sparkles, fire: Sparkles, crown: Crown, trophy: Trophy,
+                                                users: Users, crown_gold: Crown, diamond: Sparkles, compass: ArrowUpRight, star: Sparkles
+                                            };
+                                            const BadgeIcon = iconMap[b.icon] || Trophy;
+                                            return (
+                                                <div key={b.id} 
+                                                    className={`relative rounded-2xl p-4 text-center transition-all duration-300 ${b.earned ? 'hover:scale-105' : 'opacity-40 grayscale'}`}
+                                                    style={{
+                                                        background: b.earned ? 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(245,158,11,0.1))' : 'rgba(255,255,255,0.02)',
+                                                        border: `1px solid ${b.earned ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.05)'}`
+                                                    }}
+                                                    data-testid={`badge-${b.id}`}
+                                                >
+                                                    <div className={`w-14 h-14 mx-auto rounded-xl flex items-center justify-center mb-3 ${b.earned ? '' : 'bg-white/5'}`}
+                                                        style={b.earned ? { background: 'linear-gradient(135deg, #8b5cf6, #f59e0b)' } : {}}>
+                                                        <BadgeIcon className={`w-7 h-7 ${b.earned ? 'text-white' : 'text-gray-600'}`} />
+                                                    </div>
+                                                    <p className={`text-sm font-bold mb-1 ${b.earned ? 'text-white' : 'text-gray-600'}`}>{b.name}</p>
+                                                    <p className="text-[10px] text-gray-500 leading-tight">{b.description}</p>
+                                                    {b.earned && b.awarded_at && (
+                                                        <p className="text-[9px] text-violet-400 mt-2">{new Date(b.awarded_at).toLocaleDateString('ro-RO')}</p>
+                                                    )}
+                                                    {!b.earned && (
+                                                        <div className="absolute inset-0 flex items-center justify-center rounded-2xl">
+                                                            <div className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center">
+                                                                <span className="text-gray-500 text-lg">?</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
                         {/* History Tab */}

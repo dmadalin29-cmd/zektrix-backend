@@ -744,6 +744,9 @@ async def purchase_tickets(purchase: TicketPurchase, current_user: dict = Depend
     # Check and send alerts if competition is nearly sold out
     await check_and_send_competition_alerts(purchase.competition_id, new_sold, comp["max_tickets"])
     
+    # Check and award gamification badges
+    asyncio.create_task(check_and_award_badges(current_user["user_id"]))
+    
     return purchased_tickets
 
 # ==================== CART SYSTEM ====================
@@ -5703,10 +5706,211 @@ async def upload_image(file: UploadFile = File(...), current_user: dict = Depend
     
     return {"url": image_url, "filename": filename}
 
-app.include_router(api_router)
-
 # Serve uploaded files
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+# ==================== GAMIFICATION BADGES ====================
+BADGE_DEFINITIONS = [
+    {"id": "first_ticket", "name": "Primul Bilet", "description": "Ai cumparat primul bilet!", "icon": "ticket", "condition": "tickets >= 1"},
+    {"id": "five_tickets", "name": "Colectionar", "description": "5 bilete cumparate!", "icon": "collection", "condition": "tickets >= 5"},
+    {"id": "twenty_tickets", "name": "Pasionat", "description": "20 de bilete! Esti un veteran!", "icon": "fire", "condition": "tickets >= 20"},
+    {"id": "fifty_tickets", "name": "Legenda", "description": "50 de bilete! Nimic nu te opreste!", "icon": "crown", "condition": "tickets >= 50"},
+    {"id": "first_win", "name": "Castigator", "description": "Ai castigat prima competitie!", "icon": "trophy", "condition": "wins >= 1"},
+    {"id": "referral_starter", "name": "Ambasador", "description": "Ai invitat primul prieten!", "icon": "users", "condition": "referrals >= 1"},
+    {"id": "referral_king", "name": "Referral King", "description": "5 prieteni invitati cu succes!", "icon": "crown_gold", "condition": "referrals >= 5"},
+    {"id": "big_spender", "name": "High Roller", "description": "Ai cheltuit peste £100!", "icon": "diamond", "condition": "spent >= 100"},
+    {"id": "multi_comp", "name": "Explorer", "description": "Participi la 3+ competitii diferite!", "icon": "compass", "condition": "unique_comps >= 3"},
+    {"id": "early_bird", "name": "Early Bird", "description": "Ai fost printre primii 10% cumparatori!", "icon": "star", "condition": "early_buyer"},
+]
+
+async def check_and_award_badges(user_id: str):
+    """Check all badge conditions and award new ones"""
+    user = await db.users.find_one({"user_id": user_id})
+    if not user:
+        return []
+    
+    existing_badges = user.get("badges", [])
+    existing_ids = {b["id"] for b in existing_badges}
+    new_badges = []
+    
+    # Get user stats
+    ticket_count = await db.tickets.count_documents({"user_id": user_id})
+    win_count = await db.winners.count_documents({"user_id": user_id})
+    referral_count = await db.referrals.count_documents({"referrer_id": user_id, "status": "completed"})
+    
+    # Calculate total spent
+    pipeline = [{"$match": {"user_id": user_id, "transaction_type": {"$in": ["ticket_purchase", "cart_purchase"]}, "status": "completed"}}, {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}]
+    spent_result = await db.transactions.aggregate(pipeline).to_list(1)
+    total_spent = spent_result[0]["total"] if spent_result else 0
+    
+    # Count unique competitions
+    unique_comps = len(await db.tickets.distinct("competition_id", {"user_id": user_id}))
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    for badge_def in BADGE_DEFINITIONS:
+        if badge_def["id"] in existing_ids:
+            continue
+        
+        awarded = False
+        cond = badge_def["condition"]
+        
+        if cond == "tickets >= 1" and ticket_count >= 1: awarded = True
+        elif cond == "tickets >= 5" and ticket_count >= 5: awarded = True
+        elif cond == "tickets >= 20" and ticket_count >= 20: awarded = True
+        elif cond == "tickets >= 50" and ticket_count >= 50: awarded = True
+        elif cond == "wins >= 1" and win_count >= 1: awarded = True
+        elif cond == "referrals >= 1" and referral_count >= 1: awarded = True
+        elif cond == "referrals >= 5" and referral_count >= 5: awarded = True
+        elif cond == "spent >= 100" and total_spent >= 100: awarded = True
+        elif cond == "unique_comps >= 3" and unique_comps >= 3: awarded = True
+        
+        if awarded:
+            new_badge = {"id": badge_def["id"], "name": badge_def["name"], "description": badge_def["description"], "icon": badge_def["icon"], "awarded_at": now}
+            new_badges.append(new_badge)
+    
+    if new_badges:
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$push": {"badges": {"$each": new_badges}}}
+        )
+    
+    return new_badges
+
+@api_router.get("/user/badges")
+async def get_user_badges(user: dict = Depends(get_current_user)):
+    """Get current user's badges and available badge definitions"""
+    user_badges = user.get("badges", [])
+    earned_ids = {b["id"] for b in user_badges}
+    
+    all_badges = []
+    for bd in BADGE_DEFINITIONS:
+        badge_info = {
+            "id": bd["id"],
+            "name": bd["name"],
+            "description": bd["description"],
+            "icon": bd["icon"],
+            "earned": bd["id"] in earned_ids,
+            "awarded_at": next((b["awarded_at"] for b in user_badges if b["id"] == bd["id"]), None)
+        }
+        all_badges.append(badge_info)
+    
+    return {"badges": all_badges, "total_earned": len(earned_ids), "total_available": len(BADGE_DEFINITIONS)}
+
+# ==================== RE-ENGAGEMENT EMAIL BOT ====================
+async def reengagement_email_bot():
+    """Send re-engagement emails to users inactive for 7+ days"""
+    while True:
+        try:
+            await asyncio.sleep(3600 * 6)  # Check every 6 hours
+            
+            seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+            
+            # Find users who have purchased before but not in the last 7 days
+            active_comps = await db.competitions.find({"status": "active"}, {"_id": 0}).to_list(100)
+            if not active_comps:
+                continue
+            
+            # Get users with at least 1 ticket
+            users_with_tickets = await db.tickets.distinct("user_id")
+            
+            for uid in users_with_tickets:
+                user = await db.users.find_one({"user_id": uid, "is_blocked": {"$ne": True}}, {"_id": 0})
+                if not user or user.get("role") == "admin":
+                    continue
+                
+                # Check last purchase date
+                last_ticket = await db.tickets.find_one(
+                    {"user_id": uid},
+                    sort=[("purchased_at", -1)]
+                )
+                if not last_ticket:
+                    continue
+                
+                last_purchase = last_ticket.get("purchased_at", "")
+                if isinstance(last_purchase, str) and last_purchase > seven_days_ago:
+                    continue  # Purchased recently, skip
+                
+                # Check if re-engagement email already sent recently
+                last_reengagement = await db.reengagement_emails.find_one(
+                    {"user_id": uid, "sent_at": {"$gt": (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()}}
+                )
+                if last_reengagement:
+                    continue  # Already sent within 14 days
+                
+                # Build email with top 3 active competitions
+                top_comps = sorted(active_comps, key=lambda x: x.get("sold_tickets", 0) / max(x.get("max_tickets", 1), 1), reverse=True)[:3]
+                
+                comps_html = ""
+                for comp in top_comps:
+                    pct = round((comp.get("sold_tickets", 0) / max(comp.get("max_tickets", 1), 1)) * 100)
+                    img = comp.get("image_url", "")
+                    comps_html += f"""
+                    <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);border-radius:16px;padding:16px;margin-bottom:12px;">
+                        <div style="font-weight:700;color:#ffffff;font-size:16px;margin-bottom:8px;">{comp.get('title','')}</div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="color:#a78bfa;font-size:13px;">{pct}% vandut</span>
+                            <span style="color:#10b981;font-weight:700;font-size:14px;">{comp.get('ticket_price','?')} £/loc</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:8px;height:6px;margin-top:8px;overflow:hidden;">
+                            <div style="background:linear-gradient(90deg,#8b5cf6,#ff5e00);height:100%;width:{pct}%;border-radius:8px;"></div>
+                        </div>
+                    </div>"""
+                
+                email_html = f"""
+                <div style="font-family:'Outfit',Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0614;color:#fff;border-radius:20px;overflow:hidden;">
+                    <div style="background:linear-gradient(135deg,#8b5cf6,#ff5e00);padding:40px 30px;text-align:center;">
+                        <h1 style="margin:0;font-size:28px;font-weight:900;color:#fff;">Ne e dor de tine! 💜</h1>
+                        <p style="margin:10px 0 0;color:rgba(255,255,255,0.9);font-size:15px;">Au aparut competitii noi care te asteapta</p>
+                    </div>
+                    <div style="padding:30px;">
+                        <p style="color:#a0a0b0;font-size:14px;line-height:1.6;margin-bottom:20px;">
+                            Salut <strong style="color:#fff;">{user.get('first_name', user.get('username', 'Prietene'))}</strong>!<br/>
+                            Nu te-am mai vazut de ceva timp pe Zektrix. Intre timp, avem competitii incredibile care se vand rapid:
+                        </p>
+                        {comps_html}
+                        <div style="text-align:center;margin-top:25px;">
+                            <a href="https://zektrix.uk" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#a666ff);color:#fff;text-decoration:none;padding:14px 40px;border-radius:50px;font-weight:700;font-size:15px;">VEZI COMPETITIILE</a>
+                        </div>
+                        <p style="color:#6e6987;font-size:11px;text-align:center;margin-top:25px;">
+                            Nu vrei sa mai primesti aceste emailuri? Trimite un email la contact@x67digital.com
+                        </p>
+                    </div>
+                </div>"""
+                
+                try:
+                    resend_key = os.environ.get("RESEND_API_KEY")
+                    if resend_key:
+                        import httpx
+                        async with httpx.AsyncClient() as client_http:
+                            await client_http.post(
+                                "https://api.resend.com/emails",
+                                headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+                                json={
+                                    "from": "Zektrix UK <noreply@zektrix.uk>",
+                                    "to": [user["email"]],
+                                    "subject": "Ne e dor de tine! Competitii noi te asteapta 🎯",
+                                    "html": email_html
+                                }
+                            )
+                        
+                        await db.reengagement_emails.insert_one({
+                            "user_id": uid,
+                            "email": user["email"],
+                            "sent_at": datetime.now(timezone.utc).isoformat(),
+                            "comps_included": [c.get("competition_id") for c in top_comps]
+                        })
+                        logger.info(f"Re-engagement email sent to {user['email']}")
+                except Exception as e:
+                    logger.error(f"Failed to send re-engagement email to {uid}: {e}")
+                
+                await asyncio.sleep(2)  # Rate limit
+                
+        except Exception as e:
+            logger.error(f"Re-engagement bot error: {e}")
+            await asyncio.sleep(3600)
+
+app.include_router(api_router)
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
@@ -5738,6 +5942,8 @@ async def startup_db():
     await db.referrals.create_index("referred_id", unique=True, sparse=True)
     await db.password_resets.create_index("token", unique=True)
     await db.password_resets.create_index("user_id")
+    await db.reengagement_emails.create_index("user_id")
+    await db.reengagement_emails.create_index("sent_at")
     logger.info("Database indexes created")
     
     # Start Competition Auto-Bot
@@ -5751,6 +5957,10 @@ async def startup_db():
     # Start Subscription Renewal Bot
     asyncio.create_task(subscription_renewal_bot())
     logger.info("Subscription Renewal Bot started")
+    
+    # Start Re-engagement Email Bot
+    asyncio.create_task(reengagement_email_bot())
+    logger.info("Re-engagement Email Bot started")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
