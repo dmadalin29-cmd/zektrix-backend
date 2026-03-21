@@ -508,7 +508,6 @@ const AdminPage = () => {
         { id: 'locuri', icon: Ticket, label: 'Locuri', badge: locuri.length },
         { id: 'winners', icon: Crown, label: 'Premianți', badge: winners.length },
         { id: 'wallet', icon: Wallet, label: 'Wallet', badge: walletWithdrawals.filter(w => w.status === 'pending').length || null },
-        { id: 'analytics', icon: BarChart3, label: 'Analitics' },
         { id: 'settings', icon: Settings, label: 'Setări' },
         { id: 'chat', icon: MessageCircle, label: 'Chat', badge: chatMsgs.length },
     ];
@@ -623,7 +622,7 @@ const AdminPage = () => {
                             </button>
                             <div>
                                 <h1 className="text-xl lg:text-2xl font-bold text-white capitalize tracking-tight">
-                                    {tab === 'comps' ? 'Competiții' : tab === 'analytics' ? 'Analytics' : tab}
+                                    {tab === 'comps' ? 'Competiții' : tab}
                                 </h1>
                                 <p className="text-xs lg:text-sm text-gray-500">
                                     {new Date().toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -1145,107 +1144,6 @@ const AdminPage = () => {
                     )}
 
                     {/* ============== ANALYTICS TAB ============== */}
-                    {tab === 'analytics' && (
-                        <div className="space-y-6">
-                            <div className="grid lg:grid-cols-2 gap-6">
-                                {/* Revenue Chart */}
-                                <div className="rounded-2xl p-6"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
-                                        border: '1px solid rgba(139, 92, 246, 0.15)'
-                                    }}>
-                                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                        <TrendingUp className="w-5 h-5 text-emerald-400" /> Venituri
-                                    </h3>
-                                    <div className="h-64">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={chartData}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(139, 92, 246, 0.1)" />
-                                                <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
-                                                <YAxis stroke="#6b7280" fontSize={12} />
-                                                <Tooltip content={<CustomTooltip />} />
-                                                <Bar dataKey="vanzari" fill="url(#barGradient)" radius={[4, 4, 0, 0]} />
-                                                <defs>
-                                                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor="#8b5cf6" />
-                                                        <stop offset="100%" stopColor="#7c3aed" />
-                                                    </linearGradient>
-                                                </defs>
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-
-                                {/* User Growth */}
-                                <div className="rounded-2xl p-6"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
-                                        border: '1px solid rgba(139, 92, 246, 0.15)'
-                                    }}>
-                                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                        <Users className="w-5 h-5 text-cyan-400" /> Creștere Utilizatori
-                                    </h3>
-                                    <div className="h-64">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={userGrowthChartData}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(139, 92, 246, 0.1)" />
-                                                <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
-                                                <YAxis stroke="#6b7280" fontSize={12} allowDecimals={false} />
-                                                <Tooltip content={<CustomTooltip />} />
-                                                <Line type="monotone" dataKey="utilizatori" stroke="#06b6d4" strokeWidth={3} dot={{ fill: '#06b6d4', strokeWidth: 2 }} />
-                                            </LineChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Performance Metrics - REAL DATA */}
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <StatCard icon={Users} label="Total Utilizatori" value={analyticsData?.total_users || 0} gradient="linear-gradient(135deg, #8b5cf6, #7c3aed)" loading={loading} />
-                                <StatCard icon={ShoppingCart} label="Total Locuri" value={analyticsData?.total_tickets || 0} gradient="linear-gradient(135deg, #10b981, #059669)" loading={loading} />
-                                <StatCard icon={CreditCard} label="Competitii Active" value={analyticsData?.active_competitions || 0} gradient="linear-gradient(135deg, #f97316, #ea580c)" loading={loading} />
-                                <StatCard icon={Trophy} label="Castigatori" value={analyticsData?.total_winners || 0} gradient="linear-gradient(135deg, #fbbf24, #f59e0b)" loading={loading} />
-                            </div>
-
-                            {/* Top Competitions Table */}
-                            <div className="rounded-2xl p-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
-                                    border: '1px solid rgba(139, 92, 246, 0.15)'
-                                }}>
-                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                    <BarChart3 className="w-5 h-5 text-violet-400" /> Top Competitii (dupa vanzari)
-                                </h3>
-                                <div className="space-y-3">
-                                    {(analyticsData?.top_competitions || []).filter(c => c.sold > 0).map((c, i) => {
-                                        const pct = c.max > 0 ? Math.round((c.sold / c.max) * 100) : 0;
-                                        return (
-                                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
-                                                <span className="text-sm font-bold text-violet-400 w-6 text-center">{i + 1}</span>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-white truncate font-medium">{c.title}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                                            <div className="h-full bg-gradient-to-r from-violet-500 to-orange-500 rounded-full" style={{ width: `${pct}%` }} />
-                                                        </div>
-                                                        <span className="text-xs text-gray-400">{c.sold}/{c.max}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-sm font-bold text-emerald-400">£{(c.revenue || 0).toFixed(2)}</p>
-                                                    <p className="text-[10px] text-gray-500">{pct}% vandut</p>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    {(analyticsData?.top_competitions || []).filter(c => c.sold > 0).length === 0 && (
-                                        <p className="text-center text-gray-500 text-sm py-4">Nicio vanzare inca</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                     {/* ============== WALLET TAB ============== */}
                     {tab === 'wallet' && (
                         <div className="space-y-6 max-w-5xl">
