@@ -30,6 +30,7 @@ from routes.chat import router as chat_router
 from routes.webhooks import router as webhooks_router
 from routes.public import router as public_router
 from routes.gamification import router as gamification_router
+from routes.engagement import router as engagement_router
 
 # Background services
 from services.bots import (
@@ -81,6 +82,7 @@ app.include_router(chat_router)
 app.include_router(webhooks_router)
 app.include_router(public_router)
 app.include_router(gamification_router)
+app.include_router(engagement_router)
 
 # Make ws_manager available to route modules that need it
 import routes.competitions as _comp_mod
