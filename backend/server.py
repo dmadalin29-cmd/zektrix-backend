@@ -3,6 +3,9 @@
 Zektrix UK Competition Platform - Main Server (Refactored)
 Routes are organized in /routes/*.py, services in /services/*.py
 """
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
