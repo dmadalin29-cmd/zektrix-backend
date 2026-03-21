@@ -212,6 +212,7 @@ const AdminPage = () => {
     const [subscriptionStats, setSubscriptionStats] = useState({});
     const [allSubscriptions, setAllSubscriptions] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
     const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
     // Modals
@@ -265,7 +266,7 @@ const AdminPage = () => {
         axios.get(`${API}/admin/wallet/bonus-settings`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setBonusSettings(r.data || {})).catch(() => {});
         axios.get(`${API}/admin/subscriptions/stats`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setSubscriptionStats(r.data || {})).catch(() => {});
         axios.get(`${API}/admin/subscriptions`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAllSubscriptions(r.data || [])).catch(() => {});
-        axios.get(`${API}/admin/notifications`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setNotifications(r.data?.notifications || [])).catch(() => {});
+        axios.get(`${API}/admin/notifications`, { headers: { Authorization: `Bearer ${token}` }}).then(r => { setNotifications(r.data?.notifications || []); setUnreadCount(r.data?.unread_count ?? r.data?.notifications?.length ?? 0); }).catch(() => {});
         
         // Admin WebSocket for live chat
         let ws = null;
@@ -640,11 +641,17 @@ const AdminPage = () => {
                                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                             </Button>
                             <Button variant="ghost" size="sm" className="relative text-gray-400 hover:text-white hover:bg-white/5"
-                                onClick={() => setShowNotifDropdown(!showNotifDropdown)} data-testid="notif-bell-btn">
+                                onClick={() => {
+                                    const opening = !showNotifDropdown;
+                                    setShowNotifDropdown(opening);
+                                    if (opening && unreadCount > 0) {
+                                        axios.post(`${API}/admin/notifications/read`, {}, { headers: { Authorization: `Bearer ${token}` }}).then(() => setUnreadCount(0)).catch(() => {});
+                                    }
+                                }} data-testid="notif-bell-btn">
                                 <Bell className="w-4 h-4" />
-                                {notifications.length > 0 && (
+                                {unreadCount > 0 && (
                                     <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center">
-                                        {notifications.length}
+                                        {unreadCount}
                                     </span>
                                 )}
                             </Button>

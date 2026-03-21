@@ -2988,11 +2988,22 @@ async def set_featured_competition(competition_id: str, admin: dict = Depends(ge
     return {"success": True, "competition_id": competition_id, "title": comp.get("title")}
 
 
+@api_router.post("/admin/notifications/read")
+async def mark_admin_notifications_read(admin: dict = Depends(get_admin_user)):
+    """Mark all current admin notifications as read"""
+    now = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"user_id": admin["user_id"]},
+        {"$set": {"notifications_read_at": now}}
+    )
+    return {"success": True, "read_at": now}
+
 @api_router.get("/admin/notifications")
 async def get_admin_notifications(admin: dict = Depends(get_admin_user)):
     """Get real-time admin notifications"""
     now = datetime.now(timezone.utc)
     notifications = []
+    read_at = admin.get("notifications_read_at")
     
     # Pending withdrawals
     pending_wd = await db.withdrawal_requests.find(
@@ -3080,7 +3091,12 @@ async def get_admin_notifications(admin: dict = Depends(get_admin_user)):
     notifications.sort(key=lambda n: (priority_order.get(n["priority"], 2), n.get("created_at", "")), reverse=False)
     notifications.sort(key=lambda n: priority_order.get(n["priority"], 2))
     
-    return {"notifications": notifications, "total": len(notifications), "high_priority": sum(1 for n in notifications if n["priority"] == "high")}
+    # Calculate unread count based on read_at timestamp
+    unread_count = len(notifications)
+    if read_at:
+        unread_count = sum(1 for n in notifications if n.get("created_at", "") > read_at)
+    
+    return {"notifications": notifications, "total": len(notifications), "unread_count": unread_count, "high_priority": sum(1 for n in notifications if n["priority"] == "high")}
 
 @api_router.get("/admin/analytics")
 async def get_analytics(admin: dict = Depends(get_admin_user)):
