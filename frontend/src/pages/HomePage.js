@@ -348,7 +348,7 @@ const HomePage = () => {
                 <section className="py-4">
                     <div className="max-w-7xl mx-auto px-4">
                         <Link to="/subscriptions" className="block" data-testid="home-sub-cta">
-                            <div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                            <div
                                 className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-r from-[#8B3DFF]/10 via-[#FF5E00]/5 to-[#8B3DFF]/10 border border-[#8B3DFF]/20 hover:border-[#8B3DFF]/40 transition-all duration-300 group"
                             >
                                 <div className="flex items-center justify-between">

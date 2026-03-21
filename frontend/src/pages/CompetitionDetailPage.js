@@ -168,7 +168,7 @@ const CompetitionDetailPage = () => {
                         {/* ===== PURCHASE CARD (first on mobile, sticky right on desktop) ===== */}
                         <div className="lg:col-start-3 lg:row-start-1 lg:row-span-10">
                             <div className="lg:sticky lg:top-24">
-                            <Card className="glass border-primary/30">
+                            <Card className="glass border-primary/30" data-testid="purchase-card">
                                 <CardHeader className="pb-3">
                                     <CardTitle className="flex items-center justify-between">
                                         <span>{isFree ? (isRomanian ? 'Intrare Gratuită' : 'Free Entry') : (isRomanian ? 'Cumpără Locuri' : 'Buy Spots')}</span>
