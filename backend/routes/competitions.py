@@ -18,8 +18,12 @@ logger = logging.getLogger("server")
 from helpers import generate_random_ticket_number, notify_user_push, notify_competition_participants_push
 try:
     from routes.wallet import get_viva_access_token
+    from routes.chat import check_and_send_competition_alerts
+    from routes.gamification import check_and_award_badges
 except ImportError:
     from wallet import get_viva_access_token
+    from chat import check_and_send_competition_alerts
+    from gamification import check_and_award_badges
 try:
     from models import TicketResponse, TicketSearchResult
 except ImportError:
@@ -183,6 +187,7 @@ async def purchase_tickets(purchase: TicketPurchase, current_user: dict = Depend
             "competition_title": comp["title"]
         }
         await db.tickets.insert_one(ticket_doc)
+        ticket_doc.pop("_id", None)
         purchased_tickets.append(ticket_doc)
     
     # Update user balance
@@ -378,6 +383,7 @@ async def purchase_cart(cart: CartPurchase, current_user: dict = Depends(get_cur
                     "qualification_answer": validated["qualification_answer"]
                 }
                 await db.tickets.insert_one(ticket_doc)
+                ticket_doc.pop("_id", None)
                 tickets.append(ticket_doc)
             
             new_sold = comp["sold_tickets"] + quantity
