@@ -694,24 +694,59 @@ async def get_tiktok_live_status():
     """Get TikTok LIVE status (public endpoint)"""
     settings = await db.site_settings.find_one({"setting_id": "tiktok_live"})
     if not settings:
-        return {"is_live": False, "tiktok_url": "https://www.tiktok.com/@zektrix.uk"}
+        return {"is_live": False, "tiktok_url": "https://www.tiktok.com/@x67digital"}
     return {
         "is_live": settings.get("is_live", False),
-        "tiktok_url": settings.get("tiktok_url", "https://www.tiktok.com/@zektrix.uk")
+        "tiktok_url": settings.get("tiktok_url", "https://www.tiktok.com/@x67digital")
     }
 
 @router.post("/admin/settings/tiktok-live")
 async def set_tiktok_live_status(is_live: bool, tiktok_url: Optional[str] = None, admin: dict = Depends(get_admin_user)):
-    """Toggle TikTok LIVE status (admin only)"""
-    update_data = {"is_live": is_live, "updated_at": datetime.now(timezone.utc).isoformat()}
-    if tiktok_url:
-        update_data["tiktok_url"] = tiktok_url
+    """Toggle TikTok LIVE status (admin only) - also updates live-draw for competition pages and sends push"""
+    final_url = tiktok_url or "https://www.tiktok.com/@x67digital"
+    update_data = {"is_live": is_live, "updated_at": datetime.now(timezone.utc).isoformat(), "tiktok_url": final_url}
     
     await db.site_settings.update_one(
         {"setting_id": "tiktok_live"},
         {"$set": update_data},
         upsert=True
     )
+    
+    # Also update the live-draw settings (used by competition pages)
+    live_draw_value = {
+        "is_live": is_live,
+        "competition_id": None,
+        "tiktok_live_url": final_url,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.settings.update_one(
+        {"key": "live_draw"},
+        {"$set": {"key": "live_draw", "value": live_draw_value}},
+        upsert=True
+    )
+    
+    # Send push notification when going live
+    if is_live:
+        try:
+            from push_service import send_web_push
+        except ImportError:
+            from backend.push_service import send_web_push
+        
+        subs = await db.push_subscriptions.find({}, {"_id": 0}).to_list(10000)
+        sent = 0
+        for sub in subs:
+            try:
+                await send_web_push(sub, {
+                    "title": "LIVE DRAW ACUM!",
+                    "body": "Suntem LIVE pe TikTok! Urmărește extragerea acum!",
+                    "url": final_url,
+                    "tag": "live-draw",
+                    "requireInteraction": True
+                })
+                sent += 1
+            except Exception:
+                pass
+        logger.info(f"Live toggle notification sent to {sent} devices")
     
     return {"success": True, "is_live": is_live, "message": f"TikTok LIVE {'activat' if is_live else 'dezactivat'}"}
 
