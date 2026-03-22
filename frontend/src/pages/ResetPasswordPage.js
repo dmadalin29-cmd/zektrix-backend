@@ -177,7 +177,7 @@ const ResetPasswordPage = () => {
                                     data-testid="reset-submit-btn"
                                 >
                                     {loading ? (
-                                        <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Se procesează...</>
+                                        <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...</>
                                     ) : (
                                         isRomanian ? 'Resetează Parola' : 'Reset Password'
                                     )}

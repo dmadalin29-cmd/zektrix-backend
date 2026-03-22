@@ -322,7 +322,7 @@ const LiveChat = () => {
                         </div>
                         <div className="flex items-center gap-1">
                             {mode === 'live' && (
-                                <button onClick={() => setMode('ai')} className="text-white/70 hover:text-white p-1" title="Înapoi la AI">
+                                <button onClick={() => setMode('ai')} className="text-white/70 hover:text-white p-1" title={isRomanian ? "Înapoi la AI" : "Back to AI"}>
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>
                             )}
@@ -420,7 +420,7 @@ const LiveChat = () => {
                                             className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
                                             data-testid="escalate-btn"
                                         >
-                                            <Headphones className="w-3.5 h-3.5" /> Vorbește cu un operator live
+                                            <Headphones className="w-3.5 h-3.5" /> {isRomanian ? 'Vorbește cu un operator live' : 'Talk to a live operator'}
                                         </button>
                                     </div>
                                 )}
@@ -451,7 +451,7 @@ const LiveChat = () => {
                                 className="text-[11px] text-gray-500 hover:text-emerald-400 flex items-center gap-1 transition-colors"
                                 data-testid="escalate-footer-btn"
                             >
-                                <Headphones className="w-3 h-3" /> Vorbește cu un operator live
+                                <Headphones className="w-3 h-3" /> {isRomanian ? 'Vorbește cu un operator live' : 'Talk to a live operator'}
                             </button>
                         </div>
                     )}

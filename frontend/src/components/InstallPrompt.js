@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, Smartphone } from 'lucide-react';
 import { Button } from './ui/button';
+import { useLanguage } from '../context/LanguageContext';
 
 const InstallPrompt = () => {
+    const { isRomanian } = useLanguage();
     const [showPrompt, setShowPrompt] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [isIOS, setIsIOS] = useState(false);
@@ -78,7 +80,7 @@ const InstallPrompt = () => {
                     </div>
                     
                     <div className="flex-1 pr-6">
-                        <h3 className="font-bold text-lg mb-1">Instalează Zektrix</h3>
+                        <h3 className="font-bold text-lg mb-1">{isRomanian ? 'Instalează Zektrix' : 'Install Zektrix'}</h3>
                         <p className="text-sm text-muted-foreground mb-3">
                             {isIOS 
                                 ? 'Apasă pe butonul Share și apoi "Add to Home Screen"'
@@ -100,7 +102,7 @@ const InstallPrompt = () => {
                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M16 5l-1.42 1.42-1.59-1.59V16h-2V4.83l-1.59 1.59L8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V10c0-1.1.9-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .9 2 2z"/>
                                 </svg>
-                                <span>Apasă Share → Add to Home Screen</span>
+                                <span>{isRomanian ? 'Apasă Share → Add to Home Screen' : 'Tap Share → Add to Home Screen'}</span>
                             </div>
                         )}
                     </div>

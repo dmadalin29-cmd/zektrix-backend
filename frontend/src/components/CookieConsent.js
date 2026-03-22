@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Cookie, X, Settings, Check } from 'lucide-react';
 import { Button } from './ui/button';
+import { useLanguage } from '../context/LanguageContext';
 
 const CookieConsent = () => {
+    const { isRomanian } = useLanguage();
     const [showBanner, setShowBanner] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [preferences, setPreferences] = useState({
@@ -53,11 +55,11 @@ const CookieConsent = () => {
                             </div>
                             
                             <div className="flex-1">
-                                <h3 className="font-bold text-lg mb-2">🍪 Folosim cookie-uri</h3>
+                                <h3 className="font-bold text-lg mb-2">{isRomanian ? '🍪 Folosim cookie-uri' : '🍪 We use cookies'}</h3>
                                 <p className="text-sm text-muted-foreground mb-4">
-                                    Utilizăm cookie-uri pentru a îmbunătăți experiența ta pe site. 
-                                    Cookie-urile necesare asigură funcționarea corectă a site-ului, 
-                                    în timp ce cele opționale ne ajută să înțelegem cum folosești platforma.
+                                    {isRomanian 
+                                        ? 'Utilizăm cookie-uri pentru a îmbunătăți experiența ta pe site. Cookie-urile necesare asigură funcționarea corectă a site-ului, în timp ce cele opționale ne ajută să înțelegem cum folosești platforma.'
+                                        : 'We use cookies to improve your experience. Necessary cookies ensure the site works properly, while optional ones help us understand how you use the platform.'}
                                 </p>
                                 
                                 <div className="flex flex-wrap gap-3">
@@ -66,7 +68,7 @@ const CookieConsent = () => {
                                         className="btn-primary text-sm py-2"
                                     >
                                         <Check className="w-4 h-4 mr-2" />
-                                        Acceptă Toate
+                                        {isRomanian ? 'Acceptă Toate' : 'Accept All'}
                                     </Button>
                                     <Button 
                                         onClick={() => setShowSettings(true)}
@@ -74,14 +76,14 @@ const CookieConsent = () => {
                                         className="btn-outline text-sm py-2"
                                     >
                                         <Settings className="w-4 h-4 mr-2" />
-                                        Setări
+                                        {isRomanian ? 'Setări' : 'Settings'}
                                     </Button>
                                     <Button 
                                         onClick={handleRejectAll}
                                         variant="ghost"
                                         className="text-sm text-muted-foreground hover:text-white"
                                     >
-                                        Doar Necesare
+                                        {isRomanian ? 'Doar Necesare' : 'Necessary Only'}
                                     </Button>
                                 </div>
                             </div>
@@ -98,7 +100,7 @@ const CookieConsent = () => {
                     // Settings Panel
                     <div className="glass-strong rounded-2xl p-6 border border-white/10 shadow-2xl">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-bold text-xl">Setări Cookie-uri</h3>
+                            <h3 className="font-bold text-xl">{isRomanian ? 'Setări Cookie-uri' : 'Cookie Settings'}</h3>
                             <button 
                                 onClick={() => setShowSettings(false)}
                                 className="text-white/50 hover:text-white transition-colors"
@@ -111,9 +113,9 @@ const CookieConsent = () => {
                             {/* Necessary */}
                             <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
                                 <div>
-                                    <h4 className="font-semibold">Cookie-uri Necesare</h4>
+                                    <h4 className="font-semibold">{isRomanian ? 'Cookie-uri Necesare' : 'Necessary Cookies'}</h4>
                                     <p className="text-sm text-muted-foreground">
-                                        Esențiale pentru funcționarea site-ului
+                                        {isRomanian ? 'Esențiale pentru funcționarea site-ului' : 'Essential for site functionality'}
                                     </p>
                                 </div>
                                 <div className="w-12 h-6 rounded-full bg-green-500/20 flex items-center justify-end px-1">
@@ -127,9 +129,9 @@ const CookieConsent = () => {
                                 onClick={() => setPreferences(p => ({ ...p, analytics: !p.analytics }))}
                             >
                                 <div>
-                                    <h4 className="font-semibold">Cookie-uri Analitice</h4>
+                                    <h4 className="font-semibold">{isRomanian ? 'Cookie-uri Analitice' : 'Analytics Cookies'}</h4>
                                     <p className="text-sm text-muted-foreground">
-                                        Ne ajută să înțelegem cum folosești site-ul
+                                        {isRomanian ? 'Ne ajută să înțelegem cum folosești site-ul' : 'Help us understand how you use the site'}
                                     </p>
                                 </div>
                                 <div className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors ${
@@ -147,9 +149,9 @@ const CookieConsent = () => {
                                 onClick={() => setPreferences(p => ({ ...p, marketing: !p.marketing }))}
                             >
                                 <div>
-                                    <h4 className="font-semibold">Cookie-uri Marketing</h4>
+                                    <h4 className="font-semibold">{isRomanian ? 'Cookie-uri Marketing' : 'Marketing Cookies'}</h4>
                                     <p className="text-sm text-muted-foreground">
-                                        Pentru reclame personalizate
+                                        {isRomanian ? 'Pentru reclame personalizate' : 'For personalized ads'}
                                     </p>
                                 </div>
                                 <div className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors ${
@@ -167,14 +169,14 @@ const CookieConsent = () => {
                                 onClick={handleAcceptSelected}
                                 className="btn-primary flex-1"
                             >
-                                Salvează Preferințele
+                                {isRomanian ? 'Salvează Preferințele' : 'Save Preferences'}
                             </Button>
                             <Button 
                                 onClick={handleAcceptAll}
                                 variant="outline"
                                 className="btn-outline"
                             >
-                                Acceptă Toate
+                                {isRomanian ? 'Acceptă Toate' : 'Accept All'}
                             </Button>
                         </div>
                     </div>

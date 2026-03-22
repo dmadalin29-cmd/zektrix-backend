@@ -71,8 +71,8 @@ const CompCard = ({ comp, featured = false }) => {
                 {/* Progress Bar */}
                 <div className="mb-3">
                     <div className="flex justify-between text-xs text-gray-500 mb-1">
-                        <span>Vândute: {comp.sold_tickets}</span>
-                        <span>Libere: {remaining}</span>
+                        <span>{isRomanian ? 'Vândute' : 'Sold'}: {comp.sold_tickets}</span>
+                        <span>{isRomanian ? 'Libere' : 'Available'}: {remaining}</span>
                     </div>
                     <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                         <div 

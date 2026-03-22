@@ -519,17 +519,17 @@ const AdminPage = () => {
 
     const sidebarItems = [
         { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-        { id: 'comps', icon: Trophy, label: 'Competiții', badge: comps.length },
-        { id: 'users', icon: Users, label: 'Utilizatori', badge: users.length },
-        { id: 'locuri', icon: Ticket, label: 'Locuri', badge: locuri.length },
-        { id: 'winners', icon: Crown, label: 'Premianți', badge: winners.length },
+        { id: 'comps', icon: Trophy, label: isRomanian ? 'Competiții' : 'Competitions', badge: comps.length },
+        { id: 'users', icon: Users, label: isRomanian ? 'Utilizatori' : 'Users', badge: users.length },
+        { id: 'locuri', icon: Ticket, label: isRomanian ? 'Locuri' : 'Tickets', badge: locuri.length },
+        { id: 'winners', icon: Crown, label: isRomanian ? 'Premianți' : 'Winners', badge: winners.length },
         { id: 'wallet', icon: Wallet, label: 'Wallet', badge: walletWithdrawals.filter(w => w.status === 'pending').length || null },
-        { id: 'bundles', icon: Package, label: 'Pachete', badge: adminBundles.length || null },
-        { id: 'campaigns', icon: Megaphone, label: 'Campanii Push' },
-        { id: 'analytics', icon: BarChart3, label: 'Analiză Avansată' },
-        { id: 'settings', icon: Settings, label: 'Setări' },
+        { id: 'bundles', icon: Package, label: isRomanian ? 'Pachete' : 'Bundles', badge: adminBundles.length || null },
+        { id: 'campaigns', icon: Megaphone, label: isRomanian ? 'Campanii Push' : 'Push Campaigns' },
+        { id: 'analytics', icon: BarChart3, label: isRomanian ? 'Analiză Avansată' : 'Advanced Analytics' },
+        { id: 'settings', icon: Settings, label: isRomanian ? 'Setări' : 'Settings' },
         { id: 'chat', icon: MessageCircle, label: 'Chat', badge: chatMsgs.length },
-        { id: 'reviews', icon: Star, label: 'Recenzii', badge: pendingReviews.length || null },
+        { id: 'reviews', icon: Star, label: isRomanian ? 'Recenzii' : 'Reviews', badge: pendingReviews.length || null },
     ];
 
     return (
@@ -590,7 +590,7 @@ const AdminPage = () => {
                             )}
                             {!sidebarCollapsed && (
                                 <span className={`text-sm font-medium ${liveStatus.isLive ? 'text-red-400' : 'text-gray-400'}`}>
-                                    {liveStatus.isLive ? 'LIVE ACUM' : 'Offline'}
+                                    {liveStatus.isLive ? 'LIVE NOW' : 'Offline'}
                                 </span>
                             )}
                             {liveStatus.isLive && <span className="ml-auto w-2 h-2 bg-red-500 rounded-full animate-ping" />}
@@ -642,10 +642,10 @@ const AdminPage = () => {
                             </button>
                             <div>
                                 <h1 className="text-xl lg:text-2xl font-bold text-white capitalize tracking-tight">
-                                    {tab === 'comps' ? 'Competiții' : tab}
+                                    {tab === 'comps' ? (isRomanian ? 'Competiții' : 'Competitions') : tab === 'locuri' ? (isRomanian ? 'Locuri' : 'Tickets') : tab === 'winners' ? (isRomanian ? 'Premianți' : 'Winners') : tab === 'users' ? (isRomanian ? 'Utilizatori' : 'Users') : tab === 'settings' ? (isRomanian ? 'Setări' : 'Settings') : tab === 'reviews' ? (isRomanian ? 'Recenzii' : 'Reviews') : tab === 'bundles' ? (isRomanian ? 'Pachete' : 'Bundles') : tab === 'campaigns' ? (isRomanian ? 'Campanii Push' : 'Push Campaigns') : tab === 'analytics' ? (isRomanian ? 'Analiză Avansată' : 'Advanced Analytics') : tab}
                                 </h1>
                                 <p className="text-xs lg:text-sm text-gray-500">
-                                    {new Date().toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                    {new Date().toLocaleDateString(isRomanian ? 'ro-RO' : 'en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                 </p>
                             </div>
                         </div>
@@ -733,7 +733,7 @@ const AdminPage = () => {
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                                 <StatCard 
                                     icon={Trophy} 
-                                    label="Competiții Active" 
+                                    label={isRomanian ? "Competiții Active" : "Active Competitions"} 
                                     value={stats?.active_competitions || 0} 
                                     gradient="linear-gradient(135deg, #8b5cf6, #7c3aed)" 
                                     sparkData={sparkDataSales}
@@ -742,7 +742,7 @@ const AdminPage = () => {
                                 />
                                 <StatCard 
                                     icon={Users} 
-                                    label="Total Utilizatori" 
+                                    label={isRomanian ? "Total Utilizatori" : "Total Users"} 
                                     value={stats?.total_users || 0} 
                                     gradient="linear-gradient(135deg, #06b6d4, #0891b2)" 
                                     sparkData={sparkDataUsers}
@@ -751,7 +751,7 @@ const AdminPage = () => {
                                 />
                                 <StatCard 
                                     icon={Ticket} 
-                                    label="Locuri Vândute" 
+                                    label={isRomanian ? "Locuri Vândute" : "Tickets Sold"} 
                                     value={stats?.total_tickets || 0} 
                                     gradient="linear-gradient(135deg, #10b981, #059669)" 
                                     sparkData={sparkDataTickets}
@@ -760,7 +760,7 @@ const AdminPage = () => {
                                 />
                                 <StatCard 
                                     icon={DollarSign} 
-                                    label="Venit Total (£)" 
+                                    label={isRomanian ? "Venit Total (£)" : "Total Revenue (£)"} 
                                     value={analyticsData?.total_revenue?.toFixed(2) || '0.00'} 
                                     gradient="linear-gradient(135deg, #f97316, #ea580c)" 
                                     loading={loading}
@@ -777,11 +777,11 @@ const AdminPage = () => {
                                     }}>
                                     <div className="flex items-center justify-between mb-6">
                                         <div>
-                                            <h3 className="text-lg font-bold text-white">Vânzări Săptămânale</h3>
-                                            <p className="text-sm text-gray-500">Ultima săptămână</p>
+                                            <h3 className="text-lg font-bold text-white">{isRomanian ? 'Vânzări Săptămânale' : 'Weekly Sales'}</h3>
+                                            <p className="text-sm text-gray-500">{isRomanian ? 'Ultima săptămână' : 'Last week'}</p>
                                         </div>
                                         <div className="flex items-center gap-4 text-xs">
-                                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-violet-500" /> Vânzări (£)</span>
+                                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-violet-500" /> {isRomanian ? 'Vânzări (£)' : 'Sales (£)'}</span>
                                         </div>
                                     </div>
                                     <div className="h-64 lg:h-72">
@@ -813,8 +813,8 @@ const AdminPage = () => {
                                         background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9) 0%, rgba(10, 6, 20, 0.95) 100%)',
                                         border: '1px solid rgba(139, 92, 246, 0.15)'
                                     }}>
-                                    <h3 className="text-lg font-bold text-white mb-2">Categorii</h3>
-                                    <p className="text-sm text-gray-500 mb-4">Distribuție competiții</p>
+                                    <h3 className="text-lg font-bold text-white mb-2">{isRomanian ? 'Categorii' : 'Categories'}</h3>
+                                    <p className="text-sm text-gray-500 mb-4">{isRomanian ? 'Distribuție competiții' : 'Competition distribution'}</p>
                                     <div className="h-48">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
@@ -857,10 +857,10 @@ const AdminPage = () => {
                                     }}>
                                     <div className="flex items-center justify-between mb-5">
                                         <h3 className="font-bold text-white flex items-center gap-2">
-                                            <Trophy className="w-5 h-5 text-violet-400" /> Competiții Recente
+                                            <Trophy className="w-5 h-5 text-violet-400" /> {isRomanian ? 'Competiții Recente' : 'Recent Competitions'}
                                         </h3>
                                         <Button variant="ghost" size="sm" onClick={() => setTab('comps')} className="text-violet-400 hover:text-violet-300 text-xs">
-                                            Vezi toate <ChevronRight className="w-4 h-4 ml-1" />
+                                            {isRomanian ? 'Vezi toate' : 'View all'} <ChevronRight className="w-4 h-4 ml-1" />
                                         </Button>
                                     </div>
                                     <div className="space-y-3">
@@ -902,10 +902,10 @@ const AdminPage = () => {
                                     }}>
                                     <div className="flex items-center justify-between mb-5">
                                         <h3 className="font-bold text-white flex items-center gap-2">
-                                            <Users className="w-5 h-5 text-cyan-400" /> Utilizatori Recenți
+                                            <Users className="w-5 h-5 text-cyan-400" /> {isRomanian ? 'Utilizatori Recenți' : 'Recent Users'}
                                         </h3>
                                         <Button variant="ghost" size="sm" onClick={() => setTab('users')} className="text-violet-400 hover:text-violet-300 text-xs">
-                                            Vezi toți <ChevronRight className="w-4 h-4 ml-1" />
+                                            {isRomanian ? 'Vezi toți' : 'View all'} <ChevronRight className="w-4 h-4 ml-1" />
                                         </Button>
                                     </div>
                                     <div className="space-y-3">
@@ -923,7 +923,7 @@ const AdminPage = () => {
                                                     <p className="text-xs text-gray-500 truncate">{u.email}</p>
                                                 </div>
                                                 <Badge className={`text-xs ${u.is_blocked ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                                    {u.is_blocked ? 'Blocat' : 'Activ'}
+                                    {u.is_blocked ? (isRomanian ? 'Blocat' : 'Blocked') : (isRomanian ? 'Activ' : 'Active')}
                                                 </Badge>
                                             </div>
                                         ))}
@@ -933,9 +933,9 @@ const AdminPage = () => {
 
                             {/* Quick Stats Row */}
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-                                <StatCard icon={Crown} label="Premianți" value={stats?.total_winners || 0} gradient="linear-gradient(135deg, #fbbf24, #f59e0b)" loading={loading} onClick={() => setTab('winners')} />
-                                <StatCard icon={Activity} label="Tranzacții" value={stats?.total_transactions || 0} gradient="linear-gradient(135deg, #ec4899, #db2777)" loading={loading} />
-                                <StatCard icon={Target} label="Conversie %" value={75} gradient="linear-gradient(135deg, #14b8a6, #0d9488)" loading={loading} />
+                                <StatCard icon={Crown} label={isRomanian ? "Premianți" : "Winners"} value={stats?.total_winners || 0} gradient="linear-gradient(135deg, #fbbf24, #f59e0b)" loading={loading} onClick={() => setTab('winners')} />
+                                <StatCard icon={Activity} label={isRomanian ? "Tranzacții" : "Transactions"} value={stats?.total_transactions || 0} gradient="linear-gradient(135deg, #ec4899, #db2777)" loading={loading} />
+                                <StatCard icon={Target} label={isRomanian ? "Conversie %" : "Conversion %"} value={75} gradient="linear-gradient(135deg, #14b8a6, #0d9488)" loading={loading} />
                                 <StatCard icon={Flame} label="Flash Sales" value={comps.filter(c => c.is_flash_sale).length} gradient="linear-gradient(135deg, #ef4444, #dc2626)" loading={loading} />
                             </div>
                         </div>
@@ -946,15 +946,15 @@ const AdminPage = () => {
                         <div className="space-y-4">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                 <div className="flex items-center gap-3">
-                                    <Badge className="bg-violet-500/20 text-violet-400 px-3 py-1.5">{comps.length} Competiții</Badge>
-                                    <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{comps.filter(c => c.status === 'active').length} Active</Badge>
+                                    <Badge className="bg-violet-500/20 text-violet-400 px-3 py-1.5">{comps.length} {isRomanian ? 'Competiții' : 'Competitions'}</Badge>
+                                    <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{comps.filter(c => c.status === 'active').length} {isRomanian ? 'Active' : 'Active'}</Badge>
                                 </div>
                                 <Button 
                                     onClick={() => { setEditingComp(null); setCompForm({ title: '', description: '', ticket_price: '', max_tickets: '', competition_type: 'instant_win', image_url: '', images: [], prize_description: '', category: 'general', qual_question: '', qual_option1: '', qual_option2: '', qual_correct: '0', is_free: false, instant_prizes: [] }); setShowCompModal(true); }} 
                                     className="bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-500/25"
                                     data-testid="add-competition-btn"
                                 >
-                                    <Plus className="w-4 h-4 mr-2" /> Adaugă Competiție
+                                    <Plus className="w-4 h-4 mr-2" /> {isRomanian ? 'Adaugă Competiție' : 'Add Competition'}
                                 </Button>
                             </div>
                             <div className="space-y-3">
@@ -1014,13 +1014,13 @@ const AdminPage = () => {
                     {tab === 'users' && (
                         <div className="space-y-4">
                             <div className="flex items-center gap-3 mb-4">
-                                <Badge className="bg-cyan-500/20 text-cyan-400 px-3 py-1.5">{users.length} Utilizatori</Badge>
-                                <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{users.filter(u => !u.is_blocked).length} Activi</Badge>
-                                <Badge className="bg-red-500/20 text-red-400 px-3 py-1.5">{users.filter(u => u.is_blocked).length} Blocați</Badge>
+                                <Badge className="bg-cyan-500/20 text-cyan-400 px-3 py-1.5">{users.length} {isRomanian ? 'Utilizatori' : 'Users'}</Badge>
+                                <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{users.filter(u => !u.is_blocked).length} {isRomanian ? 'Activi' : 'Active'}</Badge>
+                                <Badge className="bg-red-500/20 text-red-400 px-3 py-1.5">{users.filter(u => u.is_blocked).length} {isRomanian ? 'Blocați' : 'Blocked'}</Badge>
                             </div>
                             <div className="space-y-3">
                                 {loading ? <TableSkeleton rows={8} /> : users.length === 0 ? (
-                                    <EmptyState icon={Users} title="Niciun utilizator" description="Utilizatorii vor apărea aici după înregistrare." />
+                                    <EmptyState icon={Users} title={isRomanian ? "Niciun utilizator" : "No users"} description={isRomanian ? "Utilizatorii vor apărea aici după înregistrare." : "Users will appear here after registration."} />
                                 ) : users.map(u => (
                                     <div key={u.user_id} 
                                         className={`group rounded-xl p-4 transition-all duration-300 hover:scale-[1.01] ${u.is_blocked ? 'opacity-60' : ''}`}
@@ -1041,7 +1041,7 @@ const AdminPage = () => {
                                             <div className="text-right mr-4 hidden sm:block">
                                                 <p className="text-lg font-bold text-emerald-400">£{(u.balance || 0).toFixed(2)}</p>
                                                 <Badge className={`text-xs ${u.is_blocked ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                                    {u.is_blocked ? <><XCircle className="w-3 h-3 mr-1" />Blocat</> : <><CheckCircle className="w-3 h-3 mr-1" />Activ</>}
+                                                    {u.is_blocked ? <><XCircle className="w-3 h-3 mr-1" />{isRomanian ? 'Blocat' : 'Blocked'}</> : <><CheckCircle className="w-3 h-3 mr-1" />{isRomanian ? 'Activ' : 'Active'}</>}
                                                 </Badge>
                                             </div>
                                             <div className="flex gap-1">
@@ -1066,7 +1066,7 @@ const AdminPage = () => {
                     {tab === 'locuri' && (
                         <div className="space-y-4">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                                <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{filteredTickets.length} / {locuri.length} Locuri</Badge>
+                                <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{filteredTickets.length} / {locuri.length} {isRomanian ? 'Locuri' : 'Tickets'}</Badge>
                                 
                                 {/* Competition Filter Dropdown */}
                                 <select
@@ -1075,10 +1075,10 @@ const AdminPage = () => {
                                     className="px-4 py-2 rounded-xl bg-white/5 border border-violet-500/30 text-white focus:border-violet-500 focus:outline-none cursor-pointer"
                                     data-testid="ticket-comp-filter"
                                 >
-                                    <option value="all" className="bg-[#0a0515] text-white">🎯 Toate Competițiile</option>
+                                    <option value="all" className="bg-[#0a0515] text-white">{isRomanian ? 'Toate Competițiile' : 'All Competitions'}</option>
                                     {comps.map(c => (
                                         <option key={c.competition_id} value={c.competition_id} className="bg-[#0a0515] text-white">
-                                            {c.title} ({locuri.filter(t => t.competition_id === c.competition_id).length} locuri)
+                                            {c.title} ({locuri.filter(t => t.competition_id === c.competition_id).length} {isRomanian ? 'locuri' : 'tickets'})
                                         </option>
                                     ))}
                                 </select>
@@ -1086,7 +1086,7 @@ const AdminPage = () => {
                                 <div className="relative flex-1 max-w-md">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <Input 
-                                        placeholder="Caută după nume, email sau număr loc..." 
+                                        placeholder={isRomanian ? "Caută după nume, email sau număr loc..." : "Search by name, email or ticket number..."} 
                                         value={ticketSearch} 
                                         onChange={e => setTicketSearch(e.target.value)} 
                                         className="pl-12 bg-white/5 border-white/10 focus:border-violet-500"
@@ -1130,11 +1130,11 @@ const AdminPage = () => {
                     {/* ============== WINNERS TAB ============== */}
                     {tab === 'winners' && (
                         <div className="space-y-4">
-                            <Badge className="bg-yellow-500/20 text-yellow-400 px-3 py-1.5">{winners.length} Premianți</Badge>
+                            <Badge className="bg-yellow-500/20 text-yellow-400 px-3 py-1.5">{winners.length} {isRomanian ? 'Premianți' : 'Winners'}</Badge>
                             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {loading ? [...Array(6)].map((_, i) => <div key={i} className="h-48 bg-white/5 rounded-2xl animate-pulse" />) : winners.length === 0 ? (
                                     <div className="col-span-full">
-                                        <EmptyState icon={Crown} title="Niciun premiant" description="Premiții vor apărea aici după extrageri." />
+                                        <EmptyState icon={Crown} title={isRomanian ? "Niciun premiant" : "No winners"} description={isRomanian ? "Premiții vor apărea aici după extrageri." : "Winners will appear here after draws."} />
                                     </div>
                                 ) : winners.map(w => (
                                     <div key={w.winner_id} 
@@ -1171,22 +1171,22 @@ const AdminPage = () => {
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.08))', border: '1px solid rgba(16,185,129,0.2)' }}>
                                     <ArrowDownCircle className="w-6 h-6 text-emerald-400 mb-2" />
-                                    <p className="text-xs text-gray-400">Total Depuneri</p>
+                                    <p className="text-xs text-gray-400">{isRomanian ? 'Total Depuneri' : 'Total Deposits'}</p>
                                     <p className="text-xl font-bold text-white">£{(walletStats.total_deposits || 0).toFixed(2)}</p>
                                 </div>
                                 <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(234,88,12,0.08))', border: '1px solid rgba(249,115,22,0.2)' }}>
                                     <ArrowUpCircle className="w-6 h-6 text-orange-400 mb-2" />
-                                    <p className="text-xs text-gray-400">Total Retrageri</p>
+                                    <p className="text-xs text-gray-400">{isRomanian ? 'Total Retrageri' : 'Total Withdrawals'}</p>
                                     <p className="text-xl font-bold text-white">£{(walletStats.total_withdrawals || 0).toFixed(2)}</p>
                                 </div>
                                 <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(124,58,237,0.08))', border: '1px solid rgba(139,92,246,0.2)' }}>
                                     <Wallet className="w-6 h-6 text-violet-400 mb-2" />
-                                    <p className="text-xs text-gray-400">Solduri Utilizatori</p>
+                                    <p className="text-xs text-gray-400">{isRomanian ? 'Solduri Utilizatori' : 'User Balances'}</p>
                                     <p className="text-xl font-bold text-white">£{(walletStats.total_user_balances || 0).toFixed(2)}</p>
                                 </div>
                                 <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.15), rgba(245,158,11,0.08))', border: '1px solid rgba(251,191,36,0.2)' }}>
                                     <Clock className="w-6 h-6 text-amber-400 mb-2" />
-                                    <p className="text-xs text-gray-400">Retrageri In Asteptare</p>
+                                    <p className="text-xs text-gray-400">{isRomanian ? 'Retrageri In Asteptare' : 'Pending Withdrawals'}</p>
                                     <p className="text-xl font-bold text-white">{walletStats.pending_withdrawals || 0}</p>
                                 </div>
                             </div>
@@ -1198,8 +1198,8 @@ const AdminPage = () => {
                                         <Gift className="w-7 h-7 text-emerald-400" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-white">Bonus Depunere</h3>
-                                        <p className="text-sm text-gray-500">Configureaza bonusul acordat la fiecare depunere in wallet</p>
+                                        <h3 className="text-lg font-bold text-white">{isRomanian ? 'Bonus Depunere' : 'Deposit Bonus'}</h3>
+                                        <p className="text-sm text-gray-500">{isRomanian ? 'Configureaza bonusul acordat la fiecare depunere in wallet' : 'Configure bonus for each wallet deposit'}</p>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
@@ -1210,25 +1210,25 @@ const AdminPage = () => {
                                             className={`w-full h-10 rounded-xl font-medium text-sm transition-all ${bonusSettings.active ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-gray-500 border border-white/10'}`}
                                             data-testid="bonus-toggle"
                                         >
-                                            {bonusSettings.active ? 'ACTIV' : 'INACTIV'}
+                                            {bonusSettings.active ? (isRomanian ? 'ACTIV' : 'ACTIVE') : (isRomanian ? 'INACTIV' : 'INACTIVE')}
                                         </button>
                                     </div>
                                     <div>
-                                        <label className="text-sm text-gray-400 mb-1.5 block">Procent Bonus (%)</label>
+                                        <label className="text-sm text-gray-400 mb-1.5 block">{isRomanian ? 'Procent Bonus (%)' : 'Bonus Percent (%)'}</label>
                                         <Input type="number" value={bonusSettings.bonus_percent} onChange={e => setBonusSettings(p => ({...p, bonus_percent: parseFloat(e.target.value) || 0}))} className="bg-white/5 border-white/10 text-white" min="0" max="100" data-testid="bonus-percent-input" />
                                     </div>
                                     <div>
-                                        <label className="text-sm text-gray-400 mb-1.5 block">Bonus Maxim (£)</label>
+                                        <label className="text-sm text-gray-400 mb-1.5 block">{isRomanian ? 'Bonus Maxim (£)' : 'Max Bonus (£)'}</label>
                                         <Input type="number" value={bonusSettings.bonus_max} onChange={e => setBonusSettings(p => ({...p, bonus_max: parseFloat(e.target.value) || 0}))} className="bg-white/5 border-white/10 text-white" min="0" data-testid="bonus-max-input" />
                                     </div>
                                 </div>
                                 <Button onClick={async () => {
                                     try {
                                         await axios.put(`${API}/admin/wallet/bonus-settings`, bonusSettings, { headers: { Authorization: `Bearer ${token}` }});
-                                        toast.success('Setari bonus salvate!');
-                                    } catch { toast.error('Eroare'); }
+                                        toast.success(isRomanian ? 'Setari bonus salvate!' : 'Bonus settings saved!');
+                                    } catch { toast.error(isRomanian ? 'Eroare' : 'Error'); }
                                 }} className="bg-emerald-600 hover:bg-emerald-500 text-white" data-testid="save-bonus-btn">
-                                    Salveaza Setari Bonus
+                                    {isRomanian ? 'Salveaza Setari Bonus' : 'Save Bonus Settings'}
                                 </Button>
                             </div>
 
@@ -1237,7 +1237,7 @@ const AdminPage = () => {
                                 <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
                                     <div className="flex items-center gap-3">
                                         <Banknote className="w-5 h-5 text-orange-400" />
-                                        <h3 className="text-white font-semibold">Cereri de Retragere</h3>
+                                        <h3 className="text-white font-semibold">{isRomanian ? 'Cereri de Retragere' : 'Withdrawal Requests'}</h3>
                                     </div>
                                     <button onClick={() => axios.get(`${API}/admin/wallet/withdrawals`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setWalletWithdrawals(r.data))} className="text-xs text-violet-400 hover:text-violet-300">
                                         <RefreshCw className="w-4 h-4" />
@@ -1245,7 +1245,7 @@ const AdminPage = () => {
                                 </div>
                                 <div className="divide-y divide-white/[0.04]">
                                     {walletWithdrawals.length === 0 && (
-                                        <div className="p-8 text-center text-gray-500 text-sm">Nicio cerere de retragere</div>
+                                        <div className="p-8 text-center text-gray-500 text-sm">{isRomanian ? 'Nicio cerere de retragere' : 'No withdrawal requests'}</div>
                                     )}
                                     {walletWithdrawals.map((wd, i) => (
                                         <div key={i} className="p-4">
@@ -1269,20 +1269,20 @@ const AdminPage = () => {
                                                     <Button size="sm" onClick={async () => {
                                                         try {
                                                             await axios.post(`${API}/admin/wallet/withdrawal/${wd.withdrawal_id}/approve`, {}, { headers: { Authorization: `Bearer ${token}` }});
-                                                            toast.success('Retragere aprobata!');
+                                                            toast.success(isRomanian ? 'Retragere aprobata!' : 'Withdrawal approved!');
                                                             setWalletWithdrawals(prev => prev.map(w => w.withdrawal_id === wd.withdrawal_id ? {...w, status: 'approved'} : w));
                                                         } catch(e) { toast.error(e.response?.data?.detail || 'Eroare'); }
                                                     }} className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1" data-testid={`approve-wd-${wd.withdrawal_id}`}>
-                                                        <CheckCircle className="w-3 h-3" /> Aproba
+                                                        <CheckCircle className="w-3 h-3" /> {isRomanian ? 'Aproba' : 'Approve'}
                                                     </Button>
                                                     <Button size="sm" variant="outline" onClick={async () => {
                                                         try {
                                                             await axios.post(`${API}/admin/wallet/withdrawal/${wd.withdrawal_id}/reject?reason=Rejected%20by%20admin`, {}, { headers: { Authorization: `Bearer ${token}` }});
-                                                            toast.success('Retragere respinsa, banii returnati.');
+                                                            toast.success(isRomanian ? 'Retragere respinsa, banii returnati.' : 'Withdrawal rejected, funds returned.');
                                                             setWalletWithdrawals(prev => prev.map(w => w.withdrawal_id === wd.withdrawal_id ? {...w, status: 'rejected'} : w));
                                                         } catch(e) { toast.error(e.response?.data?.detail || 'Eroare'); }
                                                     }} className="border-red-500/30 text-red-400 hover:bg-red-500/10 gap-1" data-testid={`reject-wd-${wd.withdrawal_id}`}>
-                                                        <XCircle className="w-3 h-3" /> Respinge
+                                                        <XCircle className="w-3 h-3" /> {isRomanian ? 'Respinge' : 'Reject'}
                                                     </Button>
                                                 </div>
                                             )}
@@ -1298,8 +1298,8 @@ const AdminPage = () => {
                                         <Crown className="w-7 h-7 text-violet-400" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-white">Abonamente</h3>
-                                        <p className="text-sm text-gray-500">{subscriptionStats.active_subscriptions || 0} active din {subscriptionStats.total_subscriptions || 0} total</p>
+                                        <h3 className="text-lg font-bold text-white">{isRomanian ? 'Abonamente' : 'Subscriptions'}</h3>
+                                        <p className="text-sm text-gray-500">{subscriptionStats.active_subscriptions || 0} {isRomanian ? 'active din' : 'active of'} {subscriptionStats.total_subscriptions || 0} total</p>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -1312,11 +1312,11 @@ const AdminPage = () => {
                                         <p className="text-lg font-bold text-violet-400">{subscriptionStats.total_subscriptions || 0}</p>
                                     </div>
                                     <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
-                                        <p className="text-xs text-gray-400">Venituri</p>
+                                        <p className="text-xs text-gray-400">{isRomanian ? 'Venituri' : 'Revenue'}</p>
                                         <p className="text-lg font-bold text-orange-400">£{(subscriptionStats.total_revenue || 0).toFixed(0)}</p>
                                     </div>
                                     <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
-                                        <p className="text-xs text-gray-400">Bilete Distribuite</p>
+                                        <p className="text-xs text-gray-400">{isRomanian ? 'Bilete Distribuite' : 'Tickets Distributed'}</p>
                                         <p className="text-lg font-bold text-blue-400">{subscriptionStats.total_tickets_distributed || 0}</p>
                                     </div>
                                 </div>
@@ -1326,7 +1326,7 @@ const AdminPage = () => {
                                             <div key={i} className="flex items-center justify-between p-3 hover:bg-white/[0.02]">
                                                 <div>
                                                     <p className="text-sm text-white">{s.username || s.email}</p>
-                                                    <p className="text-xs text-gray-500">{s.plan_name} | {s.entries_per_competition} bilete/comp</p>
+                                                    <p className="text-xs text-gray-500">{s.plan_name} | {s.entries_per_competition} {isRomanian ? 'bilete/comp' : 'tickets/comp'}</p>
                                                 </div>
                                                 <span className={`text-xs px-2 py-0.5 rounded-full ${s.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-400'}`}>
                                                     {s.status}
@@ -1355,7 +1355,7 @@ const AdminPage = () => {
                                         </div>
                                         <div>
                                             <h3 className="text-lg font-bold text-white">TikTok LIVE</h3>
-                                            <p className="text-sm text-gray-500">{liveStatus.isLive ? 'Ești live acum!' : 'Nu ești live'}</p>
+                                            <p className="text-sm text-gray-500">{liveStatus.isLive ? (isRomanian ? 'Ești live acum!' : 'You are live now!') : (isRomanian ? 'Nu ești live' : 'You are offline')}</p>
                                         </div>
                                     </div>
                                     <Button 
@@ -1364,14 +1364,14 @@ const AdminPage = () => {
                                         className={liveStatus.isLive ? 'bg-red-600 hover:bg-red-500' : 'bg-violet-600 hover:bg-violet-500'}
                                         data-testid="toggle-live-btn"
                                     >
-                                        {liveStatus.isLive ? 'Oprește LIVE' : 'Pornește LIVE'}
+                                        {liveStatus.isLive ? (isRomanian ? 'Oprește LIVE' : 'Stop LIVE') : (isRomanian ? 'Pornește LIVE' : 'Start LIVE')}
                                     </Button>
                                 </div>
                                 <div>
-                                    <Label className="text-gray-400">Mesaj pentru utilizatori</Label>
+                                    <Label className="text-gray-400">{isRomanian ? 'Mesaj pentru utilizatori' : 'Message for users'}</Label>
                                     <div className="flex gap-2 mt-2">
-                                        <Input value={liveStatus.message} onChange={e => setLiveStatus(p => ({ ...p, message: e.target.value }))} className="bg-white/5 border-white/10" placeholder="Ex: Suntem LIVE pe TikTok!" />
-                                        <Button variant="outline" onClick={() => axios.put(`${API}/admin/live-status`, liveStatus, { headers: { Authorization: `Bearer ${token}` }}).then(() => toast.success('Salvat!'))}>Salvează</Button>
+                                        <Input value={liveStatus.message} onChange={e => setLiveStatus(p => ({ ...p, message: e.target.value }))} className="bg-white/5 border-white/10" placeholder={isRomanian ? "Ex: Suntem LIVE pe TikTok!" : "Ex: We're LIVE on TikTok!"} />
+                                        <Button variant="outline" onClick={() => axios.put(`${API}/admin/live-status`, liveStatus, { headers: { Authorization: `Bearer ${token}` }}).then(() => toast.success(isRomanian ? 'Salvat!' : 'Saved!'))}>{isRomanian ? 'Salvează' : 'Save'}</Button>
                                     </div>
                                 </div>
                             </div>
@@ -1387,20 +1387,20 @@ const AdminPage = () => {
                                         <Star className="w-7 h-7 text-amber-400" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-white">Ofertă Recomandată (Homepage)</h3>
-                                        <p className="text-sm text-gray-500">Alege competiția afișată ca recomandare pe prima pagină</p>
+                                        <h3 className="text-lg font-bold text-white">{isRomanian ? 'Ofertă Recomandată (Homepage)' : 'Featured Offer (Homepage)'}</h3>
+                                        <p className="text-sm text-gray-500">{isRomanian ? 'Alege competiția afișată ca recomandare pe prima pagină' : 'Select competition to feature on homepage'}</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-3 items-end">
                                     <div className="flex-1">
-                                        <Label className="text-gray-400 mb-2 block">Competiție</Label>
+                                        <Label className="text-gray-400 mb-2 block">{isRomanian ? 'Competiție' : 'Competition'}</Label>
                                         <select
                                             value={featuredCompId || ''}
                                             onChange={e => setFeaturedCompId(e.target.value)}
                                             className="w-full h-10 rounded-lg bg-white/5 border border-white/10 text-white px-3 text-sm focus:border-violet-500 focus:outline-none"
                                             data-testid="featured-comp-select"
                                         >
-                                            <option value="" className="bg-gray-900">-- Selectează --</option>
+                                            <option value="" className="bg-gray-900">-- {isRomanian ? 'Selectează' : 'Select'} --</option>
                                             {comps.filter(c => c.status === 'active').map(c => (
                                                 <option key={c.competition_id} value={c.competition_id} className="bg-gray-900">{c.title}</option>
                                             ))}
@@ -1417,11 +1417,11 @@ const AdminPage = () => {
                                         className="bg-amber-600 hover:bg-amber-500 text-white"
                                         data-testid="save-featured-btn"
                                     >
-                                        Salvează
+                                        {isRomanian ? 'Salvează' : 'Save'}
                                     </Button>
                                 </div>
                                 {featuredCompId && (
-                                    <p className="text-xs text-gray-500 mt-2">Competiția selectată va apărea ca "Ofertă Recomandată" pe prima pagină.</p>
+                                    <p className="text-xs text-gray-500 mt-2">{isRomanian ? 'Competiția selectată va apărea ca "Ofertă Recomandată" pe prima pagină.' : 'The selected competition will appear as "Featured Offer" on the homepage.'}</p>
                                 )}
                             </div>
 
@@ -1436,8 +1436,8 @@ const AdminPage = () => {
                                         <Mail className="w-7 h-7 text-violet-400" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-white">Bot Email Notificări</h3>
-                                        <p className="text-sm text-gray-500">Trimite emailuri automate către utilizatori</p>
+                                        <h3 className="text-lg font-bold text-white">{isRomanian ? 'Bot Email Notificări' : 'Email Notification Bot'}</h3>
+                                        <p className="text-sm text-gray-500">{isRomanian ? 'Trimite emailuri automate către utilizatori' : 'Send automated emails to users'}</p>
                                     </div>
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
@@ -1445,26 +1445,26 @@ const AdminPage = () => {
                                         style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.1))', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                                         <div className="flex items-center gap-2 mb-3">
                                             <Sparkles className="w-5 h-5 text-violet-400" />
-                                            <h4 className="font-semibold text-white">Digest Zilnic</h4>
+                                            <h4 className="font-semibold text-white">{isRomanian ? 'Digest Zilnic' : 'Daily Digest'}</h4>
                                         </div>
-                                        <p className="text-sm text-gray-400 mb-4">Trimite email cu competiții noi și aproape terminate.</p>
+                                        <p className="text-sm text-gray-400 mb-4">{isRomanian ? 'Trimite email cu competiții noi și aproape terminate.' : 'Send email with new and nearly ended competitions.'}</p>
                                         <Button 
-                                            onClick={() => axios.post(`${API}/admin/send-daily-digest`, {}, { headers: { Authorization: `Bearer ${token}` }}).then(r => toast.success(r.data.message)).catch(() => toast.error('Eroare'))} 
+                                            onClick={() => axios.post(`${API}/admin/send-daily-digest`, {}, { headers: { Authorization: `Bearer ${token}` }}).then(r => toast.success(r.data.message)).catch(() => toast.error(isRomanian ? 'Eroare' : 'Error'))} 
                                             className="w-full bg-violet-600 hover:bg-violet-500"
                                             data-testid="send-digest-btn"
                                         >
-                                            Trimite Digest
+                                            {isRomanian ? 'Trimite Digest' : 'Send Digest'}
                                         </Button>
                                     </div>
                                     <div className="p-5 rounded-xl"
                                         style={{ background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(234, 88, 12, 0.1))', border: '1px solid rgba(249, 115, 22, 0.2)' }}>
                                         <div className="flex items-center gap-2 mb-3">
                                             <Zap className="w-5 h-5 text-orange-400" />
-                                            <h4 className="font-semibold text-white">Notificare 75%+</h4>
+                                            <h4 className="font-semibold text-white">{isRomanian ? 'Notificare 75%+' : '75%+ Alert'}</h4>
                                         </div>
-                                        <p className="text-sm text-gray-400 mb-4">Trimite notificare când competiția depășește 75%.</p>
-                                        <Select onValueChange={id => id && axios.post(`${API}/admin/notify-75-percent/${id}`, {}, { headers: { Authorization: `Bearer ${token}` }}).then(r => toast.success(r.data.message)).catch(() => toast.error('Eroare'))}>
-                                            <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Alege competiția" /></SelectTrigger>
+                                        <p className="text-sm text-gray-400 mb-4">{isRomanian ? 'Trimite notificare când competiția depășește 75%.' : 'Send notification when competition exceeds 75%.'}</p>
+                                        <Select onValueChange={id => id && axios.post(`${API}/admin/notify-75-percent/${id}`, {}, { headers: { Authorization: `Bearer ${token}` }}).then(r => toast.success(r.data.message)).catch(() => toast.error(isRomanian ? 'Eroare' : 'Error'))}>
+                                            <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder={isRomanian ? "Alege competiția" : "Select competition"} /></SelectTrigger>
                                             <SelectContent>
                                                 {comps.map(c => <SelectItem key={c.competition_id} value={c.competition_id}>{c.title} ({Math.round((c.sold_tickets/c.max_tickets)*100)}%)</SelectItem>)}
                                             </SelectContent>
@@ -1484,20 +1484,20 @@ const AdminPage = () => {
                                         <Bell className="w-7 h-7 text-emerald-400" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-white">Notificări Push pe Telefon</h3>
-                                        <p className="text-sm text-gray-500">Primești notificare când cineva cere asistență live</p>
+                                        <h3 className="text-lg font-bold text-white">{isRomanian ? 'Notificări Push pe Telefon' : 'Push Notifications on Phone'}</h3>
+                                        <p className="text-sm text-gray-500">{isRomanian ? 'Primești notificare când cineva cere asistență live' : 'Get notified when someone requests live support'}</p>
                                     </div>
                                 </div>
                                 <Button
                                     onClick={async () => {
                                         try {
                                             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                                                toast.error('Browser-ul nu suportă notificări push');
+                                                toast.error(isRomanian ? 'Browser-ul nu suportă notificări push' : 'Browser does not support push notifications');
                                                 return;
                                             }
                                             const permission = await Notification.requestPermission();
                                             if (permission !== 'granted') {
-                                                toast.error('Permite notificările din setările browser-ului');
+                                                toast.error(isRomanian ? 'Permite notificările din setările browser-ului' : 'Allow notifications in browser settings');
                                                 return;
                                             }
                                             const vapidRes = await axios.get(`${API}/push/vapid-key`);
@@ -1525,31 +1525,31 @@ const AdminPage = () => {
                                                 endpoint: subJson.endpoint,
                                                 keys: subJson.keys
                                             }, { headers: { Authorization: `Bearer ${token}` } });
-                                            toast.success('Notificări activate! Vei primi alerte pe telefon.');
+                                            toast.success(isRomanian ? 'Notificări activate! Vei primi alerte pe telefon.' : 'Notifications enabled! You will receive phone alerts.');
                                         } catch (e) {
                                             console.error('Push error:', e);
-                                            toast.error('Eroare la activare: ' + (e.message || 'Verifică setările browser-ului'));
+                                            toast.error((isRomanian ? 'Eroare la activare: ' : 'Activation error: ') + (e.message || ''));
                                         }
                                     }}
                                     className="w-full bg-emerald-600 hover:bg-emerald-500"
                                     data-testid="enable-push-btn"
                                 >
-                                    <Bell className="w-4 h-4 mr-2" /> Activează Notificări Push
+                                    <Bell className="w-4 h-4 mr-2" /> {isRomanian ? 'Activează Notificări Push' : 'Enable Push Notifications'}
                                 </Button>
                                 <Button
                                     onClick={async () => {
                                         try {
                                             const res = await axios.post(`${API}/push/test`, {}, { headers: { Authorization: `Bearer ${token}` } });
-                                            toast.success(res.data.message || 'Notificare de test trimisă!');
+                                            toast.success(res.data.message || (isRomanian ? 'Notificare de test trimisă!' : 'Test notification sent!'));
                                         } catch (e) {
-                                            toast.error(e.response?.data?.detail || 'Eroare la trimitere test');
+                                            toast.error(e.response?.data?.detail || (isRomanian ? 'Eroare la trimitere test' : 'Error sending test'));
                                         }
                                     }}
                                     variant="outline"
                                     className="w-full mt-2 border-emerald-600/30 text-emerald-400 hover:bg-emerald-600/10"
                                     data-testid="test-push-btn"
                                 >
-                                    Trimite Notificare de Test
+                                    {isRomanian ? 'Trimite Notificare de Test' : 'Send Test Notification'}
                                 </Button>
                             </div>
                         </div>
@@ -1559,22 +1559,22 @@ const AdminPage = () => {
                     {tab === 'chat' && (
                         <div className="space-y-4">
                             <div className="flex flex-wrap items-center gap-3 mb-4">
-                                <Badge className="bg-violet-500/20 text-violet-400 px-3 py-1.5">{chatMsgs.length} Mesaje</Badge>
-                                <Badge className="bg-yellow-500/20 text-yellow-400 px-3 py-1.5">{chatMsgs.filter(m => m.status === 'pending').length} Nerezolvate</Badge>
-                                <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{chatMsgs.filter(m => m.status === 'resolved').length} Rezolvate</Badge>
+                                <Badge className="bg-violet-500/20 text-violet-400 px-3 py-1.5">{chatMsgs.length} {isRomanian ? 'Mesaje' : 'Messages'}</Badge>
+                                <Badge className="bg-yellow-500/20 text-yellow-400 px-3 py-1.5">{chatMsgs.filter(m => m.status === 'pending').length} {isRomanian ? 'Nerezolvate' : 'Pending'}</Badge>
+                                <Badge className="bg-emerald-500/20 text-emerald-400 px-3 py-1.5">{chatMsgs.filter(m => m.status === 'resolved').length} {isRomanian ? 'Rezolvate' : 'Resolved'}</Badge>
                                 <div className="flex gap-1 ml-auto">
                                     {['all', 'pending', 'replied', 'resolved'].map(f => (
                                         <Button key={f} size="sm" variant={chatFilter === f ? 'default' : 'outline'}
                                             className={chatFilter === f ? 'bg-violet-600 text-white' : 'border-white/10 text-gray-400'}
                                             onClick={() => setChatFilter(f)} data-testid={`chat-filter-${f}`}>
-                                            {f === 'all' ? 'Toate' : f === 'pending' ? 'Nerezolvate' : f === 'replied' ? 'Răspuns' : 'Rezolvate'}
+                                            {f === 'all' ? (isRomanian ? 'Toate' : 'All') : f === 'pending' ? (isRomanian ? 'Nerezolvate' : 'Pending') : f === 'replied' ? (isRomanian ? 'Răspuns' : 'Replied') : (isRomanian ? 'Rezolvate' : 'Resolved')}
                                         </Button>
                                     ))}
                                 </div>
                             </div>
                             <div className="space-y-3">
                                 {filteredChat.length === 0 ? (
-                                    <EmptyState icon={MessageCircle} title="Niciun mesaj" description="Mesajele de la utilizatori vor apărea aici." />
+                                    <EmptyState icon={MessageCircle} title={isRomanian ? "Niciun mesaj" : "No messages"} description={isRomanian ? "Mesajele de la utilizatori vor apărea aici." : "User messages will appear here."} />
                                 ) : filteredChat.map((m) => (
                                     <div key={m.message_id} 
                                         className={`rounded-2xl p-5 transition-all ${m.status === 'resolved' ? 'opacity-60' : ''}`}
@@ -1599,7 +1599,7 @@ const AdminPage = () => {
                                                             m.status === 'resolved' ? 'bg-emerald-500/20 text-emerald-400' : 
                                                             'bg-blue-500/20 text-blue-400'
                                                         }>
-                                                            {m.status === 'pending' ? 'Așteaptă' : m.status === 'resolved' ? 'Rezolvat' : 'Răspuns trimis'}
+                                                            {m.status === 'pending' ? (isRomanian ? 'Așteaptă' : 'Pending') : m.status === 'resolved' ? (isRomanian ? 'Rezolvat' : 'Resolved') : (isRomanian ? 'Răspuns trimis' : 'Replied')}
                                                         </Badge>
                                                     </div>
                                                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -1609,22 +1609,22 @@ const AdminPage = () => {
                                                                     try {
                                                                         await axios.put(`${API}/admin/chat/${m.message_id}/status`, { status: 'resolved' }, { headers: { Authorization: `Bearer ${token}` }});
                                                                         setChatMsgs(prev => prev.map(msg => msg.message_id === m.message_id ? { ...msg, status: 'resolved' } : msg));
-                                                                        toast.success('Marcat ca rezolvat');
-                                                                    } catch { toast.error('Eroare'); }
+                                                                        toast.success(isRomanian ? 'Marcat ca rezolvat' : 'Marked as resolved');
+                                                                    } catch { toast.error(isRomanian ? 'Eroare' : 'Error'); }
                                                                 }}
                                                                 data-testid={`resolve-${m.message_id}`}
                                                             >
-                                                                <CheckCircle className="w-3 h-3 mr-1" /> Rezolvat
+                                                                <CheckCircle className="w-3 h-3 mr-1" /> {isRomanian ? 'Rezolvat' : 'Resolved'}
                                                             </Button>
                                                         )}
                                                         <Button size="sm" variant="outline" className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-8 text-xs"
                                                             onClick={async () => {
-                                                                if (!window.confirm('Ștergi conversația?')) return;
+                                                                if (!window.confirm(isRomanian ? 'Ștergi conversația?' : 'Delete conversation?')) return;
                                                                 try {
                                                                     await axios.delete(`${API}/admin/chat/${m.message_id}`, { headers: { Authorization: `Bearer ${token}` }});
                                                                     setChatMsgs(prev => prev.filter(msg => msg.message_id !== m.message_id));
-                                                                    toast.success('Conversație ștearsă');
-                                                                } catch { toast.error('Eroare'); }
+                                                                    toast.success(isRomanian ? 'Conversație ștearsă' : 'Conversation deleted');
+                                                                } catch { toast.error(isRomanian ? 'Eroare' : 'Error'); }
                                                             }}
                                                             data-testid={`delete-${m.message_id}`}
                                                         >
@@ -1639,7 +1639,7 @@ const AdminPage = () => {
                                                 {m.admin_reply && (
                                                     <div className="p-3 rounded-xl mb-3"
                                                         style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05))', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                                                        <p className="text-xs text-emerald-400 mb-1">Răspuns ({m.replied_via === 'email' ? 'email' : 'chat'}):</p>
+                                                        <p className="text-xs text-emerald-400 mb-1">{isRomanian ? 'Răspuns' : 'Reply'} ({m.replied_via === 'email' ? 'email' : 'chat'}):</p>
                                                         <p className="text-gray-300">{m.admin_reply}</p>
                                                     </div>
                                                 )}
@@ -1647,7 +1647,7 @@ const AdminPage = () => {
                                                     <div className="flex flex-col gap-2">
                                                         <Input 
                                                             id={`reply-${m.message_id}`}
-                                                            placeholder="Scrie răspunsul..." 
+                                                            placeholder={isRomanian ? "Scrie răspunsul..." : "Write your reply..."} 
                                                             className="bg-white/5 border-white/10"
                                                             data-testid={`reply-input-${m.message_id}`}
                                                         />
@@ -1656,33 +1656,33 @@ const AdminPage = () => {
                                                                 onClick={async () => {
                                                                     const input = document.getElementById(`reply-${m.message_id}`);
                                                                     const reply = input?.value;
-                                                                    if (!reply) { toast.error('Scrie un răspuns'); return; }
+                                                                    if (!reply) { toast.error(isRomanian ? 'Scrie un răspuns' : 'Write a reply'); return; }
                                                                     try {
                                                                         await axios.post(`${API}/admin/chat/reply`, { message_id: m.message_id, reply }, { headers: { Authorization: `Bearer ${token}` }});
                                                                         setChatMsgs(prev => prev.map(msg => msg.message_id === m.message_id ? { ...msg, status: 'replied', admin_reply: reply } : msg));
                                                                         input.value = '';
-                                                                        toast.success('Răspuns trimis în chat!');
-                                                                    } catch { toast.error('Eroare'); }
+                                                                        toast.success(isRomanian ? 'Răspuns trimis în chat!' : 'Reply sent in chat!');
+                                                                    } catch { toast.error(isRomanian ? 'Eroare' : 'Error'); }
                                                                 }}
                                                                 className="bg-violet-600 hover:bg-violet-500 flex-1"
                                                                 data-testid={`reply-chat-${m.message_id}`}
                                                             >
-                                                                <MessageCircle className="w-4 h-4 mr-2" /> Răspunde în Chat
+                                                                <MessageCircle className="w-4 h-4 mr-2" /> {isRomanian ? 'Răspunde în Chat' : 'Reply in Chat'}
                                                             </Button>
                                                             {m.user_email && (
                                                                 <Button 
                                                                     onClick={async () => {
                                                                         const input = document.getElementById(`reply-${m.message_id}`);
                                                                         const reply = input?.value;
-                                                                        if (!reply) { toast.error('Scrie un răspuns'); return; }
+                                                                        if (!reply) { toast.error(isRomanian ? 'Scrie un răspuns' : 'Write a reply'); return; }
                                                                         try {
                                                                             await axios.post(`${API}/admin/chat/reply-email`, 
                                                                                 { message_id: m.message_id, reply, user_email: m.user_email }, 
                                                                                 { headers: { Authorization: `Bearer ${token}` }});
                                                                             setChatMsgs(prev => prev.map(msg => msg.message_id === m.message_id ? { ...msg, status: 'replied', admin_reply: reply, replied_via: 'email' } : msg));
                                                                             input.value = '';
-                                                                            toast.success(`Email trimis la ${m.user_email}`);
-                                                                        } catch { toast.error('Eroare la trimitere email'); }
+                                                                            toast.success(`Email ${isRomanian ? 'trimis la' : 'sent to'} ${m.user_email}`);
+                                                                        } catch { toast.error(isRomanian ? 'Eroare la trimitere email' : 'Error sending email'); }
                                                                     }}
                                                                     variant="outline"
                                                                     className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
@@ -1708,16 +1708,16 @@ const AdminPage = () => {
                         <div className="space-y-6" data-testid="admin-bundles-tab">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                 <div>
-                                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><Package className="w-5 h-5 text-amber-400" /> Pachete Bundle</h2>
-                                    <p className="text-sm text-gray-500">Oferă reduceri pentru achiziții multiple</p>
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><Package className="w-5 h-5 text-amber-400" /> {isRomanian ? 'Pachete Bundle' : 'Bundle Deals'}</h2>
+                                    <p className="text-sm text-gray-500">{isRomanian ? 'Oferă reduceri pentru achiziții multiple' : 'Offer discounts for multiple purchases'}</p>
                                 </div>
                                 <Button className="bg-amber-600 hover:bg-amber-500" data-testid="add-bundle-btn" onClick={() => { setEditingBundle(null); setBundleForm({ name: '', quantity: '', discount_percent: '' }); setShowBundleModal(true); }}>
-                                    <Plus className="w-4 h-4 mr-2" /> Pachet Nou
+                                    <Plus className="w-4 h-4 mr-2" /> {isRomanian ? 'Pachet Nou' : 'New Bundle'}
                                 </Button>
                             </div>
 
                             {adminBundles.length === 0 ? (
-                                <EmptyState icon={Package} title="Niciun pachet" description="Creează pachete bundle pentru a oferi reduceri la achiziții multiple" />
+                                <EmptyState icon={Package} title={isRomanian ? "Niciun pachet" : "No bundles"} description={isRomanian ? "Creează pachete bundle pentru a oferi reduceri la achiziții multiple" : "Create bundle deals to offer discounts on multiple purchases"} />
                             ) : (
                                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {adminBundles.map(b => (
@@ -1728,18 +1728,18 @@ const AdminPage = () => {
                                                     <span className="text-lg font-bold text-white">{b.quantity}x</span>
                                                 </div>
                                                 <Badge className={b.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}>
-                                                    {b.is_active ? 'Activ' : 'Inactiv'}
+                                                    {b.is_active ? (isRomanian ? 'Activ' : 'Active') : (isRomanian ? 'Inactiv' : 'Inactive')}
                                                 </Badge>
                                             </div>
                                             <h3 className="font-bold text-white text-lg mb-1">{b.name}</h3>
-                                            <p className="text-sm text-gray-400 mb-3">{b.quantity} locuri &middot; <span className="text-amber-400 font-bold">{b.discount_percent}% reducere</span></p>
+                                            <p className="text-sm text-gray-400 mb-3">{b.quantity} {isRomanian ? 'locuri' : 'spots'} &middot; <span className="text-amber-400 font-bold">{b.discount_percent}% {isRomanian ? 'reducere' : 'discount'}</span></p>
                                             <div className="flex gap-2">
                                                 <Button size="sm" variant="outline" className="flex-1 border-white/10 hover:bg-white/10" data-testid={`edit-bundle-${b.bundle_id}`}
                                                     onClick={() => { setEditingBundle(b); setBundleForm({ name: b.name, quantity: b.quantity.toString(), discount_percent: b.discount_percent.toString() }); setShowBundleModal(true); }}>
                                                     <Edit className="w-3 h-3 mr-1" /> Edit
                                                 </Button>
                                                 <Button size="sm" variant="ghost" className="text-red-400 hover:bg-red-500/10" data-testid={`delete-bundle-${b.bundle_id}`}
-                                                    onClick={async () => { if (!window.confirm('Ștergi pachetul?')) return; try { await axios.delete(`${API}/admin/bundles/${b.bundle_id}`, { headers: { Authorization: `Bearer ${token}` }}); setAdminBundles(prev => prev.filter(x => x.bundle_id !== b.bundle_id)); toast.success('Pachet șters!'); } catch { toast.error('Eroare'); } }}>
+                                                    onClick={async () => { if (!window.confirm(isRomanian ? 'Ștergi pachetul?' : 'Delete bundle?')) return; try { await axios.delete(`${API}/admin/bundles/${b.bundle_id}`, { headers: { Authorization: `Bearer ${token}` }}); setAdminBundles(prev => prev.filter(x => x.bundle_id !== b.bundle_id)); toast.success(isRomanian ? 'Pachet șters!' : 'Bundle deleted!'); } catch { toast.error(isRomanian ? 'Eroare' : 'Error'); } }}>
                                                     <Trash2 className="w-3 h-3" />
                                                 </Button>
                                             </div>
@@ -1755,15 +1755,15 @@ const AdminPage = () => {
                         <div className="space-y-6" data-testid="admin-campaigns-tab">
                             <div>
                                 <h2 className="text-xl font-bold text-white flex items-center gap-2"><Megaphone className="w-5 h-5 text-violet-400" /> Push Campaigns</h2>
-                                <p className="text-sm text-gray-500">Trimite notificări push în masă către utilizatori</p>
+                                <p className="text-sm text-gray-500">{isRomanian ? 'Trimite notificări push în masă către utilizatori' : 'Send mass push notifications to users'}</p>
                             </div>
 
                             {/* Audience Stats */}
                             <div className="grid grid-cols-3 gap-3">
                                 {[
-                                    { label: 'Toți Abonații', value: audienceStats.all, icon: Users, color: '#8b5cf6' },
-                                    { label: 'Activi (30 zile)', value: audienceStats.active, icon: UserCheck, color: '#10b981' },
-                                    { label: 'Cu Abonament', value: audienceStats.subscribers, icon: Crown, color: '#f59e0b' },
+                                    { label: isRomanian ? 'Toți Abonații' : 'All Subscribers', value: audienceStats.all, icon: Users, color: '#8b5cf6' },
+                                    { label: isRomanian ? 'Activi (30 zile)' : 'Active (30 days)', value: audienceStats.active, icon: UserCheck, color: '#10b981' },
+                                    { label: isRomanian ? 'Cu Abonament' : 'With Subscription', value: audienceStats.subscribers, icon: Crown, color: '#f59e0b' },
                                 ].map((s, i) => (
                                     <div key={i} className="rounded-2xl p-4" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
                                         <s.icon className="w-5 h-5 mb-2" style={{ color: s.color }} />
@@ -1775,28 +1775,28 @@ const AdminPage = () => {
 
                             {/* Send Campaign Form */}
                             <div className="rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
-                                <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Send className="w-4 h-4 text-violet-400" /> Campanie Nouă</h3>
+                                <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Send className="w-4 h-4 text-violet-400" /> {isRomanian ? 'Campanie Nouă' : 'New Campaign'}</h3>
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div>
-                                        <Label className="text-gray-400">Titlu Notificare</Label>
-                                        <Input value={campaignForm.title} onChange={e => setCampaignForm(p => ({ ...p, title: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="ex: Competiție Nouă!" data-testid="campaign-title-input" />
+                                        <Label className="text-gray-400">{isRomanian ? 'Titlu Notificare' : 'Notification Title'}</Label>
+                                        <Input value={campaignForm.title} onChange={e => setCampaignForm(p => ({ ...p, title: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder={isRomanian ? "ex: Competiție Nouă!" : "ex: New Competition!"} data-testid="campaign-title-input" />
                                     </div>
                                     <div>
                                         <Label className="text-gray-400">URL (clic pe notificare)</Label>
                                         <Input value={campaignForm.url} onChange={e => setCampaignForm(p => ({ ...p, url: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" data-testid="campaign-url-input" />
                                     </div>
                                     <div className="md:col-span-2">
-                                        <Label className="text-gray-400">Mesaj</Label>
-                                        <Textarea value={campaignForm.message} onChange={e => setCampaignForm(p => ({ ...p, message: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" rows={2} placeholder="ex: Câștigă un iPhone 16 Pro! Intră acum..." data-testid="campaign-message-input" />
+                                        <Label className="text-gray-400">{isRomanian ? 'Mesaj' : 'Message'}</Label>
+                                        <Textarea value={campaignForm.message} onChange={e => setCampaignForm(p => ({ ...p, message: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" rows={2} placeholder={isRomanian ? "ex: Câștigă un iPhone 16 Pro! Intră acum..." : "ex: Win an iPhone 16 Pro! Enter now..."} data-testid="campaign-message-input" />
                                     </div>
                                     <div>
-                                        <Label className="text-gray-400">Audiență</Label>
+                                        <Label className="text-gray-400">{isRomanian ? 'Audiență' : 'Audience'}</Label>
                                         <Select value={campaignForm.audience} onValueChange={v => setCampaignForm(p => ({ ...p, audience: v }))}>
                                             <SelectTrigger className="bg-white/5 border-white/10" data-testid="campaign-audience-select"><SelectValue /></SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="all">Toți ({audienceStats.all})</SelectItem>
-                                                <SelectItem value="active">Activi ultimele 30 zile ({audienceStats.active})</SelectItem>
-                                                <SelectItem value="subscribers">Cu Abonament ({audienceStats.subscribers})</SelectItem>
+                                                <SelectItem value="all">{isRomanian ? 'Toți' : 'All'} ({audienceStats.all})</SelectItem>
+                                                <SelectItem value="active">{isRomanian ? 'Activi ultimele 30 zile' : 'Active last 30 days'} ({audienceStats.active})</SelectItem>
+                                                <SelectItem value="subscribers">{isRomanian ? 'Cu Abonament' : 'With Subscription'} ({audienceStats.subscribers})</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -1804,19 +1804,19 @@ const AdminPage = () => {
                                         <Button className="w-full bg-violet-600 hover:bg-violet-500 py-5" data-testid="send-campaign-btn"
                                             disabled={sendingCampaign || !campaignForm.title || !campaignForm.message}
                                             onClick={async () => {
-                                                if (!window.confirm(`Trimiți campania "${campaignForm.title}" către ${campaignForm.audience === 'all' ? audienceStats.all : campaignForm.audience === 'active' ? audienceStats.active : audienceStats.subscribers} dispozitive?`)) return;
+                                                if (!window.confirm(isRomanian ? `Trimiți campania "${campaignForm.title}" către ${campaignForm.audience === 'all' ? audienceStats.all : campaignForm.audience === 'active' ? audienceStats.active : audienceStats.subscribers} dispozitive?` : `Send campaign "${campaignForm.title}" to ${campaignForm.audience === 'all' ? audienceStats.all : campaignForm.audience === 'active' ? audienceStats.active : audienceStats.subscribers} devices?`)) return;
                                                 setSendingCampaign(true);
                                                 try {
                                                     const res = await axios.post(`${API}/admin/campaigns/send`, campaignForm, { headers: { Authorization: `Bearer ${token}` }});
-                                                    toast.success(`Campanie trimisă! ${res.data.sent}/${res.data.total} livrate`);
+                                                    toast.success(isRomanian ? `Campanie trimisă! ${res.data.sent}/${res.data.total} livrate` : `Campaign sent! ${res.data.sent}/${res.data.total} delivered`);
                                                     setCampaignForm({ title: '', message: '', url: 'https://zektrix.uk', audience: 'all' });
                                                     const updRes = await axios.get(`${API}/admin/campaigns`, { headers: { Authorization: `Bearer ${token}` }});
                                                     setCampaigns(updRes.data || []);
-                                                } catch (e) { toast.error(e.response?.data?.detail || 'Eroare trimitere'); }
+                                                } catch (e) { toast.error(e.response?.data?.detail || (isRomanian ? 'Eroare trimitere' : 'Send error')); }
                                                 setSendingCampaign(false);
                                             }}>
                                             {sendingCampaign ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                                            {sendingCampaign ? 'Se trimite...' : 'Trimite Campania'}
+                                            {sendingCampaign ? (isRomanian ? 'Se trimite...' : 'Sending...') : (isRomanian ? 'Trimite Campania' : 'Send Campaign')}
                                         </Button>
                                     </div>
                                 </div>
@@ -1825,12 +1825,12 @@ const AdminPage = () => {
                             {/* Campaign History */}
                             <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
                                 <div className="p-5 border-b border-white/10">
-                                    <h3 className="font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> Istoric Campanii</h3>
+                                    <h3 className="font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> {isRomanian ? 'Istoric Campanii' : 'Campaign History'}</h3>
                                 </div>
                                 {campaigns.length === 0 ? (
                                     <div className="p-12 text-center">
                                         <Megaphone className="w-12 h-12 text-gray-700 mx-auto mb-3" />
-                                        <p className="text-gray-500">Nicio campanie trimisă</p>
+                                        <p className="text-gray-500">{isRomanian ? 'Nicio campanie trimisă' : 'No campaigns sent'}</p>
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-white/[0.06]">
@@ -1850,7 +1850,7 @@ const AdminPage = () => {
                                                 <div className="text-right shrink-0">
                                                     <p className="text-lg font-bold text-emerald-400">{c.sent_count}</p>
                                                     <p className="text-[10px] text-gray-500">din {c.total_targeted}</p>
-                                                    {c.failed_count > 0 && <p className="text-[10px] text-red-400">{c.failed_count} eșuate</p>}
+                                                    {c.failed_count > 0 && <p className="text-[10px] text-red-400">{c.failed_count} {isRomanian ? 'eșuate' : 'failed'}</p>}
                                                 </div>
                                             </div>
                                         ))}
@@ -1865,12 +1865,12 @@ const AdminPage = () => {
                         <div className="space-y-6" data-testid="admin-analytics-tab">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><BarChart3 className="w-5 h-5 text-cyan-400" /> Analiză Avansată</h2>
-                                    <p className="text-sm text-gray-500">Metrici detaliate de performanță</p>
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><BarChart3 className="w-5 h-5 text-cyan-400" /> {isRomanian ? 'Analiză Avansată' : 'Advanced Analytics'}</h2>
+                                    <p className="text-sm text-gray-500">{isRomanian ? 'Metrici detaliate de performanță' : 'Detailed performance metrics'}</p>
                                 </div>
                                 <Button variant="outline" size="sm" className="border-white/10" data-testid="refresh-analytics-btn"
-                                    onClick={async () => { try { const r = await axios.get(`${API}/admin/analytics/advanced`, { headers: { Authorization: `Bearer ${token}` }}); setAdvancedAnalytics(r.data); toast.success('Date actualizate!'); } catch { toast.error('Eroare'); } }}>
-                                    <RefreshCw className="w-4 h-4 mr-1" /> Actualizează
+                                    onClick={async () => { try { const r = await axios.get(`${API}/admin/analytics/advanced`, { headers: { Authorization: `Bearer ${token}` }}); setAdvancedAnalytics(r.data); toast.success(isRomanian ? 'Date actualizate!' : 'Data updated!'); } catch { toast.error(isRomanian ? 'Eroare' : 'Error'); } }}>
+                                    <RefreshCw className="w-4 h-4 mr-1" /> {isRomanian ? 'Actualizează' : 'Refresh'}
                                 </Button>
                             </div>
 
@@ -1880,15 +1880,15 @@ const AdminPage = () => {
                                 <>
                                     {/* KPI Cards */}
                                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                        <StatCard icon={Target} label="Rata Conversie" value={advancedAnalytics.conversion_rate || 0} gradient="linear-gradient(135deg, #8b5cf6, #7c3aed)" />
-                                        <StatCard icon={ShoppingCart} label="Valoare Medie Comandă" value={advancedAnalytics.aov || 0} gradient="linear-gradient(135deg, #06b6d4, #0891b2)" />
-                                        <StatCard icon={Repeat} label="Rata Retenție" value={advancedAnalytics.repeat_rate || 0} gradient="linear-gradient(135deg, #10b981, #059669)" />
-                                        <StatCard icon={DollarSign} label="Venit Total (£)" value={advancedAnalytics.total_revenue || 0} gradient="linear-gradient(135deg, #f97316, #ea580c)" />
+                                        <StatCard icon={Target} label={isRomanian ? "Rata Conversie" : "Conversion Rate"} value={advancedAnalytics.conversion_rate || 0} gradient="linear-gradient(135deg, #8b5cf6, #7c3aed)" />
+                                        <StatCard icon={ShoppingCart} label={isRomanian ? "Valoare Medie Comandă" : "Average Order Value"} value={advancedAnalytics.aov || 0} gradient="linear-gradient(135deg, #06b6d4, #0891b2)" />
+                                        <StatCard icon={Repeat} label={isRomanian ? "Rata Retenție" : "Retention Rate"} value={advancedAnalytics.repeat_rate || 0} gradient="linear-gradient(135deg, #10b981, #059669)" />
+                                        <StatCard icon={DollarSign} label={isRomanian ? "Venit Total (£)" : "Total Revenue (£)"} value={advancedAnalytics.total_revenue || 0} gradient="linear-gradient(135deg, #f97316, #ea580c)" />
                                     </div>
 
                                     {/* Revenue Chart */}
                                     <div className="rounded-2xl p-5 lg:p-6" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
-                                        <h3 className="font-bold text-white mb-4">Venit Zilnic (Luna Curentă)</h3>
+                                        <h3 className="font-bold text-white mb-4">{isRomanian ? 'Venit Zilnic (Luna Curentă)' : 'Daily Revenue (Current Month)'}</h3>
                                         <div className="h-64">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart data={(advancedAnalytics.revenue_by_day || []).map(d => ({ name: d.date?.substring(5), revenue: d.revenue, orders: d.orders }))}>
@@ -1905,22 +1905,22 @@ const AdminPage = () => {
                                     <div className="grid lg:grid-cols-2 gap-6">
                                         {/* Retention Stats */}
                                         <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
-                                            <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Repeat className="w-4 h-4 text-emerald-400" /> Retenție</h3>
+                                            <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Repeat className="w-4 h-4 text-emerald-400" /> {isRomanian ? 'Retenție' : 'Retention'}</h3>
                                             <div className="space-y-4">
                                                 <div className="flex justify-between items-center p-3 rounded-xl bg-white/5">
-                                                    <span className="text-sm text-gray-400">Cumpărători Unici</span>
+                                                    <span className="text-sm text-gray-400">{isRomanian ? 'Cumpărători Unici' : 'Unique Buyers'}</span>
                                                     <span className="font-bold text-white">{advancedAnalytics.unique_buyers}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center p-3 rounded-xl bg-white/5">
-                                                    <span className="text-sm text-gray-400">Cumpărători Recurenți (2+)</span>
+                                                    <span className="text-sm text-gray-400">{isRomanian ? 'Cumpărători Recurenți (2+)' : 'Repeat Buyers (2+)'}</span>
                                                     <span className="font-bold text-emerald-400">{advancedAnalytics.repeat_buyers}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center p-3 rounded-xl bg-white/5">
-                                                    <span className="text-sm text-gray-400">Clienți Fideli (5+)</span>
+                                                    <span className="text-sm text-gray-400">{isRomanian ? 'Clienți Fideli (5+)' : 'Loyal Customers (5+)'}</span>
                                                     <span className="font-bold text-amber-400">{advancedAnalytics.loyal_buyers}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center p-3 rounded-xl bg-white/5">
-                                                    <span className="text-sm text-gray-400">Abonamente Active</span>
+                                                    <span className="text-sm text-gray-400">{isRomanian ? 'Abonamente Active' : 'Active Subscriptions'}</span>
                                                     <span className="font-bold text-violet-400">{advancedAnalytics.active_subscriptions} / {advancedAnalytics.total_subscriptions}</span>
                                                 </div>
                                             </div>
@@ -1928,9 +1928,9 @@ const AdminPage = () => {
 
                                         {/* Top Spenders */}
                                         <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
-                                            <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Crown className="w-4 h-4 text-amber-400" /> Top Clienți</h3>
+                                            <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Crown className="w-4 h-4 text-amber-400" /> {isRomanian ? 'Top Clienți' : 'Top Customers'}</h3>
                                             {(advancedAnalytics.top_spenders || []).length === 0 ? (
-                                                <p className="text-center text-gray-500 py-8">Nicio tranzacție încă</p>
+                                                <p className="text-center text-gray-500 py-8">{isRomanian ? 'Nicio tranzacție încă' : 'No transactions yet'}</p>
                                             ) : (
                                                 <div className="space-y-2">
                                                     {(advancedAnalytics.top_spenders || []).slice(0, 8).map((s, i) => (
@@ -1940,7 +1940,7 @@ const AdminPage = () => {
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="text-sm font-medium text-white truncate">{s.username}</p>
-                                                                <p className="text-[10px] text-gray-500">{s.orders} comenzi</p>
+                                                                <p className="text-[10px] text-gray-500">{s.orders} {isRomanian ? 'comenzi' : 'orders'}</p>
                                                             </div>
                                                             <span className="font-bold text-emerald-400">£{s.total_spent}</span>
                                                         </div>
@@ -1953,13 +1953,13 @@ const AdminPage = () => {
                                     {/* Revenue Breakdown */}
                                     {advancedAnalytics.revenue_breakdown && Object.keys(advancedAnalytics.revenue_breakdown).length > 0 && (
                                         <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
-                                            <h3 className="font-bold text-white mb-4 flex items-center gap-2"><PieIcon className="w-4 h-4 text-violet-400" /> Venit per Tip Tranzacție</h3>
+                                            <h3 className="font-bold text-white mb-4 flex items-center gap-2"><PieIcon className="w-4 h-4 text-violet-400" /> {isRomanian ? 'Venit per Tip Tranzacție' : 'Revenue by Transaction Type'}</h3>
                                             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                                 {Object.entries(advancedAnalytics.revenue_breakdown).map(([type, data]) => (
                                                     <div key={type} className="p-4 rounded-xl bg-white/5 text-center">
                                                         <p className="text-xs text-gray-500 uppercase mb-1">{type}</p>
                                                         <p className="text-lg font-bold text-white">£{data.total}</p>
-                                                        <p className="text-[10px] text-gray-500">{data.count} tranzacții</p>
+                                                        <p className="text-[10px] text-gray-500">{data.count} {isRomanian ? 'tranzacții' : 'transactions'}</p>
                                                     </div>
                                                 ))}
                                             </div>
@@ -1979,14 +1979,14 @@ const AdminPage = () => {
                                 <div className="p-5 border-b border-white/10 flex items-center justify-between">
                                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
                                         <Star className="w-5 h-5 text-amber-400" />
-                                        Recenzii in Asteptare
+                                        Recenzii {isRomanian ? 'în Așteptare' : 'Pending'}
                                     </h2>
                                     <Badge className="bg-amber-500/20 text-amber-400">{pendingReviews.length}</Badge>
                                 </div>
                                 {pendingReviews.length === 0 ? (
                                     <div className="p-12 text-center">
                                         <Star className="w-12 h-12 text-gray-700 mx-auto mb-3" />
-                                        <p className="text-gray-500">Nicio recenzie in asteptare</p>
+                                        <p className="text-gray-500">{isRomanian ? 'Nicio recenzie în așteptare' : 'No pending reviews'}</p>
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-white/[0.06]">
@@ -2015,8 +2015,8 @@ const AdminPage = () => {
                                                             try {
                                                                 await axios.post(`${API}/reviews/${review.review_id}/approve`, {}, { headers: { Authorization: `Bearer ${token}` }});
                                                                 setPendingReviews(prev => prev.filter(r => r.review_id !== review.review_id));
-                                                                toast.success('Recenzie aprobata!');
-                                                            } catch { toast.error('Eroare'); }
+                                                                toast.success(isRomanian ? 'Recenzie aprobată!' : 'Review approved!');
+                                                            } catch { toast.error(isRomanian ? 'Eroare' : 'Error'); }
                                                         }}>
                                                         <CheckCircle className="w-4 h-4" />
                                                     </Button>
@@ -2026,8 +2026,8 @@ const AdminPage = () => {
                                                             try {
                                                                 await axios.delete(`${API}/reviews/${review.review_id}`, { headers: { Authorization: `Bearer ${token}` }});
                                                                 setPendingReviews(prev => prev.filter(r => r.review_id !== review.review_id));
-                                                                toast.success('Recenzie stearsa!');
-                                                            } catch { toast.error('Eroare'); }
+                                                                toast.success(isRomanian ? 'Recenzie ștearsă!' : 'Review deleted!');
+                                                            } catch { toast.error(isRomanian ? 'Eroare' : 'Error'); }
                                                         }}>
                                                         <Trash2 className="w-4 h-4" />
                                                     </Button>
@@ -2047,16 +2047,16 @@ const AdminPage = () => {
                 <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto !top-[50%] !translate-y-[-50%]"
                     style={{ background: 'linear-gradient(135deg, rgba(10, 6, 20, 0.98) 0%, rgba(5, 3, 15, 0.99) 100%)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                     <DialogHeader>
-                        <DialogTitle className="text-white text-xl">{editingComp ? 'Editează Competiția' : 'Competiție Nouă'}</DialogTitle>
+                        <DialogTitle className="text-white text-xl">{editingComp ? (isRomanian ? 'Editează Competiția' : 'Edit Competition') : (isRomanian ? 'Competiție Nouă' : 'New Competition')}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={saveComp} className="space-y-4">
                         <div className="grid md:grid-cols-2 gap-4">
                             <div>
-                                <Label className="text-gray-400">Titlu</Label>
+                                <Label className="text-gray-400">{isRomanian ? 'Titlu' : 'Title'}</Label>
                                 <Input value={compForm.title} onChange={e => setCompForm(p => ({ ...p, title: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" required />
                             </div>
                             <div>
-                                <Label className="text-gray-400">Categorie</Label>
+                                <Label className="text-gray-400">{isRomanian ? 'Categorie' : 'Category'}</Label>
                                 <Select value={compForm.category} onValueChange={v => setCompForm(p => ({ ...p, category: v }))}>
                                     <SelectTrigger className="bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
                                     <SelectContent>
@@ -2071,29 +2071,29 @@ const AdminPage = () => {
                         </div>
                         <div>
                             <div className="flex justify-between items-center mb-1">
-                                <Label className="text-gray-400">Descriere</Label>
+                                <Label className="text-gray-400">{isRomanian ? 'Descriere' : 'Description'}</Label>
                                 <Button type="button" variant="ghost" size="sm" onClick={generateAI} disabled={genAI} className="text-violet-400 hover:text-violet-300">
-                                    {genAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4 mr-1" /> Generează cu AI</>}
+                                    {genAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4 mr-1" /> {isRomanian ? 'Generează cu AI' : 'Generate with AI'}</>}
                                 </Button>
                             </div>
                             <Textarea value={compForm.description} onChange={e => setCompForm(p => ({ ...p, description: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" rows={3} />
                         </div>
                         <div className="grid md:grid-cols-3 gap-4">
                             <div>
-                                <Label className="text-gray-400">Preț (£)</Label>
+                                <Label className="text-gray-400">{isRomanian ? 'Preț (£)' : 'Price (£)'}</Label>
                                 <Input type="number" step="0.01" value={compForm.ticket_price} onChange={e => setCompForm(p => ({ ...p, ticket_price: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" required disabled={compForm.is_free} />
                             </div>
                             <div>
-                                <Label className="text-gray-400">Max Locuri</Label>
+                                <Label className="text-gray-400">Max {isRomanian ? 'Locuri' : 'Tickets'}</Label>
                                 <Input type="number" value={compForm.max_tickets} onChange={e => setCompForm(p => ({ ...p, max_tickets: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" required />
                             </div>
                             <div>
-                                <Label className="text-gray-400">Tip</Label>
+                                <Label className="text-gray-400">{isRomanian ? 'Tip' : 'Type'}</Label>
                                 <Select value={compForm.competition_type} onValueChange={v => setCompForm(p => ({ ...p, competition_type: v }))}>
                                     <SelectTrigger className="bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="instant_win">Instant</SelectItem>
-                                        <SelectItem value="draw">Extragere</SelectItem>
+                                        <SelectItem value="draw">{isRomanian ? 'Extragere' : 'Draw'}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -2107,10 +2107,10 @@ const AdminPage = () => {
                                 className="w-5 h-5 rounded accent-emerald-500"
                                 data-testid="is-free-checkbox"
                             />
-                            <Label htmlFor="is_free" className="text-emerald-400 font-medium cursor-pointer">Intrare Gratuită (doar pentru utilizatori înregistrați)</Label>
+                            <Label htmlFor="is_free" className="text-emerald-400 font-medium cursor-pointer">{isRomanian ? 'Intrare Gratuită (doar pentru utilizatori înregistrați)' : 'Free Entry (registered users only)'}</Label>
                         </div>
                         <div>
-                            <Label className="text-gray-400">Imagini Competiție ({(compForm.images || []).length} încărcate)</Label>
+                            <Label className="text-gray-400">{isRomanian ? 'Imagini Competiție' : 'Competition Images'} ({(compForm.images || []).length} {isRomanian ? 'încărcate' : 'uploaded'})</Label>
                             <div className="space-y-2">
                                 {/* Image Gallery Preview */}
                                 {(compForm.images && compForm.images.length > 0) && (
@@ -2127,11 +2127,11 @@ const AdminPage = () => {
                                 {/* Upload Button */}
                                 <label className="flex items-center justify-center gap-2 w-full p-3 rounded-xl border-2 border-dashed border-white/10 hover:border-violet-500/50 cursor-pointer transition-colors bg-white/5">
                                     <Upload className="w-4 h-4 text-violet-400" />
-                                    <span className="text-sm text-gray-400">Click pentru upload imagini (poți selecta mai multe)</span>
+                                    <span className="text-sm text-gray-400">{isRomanian ? 'Click pentru upload imagini (poți selecta mai multe)' : 'Click to upload images (multi-select)'}</span>
                                     <input type="file" accept="image/*" multiple className="hidden" data-testid="image-upload-input" onChange={async (e) => {
                                         const files = Array.from(e.target.files);
                                         if (!files.length) return;
-                                        toast.loading(`Se încarcă ${files.length} imagini...`, { id: 'img-upload' });
+                                        toast.loading(isRomanian ? `Se încarcă ${files.length} imagini...` : `Uploading ${files.length} images...`, { id: 'img-upload' });
                                         const newImages = [...(compForm.images || [])];
                                         for (const file of files) {
                                             if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} prea mare (max 10MB)`); continue; }
@@ -2143,13 +2143,13 @@ const AdminPage = () => {
                                             } catch(err) { toast.error(`Eroare upload ${file.name}`); }
                                         }
                                         setCompForm(p => ({...p, images: newImages, image_url: newImages[0] || p.image_url}));
-                                        toast.success(`${files.length} imagini încărcate!`, { id: 'img-upload' });
+                                        toast.success(isRomanian ? `${files.length} imagini încărcate!` : `${files.length} images uploaded!`, { id: 'img-upload' });
                                         e.target.value = '';
                                     }} />
                                 </label>
                                 {/* Or URL input */}
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-500">sau adaugă URL</span>
+                                    <span className="text-xs text-gray-500">{isRomanian ? 'sau adaugă URL' : 'or add URL'}</span>
                                     <Input placeholder="https://..." className="bg-white/5 border-white/10 focus:border-violet-500 text-sm" data-testid="image-url-input" onKeyDown={e => {
                                         if (e.key === 'Enter' && e.target.value.trim()) {
                                             const url = e.target.value.trim();
@@ -2161,32 +2161,32 @@ const AdminPage = () => {
                             </div>
                         </div>
                         <div>
-                            <Label className="text-gray-400">Descriere Premiu</Label>
+                            <Label className="text-gray-400">{isRomanian ? 'Descriere Premiu' : 'Prize Description'}</Label>
                             <Input value={compForm.prize_description} onChange={e => setCompForm(p => ({ ...p, prize_description: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" />
                         </div>
                         <div className="border-t border-white/10 pt-4">
-                            <Label className="text-violet-400 mb-2 block font-semibold">Întrebare Calificare</Label>
-                            <Input value={compForm.qual_question} onChange={e => setCompForm(p => ({ ...p, qual_question: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500 mb-2" placeholder="Întrebarea..." />
+                            <Label className="text-violet-400 mb-2 block font-semibold">{isRomanian ? 'Întrebare Calificare' : 'Qualification Question'}</Label>
+                            <Input value={compForm.qual_question} onChange={e => setCompForm(p => ({ ...p, qual_question: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500 mb-2" placeholder={isRomanian ? "Întrebarea..." : "Question..."} />
                             <div className="grid grid-cols-2 gap-2">
-                                <Input value={compForm.qual_option1} onChange={e => setCompForm(p => ({ ...p, qual_option1: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="Răspuns corect" />
-                                <Input value={compForm.qual_option2} onChange={e => setCompForm(p => ({ ...p, qual_option2: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="Răspuns greșit" />
+                                <Input value={compForm.qual_option1} onChange={e => setCompForm(p => ({ ...p, qual_option1: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder={isRomanian ? "Răspuns corect" : "Correct answer"} />
+                                <Input value={compForm.qual_option2} onChange={e => setCompForm(p => ({ ...p, qual_option2: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder={isRomanian ? "Răspuns greșit" : "Wrong answer"} />
                             </div>
                         </div>
 
                         {/* Instant Prizes Section */}
                         <div className="border-t border-white/10 pt-4">
                             <div className="flex items-center justify-between mb-3">
-                                <Label className="text-orange-400 font-semibold">Premii Instant (max 10)</Label>
+                                <Label className="text-orange-400 font-semibold">{isRomanian ? 'Premii Instant (max 10)' : 'Instant Prizes (max 10)'}</Label>
                                 {compForm.instant_prizes.length < 10 && (
                                     <Button type="button" size="sm" variant="outline" className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
                                         onClick={() => setCompForm(p => ({ ...p, instant_prizes: [...p.instant_prizes, { percentage: '', prize_name: '', prize_description: '' }] }))}
                                         data-testid="add-instant-prize-btn"
                                     >
-                                        + Adaugă Premiu
+                                        + {isRomanian ? 'Adaugă Premiu' : 'Add Prize'}
                                     </Button>
                                 )}
                             </div>
-                            <p className="text-xs text-gray-500 mb-3">Premiile se acordă automat când se atinge procentul de vânzare setat.</p>
+                            <p className="text-xs text-gray-500 mb-3">{isRomanian ? 'Premiile se acordă automat când se atinge procentul de vânzare setat.' : 'Prizes are awarded automatically when the set sales percentage is reached.'}</p>
                             {compForm.instant_prizes.map((prize, idx) => (
                                 <div key={idx} className="flex gap-2 mb-2 items-center" data-testid={`instant-prize-${idx}`}>
                                     <Input type="number" min="1" max="100" value={prize.percentage}
@@ -2206,8 +2206,8 @@ const AdminPage = () => {
                             ))}
                         </div>
                         <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setShowCompModal(false)}>Anulează</Button>
-                            <Button type="submit" className="bg-violet-600 hover:bg-violet-500">{editingComp ? 'Actualizează' : 'Creează'}</Button>
+                            <Button type="button" variant="outline" onClick={() => setShowCompModal(false)}>{isRomanian ? 'Anulează' : 'Cancel'}</Button>
+                            <Button type="submit" className="bg-violet-600 hover:bg-violet-500">{editingComp ? (isRomanian ? 'Actualizează' : 'Update') : (isRomanian ? 'Creează' : 'Create')}</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -2218,16 +2218,16 @@ const AdminPage = () => {
                 <DialogContent className="max-w-md"
                     style={{ background: 'linear-gradient(135deg, rgba(10, 6, 20, 0.98) 0%, rgba(5, 3, 15, 0.99) 100%)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                     <DialogHeader>
-                        <DialogTitle className="text-white">Editează: {editingUser?.username}</DialogTitle>
+                        <DialogTitle className="text-white">{isRomanian ? 'Editează' : 'Edit'}: {editingUser?.username}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={saveUser} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label className="text-gray-400">Prenume</Label>
+                                <Label className="text-gray-400">{isRomanian ? 'Prenume' : 'First Name'}</Label>
                                 <Input value={userForm.first_name} onChange={e => setUserForm(p => ({ ...p, first_name: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" />
                             </div>
                             <div>
-                                <Label className="text-gray-400">Nume</Label>
+                                <Label className="text-gray-400">{isRomanian ? 'Nume' : 'Last Name'}</Label>
                                 <Input value={userForm.last_name} onChange={e => setUserForm(p => ({ ...p, last_name: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" />
                             </div>
                         </div>
@@ -2236,20 +2236,20 @@ const AdminPage = () => {
                             <Input type="email" value={userForm.email} onChange={e => setUserForm(p => ({ ...p, email: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" />
                         </div>
                         <div>
-                            <Label className="text-gray-400">Telefon</Label>
+                            <Label className="text-gray-400">{isRomanian ? 'Telefon' : 'Phone'}</Label>
                             <Input value={userForm.phone} onChange={e => setUserForm(p => ({ ...p, phone: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" />
                         </div>
                         <div>
-                            <Label className="text-gray-400">Sold (£)</Label>
+                            <Label className="text-gray-400">{isRomanian ? 'Sold (£)' : 'Balance (£)'}</Label>
                             <Input type="number" step="0.01" value={userForm.balance} onChange={e => setUserForm(p => ({ ...p, balance: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" />
                         </div>
                         <div>
-                            <Label className="text-gray-400">Parolă Nouă</Label>
-                            <Input type="password" value={userForm.new_password} onChange={e => setUserForm(p => ({ ...p, new_password: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="Lasă gol pentru a păstra" />
+                            <Label className="text-gray-400">{isRomanian ? 'Parolă Nouă' : 'New Password'}</Label>
+                            <Input type="password" value={userForm.new_password} onChange={e => setUserForm(p => ({ ...p, new_password: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder={isRomanian ? "Lasă gol pentru a păstra" : "Leave blank to keep current"} />
                         </div>
                         <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setShowUserModal(false)}>Anulează</Button>
-                            <Button type="submit" className="bg-violet-600 hover:bg-violet-500">Actualizează</Button>
+                            <Button type="button" variant="outline" onClick={() => setShowUserModal(false)}>{isRomanian ? 'Anulează' : 'Cancel'}</Button>
+                            <Button type="submit" className="bg-violet-600 hover:bg-violet-500">{isRomanian ? 'Actualizează' : 'Update'}</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -2260,7 +2260,7 @@ const AdminPage = () => {
                 <DialogContent className="max-w-md"
                     style={{ background: 'linear-gradient(135deg, rgba(10, 6, 20, 0.98) 0%, rgba(5, 3, 15, 0.99) 100%)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                     <DialogHeader>
-                        <DialogTitle className="text-white">{editingBundle ? 'Editează Pachet' : 'Pachet Nou'}</DialogTitle>
+                        <DialogTitle className="text-white">{editingBundle ? (isRomanian ? 'Editează Pachet' : 'Edit Bundle') : (isRomanian ? 'Pachet Nou' : 'New Bundle')}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={async (e) => {
                         e.preventDefault();
@@ -2268,33 +2268,33 @@ const AdminPage = () => {
                         try {
                             if (editingBundle) {
                                 await axios.put(`${API}/admin/bundles/${editingBundle.bundle_id}`, data, { headers: { Authorization: `Bearer ${token}` }});
-                                toast.success('Pachet actualizat!');
+                                toast.success(isRomanian ? 'Pachet actualizat!' : 'Bundle updated!');
                             } else {
                                 await axios.post(`${API}/admin/bundles`, data, { headers: { Authorization: `Bearer ${token}` }});
-                                toast.success('Pachet creat!');
+                                toast.success(isRomanian ? 'Pachet creat!' : 'Bundle created!');
                             }
                             setShowBundleModal(false);
                             const r = await axios.get(`${API}/admin/bundles`, { headers: { Authorization: `Bearer ${token}` }});
                             setAdminBundles(r.data || []);
-                        } catch (err) { toast.error(err.response?.data?.detail || 'Eroare'); }
+                        } catch (err) { toast.error(err.response?.data?.detail || (isRomanian ? 'Eroare' : 'Error')); }
                     }} className="space-y-4">
                         <div>
-                            <Label className="text-gray-400">Nume Pachet</Label>
-                            <Input value={bundleForm.name} onChange={e => setBundleForm(p => ({ ...p, name: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="ex: Pachet Starter" required data-testid="bundle-name-input" />
+                            <Label className="text-gray-400">{isRomanian ? 'Nume Pachet' : 'Bundle Name'}</Label>
+                            <Input value={bundleForm.name} onChange={e => setBundleForm(p => ({ ...p, name: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder={isRomanian ? "ex: Pachet Starter" : "eg: Starter Pack"} required data-testid="bundle-name-input" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label className="text-gray-400">Nr. Locuri</Label>
+                                <Label className="text-gray-400">{isRomanian ? 'Nr. Locuri' : 'Tickets'}</Label>
                                 <Input type="number" min="2" value={bundleForm.quantity} onChange={e => setBundleForm(p => ({ ...p, quantity: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="ex: 5" required data-testid="bundle-quantity-input" />
                             </div>
                             <div>
-                                <Label className="text-gray-400">Reducere (%)</Label>
+                                <Label className="text-gray-400">{isRomanian ? 'Reducere (%)' : 'Discount (%)'}</Label>
                                 <Input type="number" min="1" max="90" step="0.5" value={bundleForm.discount_percent} onChange={e => setBundleForm(p => ({ ...p, discount_percent: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="ex: 15" required data-testid="bundle-discount-input" />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setShowBundleModal(false)}>Anulează</Button>
-                            <Button type="submit" className="bg-amber-600 hover:bg-amber-500">{editingBundle ? 'Actualizează' : 'Creează'}</Button>
+                            <Button type="button" variant="outline" onClick={() => setShowBundleModal(false)}>{isRomanian ? 'Anulează' : 'Cancel'}</Button>
+                            <Button type="submit" className="bg-amber-600 hover:bg-amber-500">{editingBundle ? (isRomanian ? 'Actualizează' : 'Update') : (isRomanian ? 'Creează' : 'Create')}</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

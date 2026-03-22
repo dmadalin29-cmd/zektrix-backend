@@ -40,7 +40,7 @@ const AuthCallback = () => {
         <div className="min-h-screen flex items-center justify-center bg-background" data-testid="auth-callback-page">
             <div className="text-center">
                 <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-                <p className="text-muted-foreground">Se procesează autentificarea...</p>
+                <p className="text-muted-foreground">Processing authentication...</p>
             </div>
         </div>
     );
