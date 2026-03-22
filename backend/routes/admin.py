@@ -694,16 +694,16 @@ async def get_tiktok_live_status():
     """Get TikTok LIVE status (public endpoint)"""
     settings = await db.site_settings.find_one({"setting_id": "tiktok_live"})
     if not settings:
-        return {"is_live": False, "tiktok_url": "https://www.tiktok.com/@x67digital.com"}
+        return {"is_live": False, "tiktok_url": "https://www.tiktok.com/@x67digital.com/live"}
     return {
         "is_live": settings.get("is_live", False),
-        "tiktok_url": settings.get("tiktok_url", "https://www.tiktok.com/@x67digital.com")
+        "tiktok_url": settings.get("tiktok_url", "https://www.tiktok.com/@x67digital.com/live")
     }
 
 @router.post("/admin/settings/tiktok-live")
 async def set_tiktok_live_status(is_live: bool, tiktok_url: Optional[str] = None, admin: dict = Depends(get_admin_user)):
     """Toggle TikTok LIVE status (admin only) - also updates live-draw for competition pages and sends push"""
-    final_url = tiktok_url or "https://www.tiktok.com/@x67digital.com"
+    final_url = tiktok_url or "https://www.tiktok.com/@x67digital.com/live"
     update_data = {"is_live": is_live, "updated_at": datetime.now(timezone.utc).isoformat(), "tiktok_url": final_url}
     
     await db.site_settings.update_one(
