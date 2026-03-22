@@ -35,7 +35,8 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 │   ├── webhooks.py     # Viva webhooks + payments
 │   ├── public.py       # Public routes + uploads + email mgmt
 │   ├── gamification.py # Badge system
-│   └── engagement.py   # Loyalty, Notifications, Reviews, Wheel, Exit Intent
+│   ├── engagement.py   # Loyalty, Notifications, Reviews, Wheel, Exit Intent
+│   └── marketing.py    # Bundle Deals, Push Campaigns, TikTok Live Draw, Advanced Analytics
 ├── services/
 │   └── bots.py         # Background tasks: auto-bot, email, subs, re-engagement
 ```
@@ -56,7 +57,13 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - **Wheel of Fortune**: One spin per user, 8 prizes (discounts, credits, points), Canvas-based animation
 - **Exit Intent Popup**: 15% discount on exit, 24h validity, one-time per user
 
+### Marketing Features (Implemented March 22, 2026)
+- **Bundle Deals**: Admin creates ticket packages with % discounts (e.g., 3x 10% OFF). Displayed on paid competition pages with visual pricing comparison
+- **Push Campaign Manager**: Admin broadcasts push notifications to all/active/subscriber audiences. Includes audience stats, send form, and campaign history
+- **TikTok Live Draw Embed**: When admin enables live draw, a prominent red banner with TikTok link appears on the competition page
+- **Advanced Analytics**: KPI dashboard (conversion rate, AOV, retention rate, total revenue), daily revenue bar chart, retention stats, top spenders leaderboard, revenue breakdown by transaction type
+
 ## Upcoming Tasks
-- **P1:** TikTok Pixel Integration
-- **P2:** Bundle Deals (ticket packages with discounts)
+- **P1:** TikTok Pixel Integration (when running ads)
+- **P2:** Bundle Deals with Viva Payment integration (bundle-specific checkout)
 - **P2:** SMS Marketing
