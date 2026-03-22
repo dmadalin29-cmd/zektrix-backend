@@ -12,6 +12,7 @@ const API = `${BACKEND_URL}/api`;
 
 // Modern Competition Card
 const CompCard = ({ comp, featured = false }) => {
+    const { isRomanian } = useLanguage();
     const progress = (comp.sold_tickets / comp.max_tickets) * 100;
     const remaining = comp.max_tickets - comp.sold_tickets;
     

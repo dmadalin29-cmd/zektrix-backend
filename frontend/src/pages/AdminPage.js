@@ -225,6 +225,10 @@ const AdminPage = () => {
     const [bundleForm, setBundleForm] = useState({ name: '', quantity: '', discount_percent: '' });
     const [showBundleModal, setShowBundleModal] = useState(false);
     const [editingBundle, setEditingBundle] = useState(null);
+    const [tiktokVideos, setTiktokVideos] = useState([]);
+    const [newTiktokUrl, setNewTiktokUrl] = useState('');
+    const [newTiktokTitle, setNewTiktokTitle] = useState('');
+    const [addingVideo, setAddingVideo] = useState(false);
 
     // Modals
     const [showCompModal, setShowCompModal] = useState(false);
@@ -283,6 +287,7 @@ const AdminPage = () => {
         axios.get(`${API}/admin/campaigns`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setCampaigns(r.data || [])).catch(() => {});
         axios.get(`${API}/admin/campaigns/audience-stats`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAudienceStats(r.data || {})).catch(() => {});
         axios.get(`${API}/admin/analytics/advanced`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAdvancedAnalytics(r.data || {})).catch(() => {});
+        axios.get(`${API}/tiktok-videos`).then(r => setTiktokVideos(r.data || [])).catch(() => {});
         
         // Admin WebSocket for live chat
         let ws = null;
@@ -1551,6 +1556,86 @@ const AdminPage = () => {
                                 >
                                     {isRomanian ? 'Trimite Notificare de Test' : 'Send Test Notification'}
                                 </Button>
+                            </div>
+
+                            {/* TikTok Video Gallery Management */}
+                            <div className="rounded-2xl p-6 mt-6" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff0050] to-[#00f2ea] flex items-center justify-center">
+                                        <svg viewBox="0 0 24 24" className="w-5 h-5 text-white fill-current"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.98a8.18 8.18 0 004.76 1.52V7.05a4.84 4.84 0 01-1-.36z"/></svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white">{isRomanian ? 'Galerie TikTok' : 'TikTok Gallery'}</h3>
+                                        <p className="text-sm text-gray-500">{isRomanian ? 'Videoclipurile apar pe pagina fiecărei competiții' : 'Videos appear on every competition page'}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                                    <Input 
+                                        value={newTiktokUrl} 
+                                        onChange={e => setNewTiktokUrl(e.target.value)} 
+                                        className="bg-white/5 border-white/10 focus:border-violet-500 flex-1" 
+                                        placeholder="https://www.tiktok.com/@x67digital.com/video/..." 
+                                        data-testid="tiktok-url-input"
+                                    />
+                                    <Input 
+                                        value={newTiktokTitle} 
+                                        onChange={e => setNewTiktokTitle(e.target.value)} 
+                                        className="bg-white/5 border-white/10 focus:border-violet-500 sm:w-48" 
+                                        placeholder={isRomanian ? "Titlu (opțional)" : "Title (optional)"}
+                                        data-testid="tiktok-title-input"
+                                    />
+                                    <Button 
+                                        className="bg-gradient-to-r from-[#ff0050] to-[#00f2ea] hover:opacity-90 text-white shrink-0"
+                                        disabled={addingVideo || !newTiktokUrl}
+                                        data-testid="add-tiktok-btn"
+                                        onClick={async () => {
+                                            setAddingVideo(true);
+                                            try {
+                                                await axios.post(`${API}/admin/tiktok-videos`, { url: newTiktokUrl, title: newTiktokTitle }, { headers: { Authorization: `Bearer ${token}` }});
+                                                toast.success(isRomanian ? 'Video adăugat!' : 'Video added!');
+                                                setNewTiktokUrl(''); setNewTiktokTitle('');
+                                                const r = await axios.get(`${API}/tiktok-videos`);
+                                                setTiktokVideos(r.data || []);
+                                            } catch (e) { toast.error(e.response?.data?.detail || (isRomanian ? 'URL invalid' : 'Invalid URL')); }
+                                            setAddingVideo(false);
+                                        }}
+                                    >
+                                        {addingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" /> {isRomanian ? 'Adaugă' : 'Add'}</>}
+                                    </Button>
+                                </div>
+
+                                {tiktokVideos.length === 0 ? (
+                                    <p className="text-center text-gray-500 text-sm py-6">{isRomanian ? 'Niciun video adăugat' : 'No videos added'}</p>
+                                ) : (
+                                    <div className="grid gap-3">
+                                        {tiktokVideos.map(v => (
+                                            <div key={v.video_uid} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5" data-testid={`admin-tiktok-${v.video_uid}`}>
+                                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff0050]/20 to-[#00f2ea]/20 flex items-center justify-center shrink-0">
+                                                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current text-pink-400"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.98a8.18 8.18 0 004.76 1.52V7.05a4.84 4.84 0 01-1-.36z"/></svg>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-white truncate">{v.title || v.url}</p>
+                                                    <p className="text-[10px] text-gray-500">ID: {v.video_id}</p>
+                                                </div>
+                                                <Button 
+                                                    size="sm" variant="ghost" className="text-red-400 hover:bg-red-500/10 shrink-0"
+                                                    data-testid={`delete-tiktok-${v.video_uid}`}
+                                                    onClick={async () => {
+                                                        if (!window.confirm(isRomanian ? 'Ștergi videoclipul?' : 'Delete video?')) return;
+                                                        try {
+                                                            await axios.delete(`${API}/admin/tiktok-videos/${v.video_uid}`, { headers: { Authorization: `Bearer ${token}` }});
+                                                            setTiktokVideos(prev => prev.filter(x => x.video_uid !== v.video_uid));
+                                                            toast.success(isRomanian ? 'Video șters!' : 'Video deleted!');
+                                                        } catch { toast.error(isRomanian ? 'Eroare' : 'Error'); }
+                                                    }}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

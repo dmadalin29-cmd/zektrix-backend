@@ -6,7 +6,9 @@ from typing import Optional, List
 from datetime import datetime, timezone
 from database import db
 from dependencies import get_current_user, get_admin_user
-import uuid, logging, asyncio
+import uuid
+import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -217,6 +219,51 @@ async def update_live_draw(data: LiveDrawUpdate, admin: dict = Depends(get_admin
                 pass
         logger.info(f"Live draw notification sent to {sent} devices")
 
+    return {"success": True}
+
+
+# ==================== TIKTOK VIDEO GALLERY ====================
+
+class TikTokVideoAdd(BaseModel):
+    url: str
+    title: Optional[str] = ""
+
+@router.get("/tiktok-videos")
+async def get_tiktok_videos():
+    """Public: Get TikTok video gallery"""
+    videos = await db.tiktok_videos.find({"is_active": True}, {"_id": 0}).sort("created_at", -1).to_list(20)
+    return videos
+
+@router.post("/admin/tiktok-videos")
+async def add_tiktok_video(data: TikTokVideoAdd, admin: dict = Depends(get_admin_user)):
+    """Admin: Add a TikTok video to gallery"""
+    import re
+    match = re.search(r'/video/(\d+)', data.url)
+    if not match:
+        match = re.search(r'tiktok\.com/.*?/(\d{15,})', data.url)
+    video_id = match.group(1) if match else None
+    if not video_id:
+        raise HTTPException(400, "URL TikTok invalid. Format: https://www.tiktok.com/@user/video/123456789")
+    
+    video = {
+        "video_uid": f"tv_{uuid.uuid4().hex[:12]}",
+        "url": data.url,
+        "video_id": video_id,
+        "embed_url": f"https://www.tiktok.com/embed/v2/{video_id}",
+        "title": data.title or "",
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.tiktok_videos.insert_one(video)
+    video.pop("_id", None)
+    return video
+
+@router.delete("/admin/tiktok-videos/{video_uid}")
+async def delete_tiktok_video(video_uid: str, admin: dict = Depends(get_admin_user)):
+    """Admin: Remove a TikTok video"""
+    result = await db.tiktok_videos.delete_one({"video_uid": video_uid})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Video not found")
     return {"success": True}
 
 

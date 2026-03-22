@@ -46,8 +46,9 @@ const CompetitionDetailPage = () => {
     const [paymentMethod, setPaymentMethod] = useState('viva');
     const [bundles, setBundles] = useState([]);
     const [liveDraw, setLiveDraw] = useState(null);
+    const [tiktokVideos, setTiktokVideos] = useState([]);
 
-    useEffect(() => { fetchCompetition(); fetchBundles(); fetchLiveDraw(); }, [id]);
+    useEffect(() => { fetchCompetition(); fetchBundles(); fetchLiveDraw(); fetchTiktokVideos(); }, [id]);
 
     const fetchCompetition = async () => {
         try {
@@ -72,6 +73,13 @@ const CompetitionDetailPage = () => {
         try {
             const res = await axios.get(`${API}/live-draw`);
             if (res.data?.is_live) setLiveDraw(res.data);
+        } catch { }
+    };
+
+    const fetchTiktokVideos = async () => {
+        try {
+            const res = await axios.get(`${API}/tiktok-videos`);
+            setTiktokVideos(res.data || []);
         } catch { }
     };
 
@@ -481,6 +489,38 @@ const CompetitionDetailPage = () => {
                                                 <ExternalLink className="w-4 h-4 ml-1" />
                                             </a>
                                         )}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* TikTok Video Gallery */}
+                            {tiktokVideos.length > 0 && (
+                                <Card className="glass border-white/10 overflow-hidden" data-testid="tiktok-gallery-section">
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center gap-3 mb-5">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ff0050] to-[#00f2ea] flex items-center justify-center">
+                                                <svg viewBox="0 0 24 24" className="w-5 h-5 text-white fill-current"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.98a8.18 8.18 0 004.76 1.52V7.05a4.84 4.84 0 01-1-.36z"/></svg>
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-lg">{isRomanian ? 'Videoclipuri TikTok' : 'TikTok Videos'}</h3>
+                                                <p className="text-sm text-muted-foreground">{isRomanian ? 'Urmărește-ne pe TikTok' : 'Follow us on TikTok'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid gap-4" style={{ gridTemplateColumns: tiktokVideos.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+                                            {tiktokVideos.map(v => (
+                                                <div key={v.video_uid} className="rounded-xl overflow-hidden bg-black/30 border border-white/5" data-testid={`tiktok-video-${v.video_uid}`}>
+                                                    <iframe
+                                                        src={v.embed_url}
+                                                        className="w-full"
+                                                        style={{ height: '500px', border: 'none' }}
+                                                        allow="encrypted-media"
+                                                        allowFullScreen
+                                                        title={v.title || 'TikTok Video'}
+                                                    />
+                                                    {v.title && <p className="text-sm text-gray-400 p-3 border-t border-white/5">{v.title}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </CardContent>
                                 </Card>
                             )}
