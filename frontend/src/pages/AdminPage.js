@@ -24,7 +24,8 @@ import {
     ArrowUpRight, ArrowDownRight, Eye, Calendar, Target, Sparkles,
     Activity, CreditCard, ShoppingCart, Bell, Moon, Sun, ChevronDown,
     PieChart as PieIcon, Layers, Hash, Gift, Crown, Flame, Star, Upload,
-    Wallet, ArrowUpCircle, ArrowDownCircle, Banknote
+    Wallet, ArrowUpCircle, ArrowDownCircle, Banknote,
+    Package, Megaphone, Send, Radio, Percent, UserCheck, Repeat
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -215,6 +216,15 @@ const AdminPage = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [showNotifDropdown, setShowNotifDropdown] = useState(false);
     const [pendingReviews, setPendingReviews] = useState([]);
+    const [adminBundles, setAdminBundles] = useState([]);
+    const [campaigns, setCampaigns] = useState([]);
+    const [audienceStats, setAudienceStats] = useState({ all: 0, active: 0, subscribers: 0 });
+    const [advancedAnalytics, setAdvancedAnalytics] = useState(null);
+    const [campaignForm, setCampaignForm] = useState({ title: '', message: '', url: 'https://zektrix.uk', audience: 'all' });
+    const [sendingCampaign, setSendingCampaign] = useState(false);
+    const [bundleForm, setBundleForm] = useState({ name: '', quantity: '', discount_percent: '' });
+    const [showBundleModal, setShowBundleModal] = useState(false);
+    const [editingBundle, setEditingBundle] = useState(null);
 
     // Modals
     const [showCompModal, setShowCompModal] = useState(false);
@@ -269,6 +279,10 @@ const AdminPage = () => {
         axios.get(`${API}/admin/subscriptions`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAllSubscriptions(r.data || [])).catch(() => {});
         axios.get(`${API}/admin/notifications`, { headers: { Authorization: `Bearer ${token}` }}).then(r => { setNotifications(r.data?.notifications || []); setUnreadCount(r.data?.unread_count ?? r.data?.notifications?.length ?? 0); }).catch(() => {});
         axios.get(`${API}/reviews/pending`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setPendingReviews(r.data || [])).catch(() => {});
+        axios.get(`${API}/admin/bundles`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAdminBundles(r.data || [])).catch(() => {});
+        axios.get(`${API}/admin/campaigns`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setCampaigns(r.data || [])).catch(() => {});
+        axios.get(`${API}/admin/campaigns/audience-stats`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAudienceStats(r.data || {})).catch(() => {});
+        axios.get(`${API}/admin/analytics/advanced`, { headers: { Authorization: `Bearer ${token}` }}).then(r => setAdvancedAnalytics(r.data || {})).catch(() => {});
         
         // Admin WebSocket for live chat
         let ws = null;
@@ -510,6 +524,9 @@ const AdminPage = () => {
         { id: 'locuri', icon: Ticket, label: 'Locuri', badge: locuri.length },
         { id: 'winners', icon: Crown, label: 'Premianți', badge: winners.length },
         { id: 'wallet', icon: Wallet, label: 'Wallet', badge: walletWithdrawals.filter(w => w.status === 'pending').length || null },
+        { id: 'bundles', icon: Package, label: 'Pachete', badge: adminBundles.length || null },
+        { id: 'campaigns', icon: Megaphone, label: 'Campanii Push' },
+        { id: 'analytics', icon: BarChart3, label: 'Analiză Avansată' },
         { id: 'settings', icon: Settings, label: 'Setări' },
         { id: 'chat', icon: MessageCircle, label: 'Chat', badge: chatMsgs.length },
         { id: 'reviews', icon: Star, label: 'Recenzii', badge: pendingReviews.length || null },
@@ -1686,6 +1703,273 @@ const AdminPage = () => {
                     )}
 
                     {/* ============== REVIEWS TAB ============== */}
+                    {/* ============== BUNDLES TAB ============== */}
+                    {tab === 'bundles' && (
+                        <div className="space-y-6" data-testid="admin-bundles-tab">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                <div>
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><Package className="w-5 h-5 text-amber-400" /> Pachete Bundle</h2>
+                                    <p className="text-sm text-gray-500">Oferă reduceri pentru achiziții multiple</p>
+                                </div>
+                                <Button className="bg-amber-600 hover:bg-amber-500" data-testid="add-bundle-btn" onClick={() => { setEditingBundle(null); setBundleForm({ name: '', quantity: '', discount_percent: '' }); setShowBundleModal(true); }}>
+                                    <Plus className="w-4 h-4 mr-2" /> Pachet Nou
+                                </Button>
+                            </div>
+
+                            {adminBundles.length === 0 ? (
+                                <EmptyState icon={Package} title="Niciun pachet" description="Creează pachete bundle pentru a oferi reduceri la achiziții multiple" />
+                            ) : (
+                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {adminBundles.map(b => (
+                                        <div key={b.bundle_id} className="rounded-2xl p-5 transition-all hover:scale-[1.02]" data-testid={`bundle-card-${b.bundle_id}`}
+                                            style={{ background: 'linear-gradient(135deg, rgba(15, 10, 30, 0.9), rgba(10, 6, 20, 0.95))', border: `1px solid ${b.is_active ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.1)'}` }}>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                                                    <span className="text-lg font-bold text-white">{b.quantity}x</span>
+                                                </div>
+                                                <Badge className={b.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}>
+                                                    {b.is_active ? 'Activ' : 'Inactiv'}
+                                                </Badge>
+                                            </div>
+                                            <h3 className="font-bold text-white text-lg mb-1">{b.name}</h3>
+                                            <p className="text-sm text-gray-400 mb-3">{b.quantity} locuri &middot; <span className="text-amber-400 font-bold">{b.discount_percent}% reducere</span></p>
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="outline" className="flex-1 border-white/10 hover:bg-white/10" data-testid={`edit-bundle-${b.bundle_id}`}
+                                                    onClick={() => { setEditingBundle(b); setBundleForm({ name: b.name, quantity: b.quantity.toString(), discount_percent: b.discount_percent.toString() }); setShowBundleModal(true); }}>
+                                                    <Edit className="w-3 h-3 mr-1" /> Edit
+                                                </Button>
+                                                <Button size="sm" variant="ghost" className="text-red-400 hover:bg-red-500/10" data-testid={`delete-bundle-${b.bundle_id}`}
+                                                    onClick={async () => { if (!window.confirm('Ștergi pachetul?')) return; try { await axios.delete(`${API}/admin/bundles/${b.bundle_id}`, { headers: { Authorization: `Bearer ${token}` }}); setAdminBundles(prev => prev.filter(x => x.bundle_id !== b.bundle_id)); toast.success('Pachet șters!'); } catch { toast.error('Eroare'); } }}>
+                                                    <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ============== CAMPAIGNS TAB ============== */}
+                    {tab === 'campaigns' && (
+                        <div className="space-y-6" data-testid="admin-campaigns-tab">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2"><Megaphone className="w-5 h-5 text-violet-400" /> Push Campaigns</h2>
+                                <p className="text-sm text-gray-500">Trimite notificări push în masă către utilizatori</p>
+                            </div>
+
+                            {/* Audience Stats */}
+                            <div className="grid grid-cols-3 gap-3">
+                                {[
+                                    { label: 'Toți Abonații', value: audienceStats.all, icon: Users, color: '#8b5cf6' },
+                                    { label: 'Activi (30 zile)', value: audienceStats.active, icon: UserCheck, color: '#10b981' },
+                                    { label: 'Cu Abonament', value: audienceStats.subscribers, icon: Crown, color: '#f59e0b' },
+                                ].map((s, i) => (
+                                    <div key={i} className="rounded-2xl p-4" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                        <s.icon className="w-5 h-5 mb-2" style={{ color: s.color }} />
+                                        <p className="text-2xl font-bold text-white">{s.value}</p>
+                                        <p className="text-xs text-gray-500">{s.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Send Campaign Form */}
+                            <div className="rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Send className="w-4 h-4 text-violet-400" /> Campanie Nouă</h3>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-gray-400">Titlu Notificare</Label>
+                                        <Input value={campaignForm.title} onChange={e => setCampaignForm(p => ({ ...p, title: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="ex: Competiție Nouă!" data-testid="campaign-title-input" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-400">URL (clic pe notificare)</Label>
+                                        <Input value={campaignForm.url} onChange={e => setCampaignForm(p => ({ ...p, url: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" data-testid="campaign-url-input" />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <Label className="text-gray-400">Mesaj</Label>
+                                        <Textarea value={campaignForm.message} onChange={e => setCampaignForm(p => ({ ...p, message: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" rows={2} placeholder="ex: Câștigă un iPhone 16 Pro! Intră acum..." data-testid="campaign-message-input" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-400">Audiență</Label>
+                                        <Select value={campaignForm.audience} onValueChange={v => setCampaignForm(p => ({ ...p, audience: v }))}>
+                                            <SelectTrigger className="bg-white/5 border-white/10" data-testid="campaign-audience-select"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Toți ({audienceStats.all})</SelectItem>
+                                                <SelectItem value="active">Activi ultimele 30 zile ({audienceStats.active})</SelectItem>
+                                                <SelectItem value="subscribers">Cu Abonament ({audienceStats.subscribers})</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="flex items-end">
+                                        <Button className="w-full bg-violet-600 hover:bg-violet-500 py-5" data-testid="send-campaign-btn"
+                                            disabled={sendingCampaign || !campaignForm.title || !campaignForm.message}
+                                            onClick={async () => {
+                                                if (!window.confirm(`Trimiți campania "${campaignForm.title}" către ${campaignForm.audience === 'all' ? audienceStats.all : campaignForm.audience === 'active' ? audienceStats.active : audienceStats.subscribers} dispozitive?`)) return;
+                                                setSendingCampaign(true);
+                                                try {
+                                                    const res = await axios.post(`${API}/admin/campaigns/send`, campaignForm, { headers: { Authorization: `Bearer ${token}` }});
+                                                    toast.success(`Campanie trimisă! ${res.data.sent}/${res.data.total} livrate`);
+                                                    setCampaignForm({ title: '', message: '', url: 'https://zektrix.uk', audience: 'all' });
+                                                    const updRes = await axios.get(`${API}/admin/campaigns`, { headers: { Authorization: `Bearer ${token}` }});
+                                                    setCampaigns(updRes.data || []);
+                                                } catch (e) { toast.error(e.response?.data?.detail || 'Eroare trimitere'); }
+                                                setSendingCampaign(false);
+                                            }}>
+                                            {sendingCampaign ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                                            {sendingCampaign ? 'Se trimite...' : 'Trimite Campania'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Campaign History */}
+                            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                <div className="p-5 border-b border-white/10">
+                                    <h3 className="font-bold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> Istoric Campanii</h3>
+                                </div>
+                                {campaigns.length === 0 ? (
+                                    <div className="p-12 text-center">
+                                        <Megaphone className="w-12 h-12 text-gray-700 mx-auto mb-3" />
+                                        <p className="text-gray-500">Nicio campanie trimisă</p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-white/[0.06]">
+                                        {campaigns.map(c => (
+                                            <div key={c.campaign_id} className="p-4 flex items-start gap-4" data-testid={`campaign-${c.campaign_id}`}>
+                                                <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0">
+                                                    <Send className="w-5 h-5 text-violet-400" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-white">{c.title}</p>
+                                                    <p className="text-xs text-gray-400 mt-0.5">{c.message}</p>
+                                                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                                        <span>{new Date(c.sent_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                                        <Badge className="bg-violet-500/20 text-violet-300 text-[10px]">{c.audience}</Badge>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-lg font-bold text-emerald-400">{c.sent_count}</p>
+                                                    <p className="text-[10px] text-gray-500">din {c.total_targeted}</p>
+                                                    {c.failed_count > 0 && <p className="text-[10px] text-red-400">{c.failed_count} eșuate</p>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ============== ADVANCED ANALYTICS TAB ============== */}
+                    {tab === 'analytics' && (
+                        <div className="space-y-6" data-testid="admin-analytics-tab">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><BarChart3 className="w-5 h-5 text-cyan-400" /> Analiză Avansată</h2>
+                                    <p className="text-sm text-gray-500">Metrici detaliate de performanță</p>
+                                </div>
+                                <Button variant="outline" size="sm" className="border-white/10" data-testid="refresh-analytics-btn"
+                                    onClick={async () => { try { const r = await axios.get(`${API}/admin/analytics/advanced`, { headers: { Authorization: `Bearer ${token}` }}); setAdvancedAnalytics(r.data); toast.success('Date actualizate!'); } catch { toast.error('Eroare'); } }}>
+                                    <RefreshCw className="w-4 h-4 mr-1" /> Actualizează
+                                </Button>
+                            </div>
+
+                            {!advancedAnalytics ? (
+                                <TableSkeleton rows={4} />
+                            ) : (
+                                <>
+                                    {/* KPI Cards */}
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                        <StatCard icon={Target} label="Rata Conversie" value={advancedAnalytics.conversion_rate || 0} gradient="linear-gradient(135deg, #8b5cf6, #7c3aed)" />
+                                        <StatCard icon={ShoppingCart} label="Valoare Medie Comandă" value={advancedAnalytics.aov || 0} gradient="linear-gradient(135deg, #06b6d4, #0891b2)" />
+                                        <StatCard icon={Repeat} label="Rata Retenție" value={advancedAnalytics.repeat_rate || 0} gradient="linear-gradient(135deg, #10b981, #059669)" />
+                                        <StatCard icon={DollarSign} label="Venit Total (£)" value={advancedAnalytics.total_revenue || 0} gradient="linear-gradient(135deg, #f97316, #ea580c)" />
+                                    </div>
+
+                                    {/* Revenue Chart */}
+                                    <div className="rounded-2xl p-5 lg:p-6" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                        <h3 className="font-bold text-white mb-4">Venit Zilnic (Luna Curentă)</h3>
+                                        <div className="h-64">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={(advancedAnalytics.revenue_by_day || []).map(d => ({ name: d.date?.substring(5), revenue: d.revenue, orders: d.orders }))}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(139,92,246,0.1)" />
+                                                    <XAxis dataKey="name" stroke="#6b7280" fontSize={11} />
+                                                    <YAxis stroke="#6b7280" fontSize={11} />
+                                                    <Tooltip content={<CustomTooltip />} />
+                                                    <Bar dataKey="revenue" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid lg:grid-cols-2 gap-6">
+                                        {/* Retention Stats */}
+                                        <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                            <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Repeat className="w-4 h-4 text-emerald-400" /> Retenție</h3>
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center p-3 rounded-xl bg-white/5">
+                                                    <span className="text-sm text-gray-400">Cumpărători Unici</span>
+                                                    <span className="font-bold text-white">{advancedAnalytics.unique_buyers}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center p-3 rounded-xl bg-white/5">
+                                                    <span className="text-sm text-gray-400">Cumpărători Recurenți (2+)</span>
+                                                    <span className="font-bold text-emerald-400">{advancedAnalytics.repeat_buyers}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center p-3 rounded-xl bg-white/5">
+                                                    <span className="text-sm text-gray-400">Clienți Fideli (5+)</span>
+                                                    <span className="font-bold text-amber-400">{advancedAnalytics.loyal_buyers}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center p-3 rounded-xl bg-white/5">
+                                                    <span className="text-sm text-gray-400">Abonamente Active</span>
+                                                    <span className="font-bold text-violet-400">{advancedAnalytics.active_subscriptions} / {advancedAnalytics.total_subscriptions}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Top Spenders */}
+                                        <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                            <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Crown className="w-4 h-4 text-amber-400" /> Top Clienți</h3>
+                                            {(advancedAnalytics.top_spenders || []).length === 0 ? (
+                                                <p className="text-center text-gray-500 py-8">Nicio tranzacție încă</p>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {(advancedAnalytics.top_spenders || []).slice(0, 8).map((s, i) => (
+                                                        <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5" data-testid={`top-spender-${i}`}>
+                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? 'bg-amber-500/20 text-amber-400' : 'bg-white/10 text-gray-400'}`}>
+                                                                #{i + 1}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-medium text-white truncate">{s.username}</p>
+                                                                <p className="text-[10px] text-gray-500">{s.orders} comenzi</p>
+                                                            </div>
+                                                            <span className="font-bold text-emerald-400">£{s.total_spent}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Revenue Breakdown */}
+                                    {advancedAnalytics.revenue_breakdown && Object.keys(advancedAnalytics.revenue_breakdown).length > 0 && (
+                                        <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(15,10,30,0.9), rgba(10,6,20,0.95))', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                            <h3 className="font-bold text-white mb-4 flex items-center gap-2"><PieIcon className="w-4 h-4 text-violet-400" /> Venit per Tip Tranzacție</h3>
+                                            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                                {Object.entries(advancedAnalytics.revenue_breakdown).map(([type, data]) => (
+                                                    <div key={type} className="p-4 rounded-xl bg-white/5 text-center">
+                                                        <p className="text-xs text-gray-500 uppercase mb-1">{type}</p>
+                                                        <p className="text-lg font-bold text-white">£{data.total}</p>
+                                                        <p className="text-[10px] text-gray-500">{data.count} tranzacții</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+
                     {tab === 'reviews' && (
                         <div className="space-y-6" data-testid="admin-reviews-tab">
                             <div className="rounded-2xl overflow-hidden" style={{
@@ -1966,6 +2250,51 @@ const AdminPage = () => {
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setShowUserModal(false)}>Anulează</Button>
                             <Button type="submit" className="bg-violet-600 hover:bg-violet-500">Actualizează</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* ============== BUNDLE MODAL ============== */}
+            <Dialog open={showBundleModal} onOpenChange={setShowBundleModal}>
+                <DialogContent className="max-w-md"
+                    style={{ background: 'linear-gradient(135deg, rgba(10, 6, 20, 0.98) 0%, rgba(5, 3, 15, 0.99) 100%)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                    <DialogHeader>
+                        <DialogTitle className="text-white">{editingBundle ? 'Editează Pachet' : 'Pachet Nou'}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        const data = { name: bundleForm.name, quantity: parseInt(bundleForm.quantity), discount_percent: parseFloat(bundleForm.discount_percent) };
+                        try {
+                            if (editingBundle) {
+                                await axios.put(`${API}/admin/bundles/${editingBundle.bundle_id}`, data, { headers: { Authorization: `Bearer ${token}` }});
+                                toast.success('Pachet actualizat!');
+                            } else {
+                                await axios.post(`${API}/admin/bundles`, data, { headers: { Authorization: `Bearer ${token}` }});
+                                toast.success('Pachet creat!');
+                            }
+                            setShowBundleModal(false);
+                            const r = await axios.get(`${API}/admin/bundles`, { headers: { Authorization: `Bearer ${token}` }});
+                            setAdminBundles(r.data || []);
+                        } catch (err) { toast.error(err.response?.data?.detail || 'Eroare'); }
+                    }} className="space-y-4">
+                        <div>
+                            <Label className="text-gray-400">Nume Pachet</Label>
+                            <Input value={bundleForm.name} onChange={e => setBundleForm(p => ({ ...p, name: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="ex: Pachet Starter" required data-testid="bundle-name-input" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-gray-400">Nr. Locuri</Label>
+                                <Input type="number" min="2" value={bundleForm.quantity} onChange={e => setBundleForm(p => ({ ...p, quantity: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="ex: 5" required data-testid="bundle-quantity-input" />
+                            </div>
+                            <div>
+                                <Label className="text-gray-400">Reducere (%)</Label>
+                                <Input type="number" min="1" max="90" step="0.5" value={bundleForm.discount_percent} onChange={e => setBundleForm(p => ({ ...p, discount_percent: e.target.value }))} className="bg-white/5 border-white/10 focus:border-violet-500" placeholder="ex: 15" required data-testid="bundle-discount-input" />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setShowBundleModal(false)}>Anulează</Button>
+                            <Button type="submit" className="bg-amber-600 hover:bg-amber-500">{editingBundle ? 'Actualizează' : 'Creează'}</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

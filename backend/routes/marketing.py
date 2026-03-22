@@ -9,7 +9,7 @@ from dependencies import get_current_user, get_admin_user
 import uuid, logging, asyncio
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 # ==================== BUNDLE DEALS ====================
 

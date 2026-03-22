@@ -19,7 +19,8 @@ import axios from 'axios';
 import { 
     Zap, Clock, Ticket, Minus, Plus, Loader2, Trophy, ArrowLeft, 
     PartyPopper, CreditCard, Mail, HelpCircle, CheckCircle, XCircle, 
-    ShoppingCart, Users, Calendar, Gift, ChevronLeft, ChevronRight, Wallet
+    ShoppingCart, Users, Calendar, Gift, ChevronLeft, ChevronRight, Wallet,
+    Package, Percent, Radio, ExternalLink
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -43,8 +44,10 @@ const CompetitionDetailPage = () => {
     const [enteringFree, setEnteringFree] = useState(false);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [paymentMethod, setPaymentMethod] = useState('viva');
+    const [bundles, setBundles] = useState([]);
+    const [liveDraw, setLiveDraw] = useState(null);
 
-    useEffect(() => { fetchCompetition(); }, [id]);
+    useEffect(() => { fetchCompetition(); fetchBundles(); fetchLiveDraw(); }, [id]);
 
     const fetchCompetition = async () => {
         try {
@@ -56,6 +59,20 @@ const CompetitionDetailPage = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchBundles = async () => {
+        try {
+            const res = await axios.get(`${API}/bundles`);
+            setBundles(res.data || []);
+        } catch { }
+    };
+
+    const fetchLiveDraw = async () => {
+        try {
+            const res = await axios.get(`${API}/live-draw`);
+            if (res.data?.is_live) setLiveDraw(res.data);
+        } catch { }
     };
 
     const verifyAnswer = () => {
@@ -125,7 +142,10 @@ const CompetitionDetailPage = () => {
 
     const soldPercentage = (competition.sold_tickets / competition.max_tickets) * 100;
     const available = competition.max_tickets - competition.sold_tickets;
-    const totalCost = competition.ticket_price * quantity;
+    const activeBundle = bundles.find(b => b.quantity === quantity);
+    const totalCost = activeBundle 
+        ? competition.ticket_price * quantity * (1 - activeBundle.discount_percent / 100) 
+        : competition.ticket_price * quantity;
     const isFree = competition.is_free || competition.ticket_price === 0;
     const qualQuestion = competition.qualification_question;
     const postalEntry = competition.postal_entry;
@@ -237,6 +257,49 @@ const CompetitionDetailPage = () => {
                                                             <Button variant="outline" size="icon" onClick={() => setQuantity(Math.min(available, quantity + 1))} disabled={quantity >= available} className="h-10 w-10" data-testid="qty-plus-btn"><Plus className="w-4 h-4" /></Button>
                                                         </div>
                                                     </div>
+
+                                                    {/* Bundle Deals */}
+                                                    {bundles.length > 0 && (
+                                                        <div data-testid="bundle-deals-section">
+                                                            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                                                                <Package className="w-3.5 h-3.5 text-amber-400" />
+                                                                {isRomanian ? 'Pachete cu Reducere' : 'Bundle Deals'}
+                                                            </p>
+                                                            <div className="grid grid-cols-1 gap-2">
+                                                                {bundles.map(b => {
+                                                                    const bundlePrice = (competition.ticket_price * b.quantity * (1 - b.discount_percent / 100)).toFixed(2);
+                                                                    const isSelected = quantity === b.quantity;
+                                                                    return (
+                                                                        <button
+                                                                            key={b.bundle_id}
+                                                                            onClick={() => setQuantity(Math.min(available, b.quantity))}
+                                                                            data-testid={`bundle-${b.bundle_id}`}
+                                                                            className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left ${isSelected ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30' : 'border-white/10 hover:border-white/20 bg-white/[0.02]'}`}
+                                                                        >
+                                                                            <div className="flex items-center gap-2.5">
+                                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-gray-400'}`}>
+                                                                                    {b.quantity}x
+                                                                                </div>
+                                                                                <div>
+                                                                                    <p className="text-sm font-medium">{b.name}</p>
+                                                                                    <p className="text-[10px] text-muted-foreground">{b.quantity} {isRomanian ? 'locuri' : 'spots'}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="text-right">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <span className="text-[10px] line-through text-gray-500">£{(competition.ticket_price * b.quantity).toFixed(2)}</span>
+                                                                                    <span className={`text-sm font-bold ${isSelected ? 'text-amber-400' : 'text-white'}`}>£{bundlePrice}</span>
+                                                                                </div>
+                                                                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] mt-0.5">
+                                                                                    <Percent className="w-2.5 h-2.5 mr-0.5" /> {b.discount_percent}% OFF
+                                                                                </Badge>
+                                                                            </div>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
 
                                                     {/* Total */}
                                                     <div className="flex justify-between items-center py-3 border-y border-white/10">
@@ -384,6 +447,43 @@ const CompetitionDetailPage = () => {
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* TikTok Live Draw Embed */}
+                            {liveDraw && liveDraw.is_live && (liveDraw.competition_id === id || !liveDraw.competition_id) && (
+                                <Card className="glass border-red-500/30 overflow-hidden" data-testid="live-draw-section">
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="relative">
+                                                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                                    <Radio className="w-5 h-5 text-red-400" />
+                                                </div>
+                                                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full animate-pulse border-2 border-background" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-lg text-red-400">
+                                                    {isRomanian ? 'EXTRAGERE LIVE!' : 'LIVE DRAW!'}
+                                                </h3>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {isRomanian ? 'Urmărește extragerea în direct pe TikTok' : 'Watch the draw live on TikTok'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {liveDraw.tiktok_live_url && (
+                                            <a 
+                                                href={liveDraw.tiktok_live_url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                data-testid="live-draw-link"
+                                                className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-bold text-base transition-all hover:scale-[1.02]"
+                                            >
+                                                <Radio className="w-5 h-5 animate-pulse" />
+                                                {isRomanian ? 'Urmărește LIVE pe TikTok' : 'Watch LIVE on TikTok'}
+                                                <ExternalLink className="w-4 h-4 ml-1" />
+                                            </a>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
 
                             {/* Countdown Timer */}
                             {competition.draw_date && (
