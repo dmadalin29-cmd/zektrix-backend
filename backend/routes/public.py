@@ -73,23 +73,40 @@ async def update_live_status(status: LiveStatusUpdate, current_user: dict = Depe
 @router.post("/upload/image")
 async def upload_image(file: UploadFile = File(...), current_user: dict = Depends(get_admin_user)):
     """Upload image for competitions (admin only)"""
-    allowed = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+    allowed = {"image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"}
     if file.content_type not in allowed:
-        raise HTTPException(400, "Only JPEG, PNG, WebP and GIF images allowed")
+        raise HTTPException(400, "Only JPEG, PNG, WebP, GIF and HEIC images allowed")
     
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(400, "Image too large (max 10MB)")
     
     ext = file.filename.split(".")[-1].lower() if "." in file.filename else "jpg"
+    
+    # Convert HEIC/HEIF to JPEG
+    if ext in ("heic", "heif") or file.content_type in ("image/heic", "image/heif"):
+        try:
+            from PIL import Image
+            import pillow_heif
+            pillow_heif.register_heif_opener()
+            import io
+            img = Image.open(io.BytesIO(content))
+            img = img.convert("RGB")
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=90)
+            content = buf.getvalue()
+            ext = "jpg"
+        except Exception as e:
+            logger.error(f"HEIC conversion failed: {e}")
+            raise HTTPException(400, "Failed to convert HEIC image. Please upload JPEG or PNG.")
+    
     if ext not in ("jpg", "jpeg", "png", "webp", "gif"):
         ext = "jpg"
     
     import uuid
     filename = f"{uuid.uuid4().hex[:12]}.{ext}"
-    upload_dir = os.path.join(os.path.dirname(__file__), "uploads")
-    os.makedirs(upload_dir, exist_ok=True)
-    filepath = os.path.join(upload_dir, filename)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    filepath = os.path.join(UPLOAD_DIR, filename)
     
     with open(filepath, "wb") as f:
         f.write(content)
@@ -102,9 +119,6 @@ async def upload_image(file: UploadFile = File(...), current_user: dict = Depend
         image_url = f"/api/uploads/{filename}"
     
     return {"url": image_url, "filename": filename}
-
-# Serve uploaded files
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 
 @router.post("/admin/trigger-daily-digest")
 async def trigger_daily_digest(admin: dict = Depends(get_admin_user)):
