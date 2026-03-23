@@ -17,6 +17,7 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 ```
 /app/backend/
 ├── server.py          # App orchestrator (~175 lines)
+├── config.py          # Shared config (UPLOAD_DIR, JWT, VAPID, etc.)
 ├── routes/
 │   ├── auth.py, competitions.py, wallet.py, subscriptions.py, referral.py
 │   ├── admin.py, chat.py, webhooks.py, public.py
@@ -36,9 +37,9 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - **TikTok Live Draw Embed** (live banner with @x67digital link)
 - **Advanced Analytics** (KPI dashboard, daily revenue, retention, top spenders)
 - **Full bilingual RO/EN support** across entire site (AdminPage, all pages, components)
+- **Image Upload Fix** (path mismatch corrected + HEIC/iPhone support added) - Mar 2026
 
 ## Upcoming Tasks
 - **P1:** TikTok Pixel Integration (when running ads)
-- **P2:** Bundle-specific Viva Payment checkout
 - **P2:** SMS Marketing
-- **P2:** Privacy Policy & Terms pages bilingual translation (51 + 19 strings)
+- **P2:** Refactor AdminPage.js (2300+ lines → smaller sub-components)
