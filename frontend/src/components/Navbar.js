@@ -178,7 +178,7 @@ const Navbar = () => {
                             </DropdownMenu>
                         ) : (
                             <div className="flex items-center gap-1.5">
-                                <Link to="/login">
+                                <Link to="/login" aria-label="Login">
                                     <button className="hidden sm:block px-3.5 py-1.5 text-[13px] font-medium text-gray-400 hover:text-white transition-colors rounded-lg" data-testid="nav-login-btn">
                                         {isRomanian ? 'Conectare' : 'Login'}
                                     </button>

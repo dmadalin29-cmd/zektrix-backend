@@ -294,9 +294,39 @@ const StatCard = ({ icon: Icon, label, value, gradient }) => (
     </div>
 );
 
+const SkeletonCard = () => (
+    <div className="bg-white/[0.04] backdrop-blur-sm rounded-3xl overflow-hidden border border-white/[0.06] animate-pulse">
+        <div className="p-6">
+            <div className="h-6 w-24 bg-white/[0.06] rounded-full mb-4" />
+            <div className="aspect-video rounded-2xl bg-white/[0.06] mb-4" />
+            <div className="h-5 w-3/4 bg-white/[0.06] rounded mb-3" />
+            <div className="h-2 bg-white/[0.06] rounded-full mb-3" />
+            <div className="flex justify-between">
+                <div className="h-8 w-20 bg-white/[0.06] rounded" />
+                <div className="h-10 w-28 bg-white/[0.06] rounded-full" />
+            </div>
+        </div>
+    </div>
+);
+
+const SkeletonGrid = () => (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {[1,2,3,4].map(i => (
+            <div key={i} className="bg-white/[0.03] rounded-2xl overflow-hidden border border-white/[0.06] animate-pulse">
+                <div className="aspect-[4/3] bg-white/[0.06]" />
+                <div className="p-4">
+                    <div className="h-4 w-3/4 bg-white/[0.06] rounded mb-2" />
+                    <div className="h-1.5 bg-white/[0.06] rounded-full" />
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
 const HomePage = () => {
     const { isRomanian } = useLanguage();
     const [comps, setComps] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [tiktokLive, setTiktokLive] = useState({ is_live: false, tiktok_url: 'https://www.tiktok.com/@zektrix.uk' });
     const [stats, setStats] = useState({ winners: 0, users: 0, tickets: 0 });
     const [activities, setActivities] = useState([]);
@@ -318,6 +348,7 @@ const HomePage = () => {
             setActivities(actRes.data);
             setFeaturedComp(featRes.data?.competition || null);
             setReviews(reviewsRes.data || []);
+            setLoading(false);
         });
     }, []);
 
@@ -338,8 +369,8 @@ const HomePage = () => {
                 <section className="py-8 md:py-12">
                     <div className="max-w-7xl mx-auto px-4">
                         <div className="grid lg:grid-cols-2 gap-6 items-stretch" style={{ minHeight: '420px' }}>
-                            <SpecialCompCard c={specialComp} />
-                            <FeaturedCard c={displayFeatured} />
+                            {loading ? <SkeletonCard /> : <SpecialCompCard c={specialComp} />}
+                            {loading ? <SkeletonCard /> : <FeaturedCard c={displayFeatured} />}
                         </div>
                     </div>
                 </section>
@@ -432,9 +463,11 @@ const HomePage = () => {
                                 {isRomanian ? 'Vezi toate' : 'View all'} <ChevronRight className="w-4 h-4" />
                             </Link>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {otherComps.slice(0, 8).map((c, i) => <CompCard key={c.competition_id} c={c} index={i} />)}
-                        </div>
+                        {loading ? <SkeletonGrid /> : (
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {otherComps.slice(0, 8).map((c, i) => <CompCard key={c.competition_id} c={c} index={i} />)}
+                            </div>
+                        )}
                     </div>
                 </section>
                 {/* Reviews / Testimonials */}

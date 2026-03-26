@@ -91,6 +91,7 @@ const CookieConsent = () => {
                             <button 
                                 onClick={handleRejectAll}
                                 className="text-white/50 hover:text-white transition-colors"
+                                aria-label="Close cookie banner"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -104,6 +105,7 @@ const CookieConsent = () => {
                             <button 
                                 onClick={() => setShowSettings(false)}
                                 className="text-white/50 hover:text-white transition-colors"
+                                aria-label="Close cookie settings"
                             >
                                 <X className="w-5 h-5" />
                             </button>
