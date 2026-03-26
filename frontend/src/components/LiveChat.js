@@ -290,6 +290,7 @@ const LiveChat = () => {
                 className={`fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform ${isOpen ? 'hidden' : ''}`}
                 style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}
                 data-testid="chat-btn"
+                aria-label="Open chat"
             >
                 <MessageCircle className="w-5 h-5 text-white" />
                 {hasUnread && (
@@ -326,7 +327,7 @@ const LiveChat = () => {
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>
                             )}
-                            <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white p-1" data-testid="chat-close-btn">
+                            <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white p-1" data-testid="chat-close-btn" aria-label="Close chat">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>

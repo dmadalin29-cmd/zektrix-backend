@@ -121,6 +121,14 @@ app.websocket("/api/ws/chat/admin")(ws_chat_admin)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+# Cache headers for uploaded images
+@app.middleware("http")
+async def add_cache_headers(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/api/uploads/"):
+        response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+    return response
+
 # ==================== CORS ====================
 app.add_middleware(
     CORSMiddleware,

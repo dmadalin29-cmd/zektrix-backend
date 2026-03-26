@@ -104,7 +104,7 @@ const SpecialCompCard = ({ c }) => {
                     </div>
 
                     <div className="relative aspect-video rounded-2xl overflow-hidden mb-4 border border-white/[0.06]">
-                        <img src={c.image_url} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
+                        <img src={c.image_url} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="eager" fetchpriority="high" />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#060311]/90 via-transparent to-transparent" />
                         <div className="absolute bottom-3 left-4 right-4">
                             <div className="flex items-end justify-between">
@@ -168,7 +168,7 @@ const FeaturedCard = ({ c }) => {
             >
                 <div className="relative h-full flex flex-col">
                     <div className="relative flex-1 min-h-[250px]">
-                        <img src={c.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80'} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
+                        <img src={c.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80'} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="eager" fetchpriority="high" />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#060311] via-[#060311]/30 to-transparent" />
                         <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
                             <span className="px-3 py-1.5 bg-[#8B3DFF] text-white text-xs font-bold rounded-full shadow-[0_0_15px_rgba(139,61,255,0.4)]">OFERTA RECOMANDATA</span>
@@ -208,7 +208,7 @@ const FeaturedCard = ({ c }) => {
                         </div>
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs text-[#6E6987]">PRET LOC</p>
+                                <p className="text-xs text-[#9490AD]">PRET LOC</p>
                                 <p className="text-xl font-bold text-violet-400">{(c.is_free || c.ticket_price === 0) ? <span className="text-emerald-400">GRATUIT</span> : `£${c.ticket_price?.toFixed(2)}`}</p>
                             </div>
                             <span className="px-5 py-2.5 bg-gradient-to-r from-[#8B3DFF] to-[#A666FF] hover:from-[#A666FF] hover:to-[#8B3DFF] text-white font-bold rounded-full transition-all duration-300 flex items-center gap-2 shadow-[0_0_15px_rgba(139,61,255,0.3)]">
@@ -235,7 +235,7 @@ const CompCard = ({ c, index }) => {
                 data-testid={`comp-card-${c.competition_id}`}
             >
                 <div className="relative aspect-[4/3] overflow-hidden">
-                    <img src={c.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80'} alt={c.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
+                    <img src={c.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80'} alt={c.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" decoding="async" />
                     <div className="absolute top-2.5 left-2.5 flex gap-1.5 flex-wrap">
                         {c.competition_type === 'instant_win' && (
                             <span className="px-2 py-1 bg-emerald-500/80 backdrop-blur-sm text-white text-[10px] font-bold rounded-full">AUTODRAW</span>
@@ -269,8 +269,8 @@ const CompCard = ({ c, index }) => {
                     )}
                     <div>
                         <div className="flex justify-between text-[10px] mb-1">
-                            <span className={`${isAlmostGone ? 'text-red-400 font-bold' : isHot ? 'text-orange-400 font-semibold' : 'text-[#6E6987]'}`}>{progress.toFixed(0)}% vandut</span>
-                            <span className={`${isAlmostGone ? 'text-red-400' : 'text-[#6E6987]'}`}>{remaining.toLocaleString()} libere</span>
+                            <span className={`${isAlmostGone ? 'text-red-400 font-bold' : isHot ? 'text-orange-400 font-semibold' : 'text-[#9490AD]'}`}>{progress.toFixed(0)}% vandut</span>
+                            <span className={`${isAlmostGone ? 'text-red-400' : 'text-[#9490AD]'}`}>{remaining.toLocaleString()} libere</span>
                         </div>
                         <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${isAlmostGone ? 'bg-gradient-to-r from-red-500 to-red-400' : isHot ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-violet-500 to-[#FF5E00]'}`} style={{width: `${Math.max(progress, 3)}%`}} />
@@ -288,7 +288,7 @@ const StatCard = ({ icon: Icon, label, value, gradient }) => (
             <Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
         </div>
         <div>
-            <p className="text-[10px] text-[#6E6987] uppercase tracking-wider">{label}</p>
+            <p className="text-[10px] text-[#9490AD] uppercase tracking-wider">{label}</p>
             <p className="text-lg font-bold text-white tracking-tight">{value}</p>
         </div>
     </div>
@@ -337,7 +337,7 @@ const HomePage = () => {
                 {/* Hero Section */}
                 <section className="py-8 md:py-12">
                     <div className="max-w-7xl mx-auto px-4">
-                        <div className="grid lg:grid-cols-2 gap-6 items-stretch">
+                        <div className="grid lg:grid-cols-2 gap-6 items-stretch" style={{ minHeight: '420px' }}>
                             <SpecialCompCard c={specialComp} />
                             <FeaturedCard c={displayFeatured} />
                         </div>
@@ -386,7 +386,7 @@ const HomePage = () => {
                                     <MessageCircle className="w-5 h-5 text-white" strokeWidth={1.5} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-[#6E6987] uppercase tracking-wider">COMUNITATE</p>
+                                    <p className="text-[10px] text-[#9490AD] uppercase tracking-wider">COMUNITATE</p>
                                     <p className="text-white text-xs font-semibold">WhatsApp</p>
                                 </div>
                             </a>
@@ -413,7 +413,7 @@ const HomePage = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <p className="text-[10px] text-[#6E6987] uppercase tracking-wider">URMARESTE</p>
+                                            <p className="text-[10px] text-[#9490AD] uppercase tracking-wider">URMARESTE</p>
                                             <p className="text-white text-xs font-semibold">TikTok</p>
                                         </>
                                     )}

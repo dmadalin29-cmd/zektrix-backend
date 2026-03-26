@@ -93,12 +93,40 @@ async def upload_image(file: UploadFile = File(...), current_user: dict = Depend
             img = Image.open(io.BytesIO(content))
             img = img.convert("RGB")
             buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=90)
+            img.save(buf, format="JPEG", quality=85)
             content = buf.getvalue()
             ext = "jpg"
         except Exception as e:
             logger.error(f"HEIC conversion failed: {e}")
             raise HTTPException(400, "Failed to convert HEIC image. Please upload JPEG or PNG.")
+    
+    # Auto-optimize large images (resize if > 1920px wide, compress)
+    try:
+        from PIL import Image
+        import io
+        img = Image.open(io.BytesIO(content))
+        max_width = 1920
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_size = (max_width, int(img.height * ratio))
+            img = img.resize(new_size, Image.LANCZOS)
+        # Convert PNG to WebP for better compression (except for transparent PNGs)
+        if ext == "png" and img.mode != "RGBA":
+            buf = io.BytesIO()
+            img.save(buf, format="WEBP", quality=85)
+            content = buf.getvalue()
+            ext = "webp"
+        elif ext in ("jpg", "jpeg"):
+            buf = io.BytesIO()
+            img = img.convert("RGB") if img.mode != "RGB" else img
+            img.save(buf, format="JPEG", quality=85, optimize=True)
+            content = buf.getvalue()
+        elif ext == "png":
+            buf = io.BytesIO()
+            img.save(buf, format="PNG", optimize=True)
+            content = buf.getvalue()
+    except Exception as e:
+        logger.warning(f"Image optimization skipped: {e}")
     
     if ext not in ("jpg", "jpeg", "png", "webp", "gif"):
         ext = "jpg"

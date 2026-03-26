@@ -109,8 +109,8 @@ const Navbar = () => {
                         {isAuthenticated && <UserNotificationBell />}
 
                         {/* Cart */}
-                        <Link to="/cart" data-testid="cart-btn">
-                            <button className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-all duration-200">
+                        <Link to="/cart" data-testid="cart-btn" aria-label="Shopping cart">
+                            <button className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-all duration-200" aria-label="Shopping cart">
                                 <ShoppingCart className="w-[18px] h-[18px]" />
                                 {totalItems > 0 && (
                                     <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-[#0a0614]">
@@ -194,7 +194,7 @@ const Navbar = () => {
                         {/* Mobile Menu */}
                         <Sheet>
                             <SheetTrigger asChild className="lg:hidden">
-                                <button className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-all duration-200 ml-0.5" data-testid="mobile-menu-btn">
+                                <button className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-all duration-200 ml-0.5" data-testid="mobile-menu-btn" aria-label="Open menu">
                                     <Menu className="w-5 h-5" />
                                 </button>
                             </SheetTrigger>
