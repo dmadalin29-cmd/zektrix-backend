@@ -16,7 +16,7 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 ## Backend Architecture
 ```
 /app/backend/
-├── server.py          # App orchestrator (~175 lines)
+├── server.py          # App orchestrator (~185 lines)
 ├── config.py          # Shared config (UPLOAD_DIR, JWT, VAPID, etc.)
 ├── routes/
 │   ├── auth.py, competitions.py, wallet.py, subscriptions.py, referral.py
@@ -32,12 +32,18 @@ Full-stack competition platform with Viva Payments, modern UI, AI-powered live c
 - Admin panel with real-time notifications
 - Gamification Badges, Re-engagement Emails
 - Loyalty Points, User Notifications, Reviews, Wheel of Fortune, Exit Intent
-- **Bundle Deals** with discount pricing on competition pages
-- **Push Campaign Manager** (admin broadcasts to all/active/subscribers)
-- **TikTok Live Draw Embed** (live banner with @x67digital link)
-- **Advanced Analytics** (KPI dashboard, daily revenue, retention, top spenders)
-- **Full bilingual RO/EN support** across entire site (AdminPage, all pages, components)
-- **Image Upload Fix** (path mismatch corrected + HEIC/iPhone support added) - Mar 2026
+- Bundle Deals, Push Campaign Manager, TikTok Live Draw Embed
+- Advanced Analytics (KPI dashboard, daily revenue, retention, top spenders)
+- Full bilingual RO/EN support across entire site
+- **Image Upload Fix** (path mismatch corrected + HEIC/iPhone support) - Mar 2026
+- **Performance Optimization** (Lighthouse fixes) - Mar 2026:
+  - CLS fix: hero section min-height, eager loading for above-the-fold images
+  - LCP fix: fetchpriority="high" on hero images, removed lazy loading
+  - Image auto-optimization: resize >1920px, compress JPEG/PNG, auto WebP conversion
+  - Cache headers on uploaded images (30 days immutable)
+  - Preconnect hints for image CDNs
+  - Async font loading (preload + media swap)
+  - Accessibility: aria-labels on buttons, improved color contrast (#6E6987 → #9490AD)
 
 ## Upcoming Tasks
 - **P1:** TikTok Pixel Integration (when running ads)
